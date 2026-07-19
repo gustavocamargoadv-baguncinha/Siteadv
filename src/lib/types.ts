@@ -19,6 +19,10 @@ export interface Cliente {
   tipo: "pf" | "pj";
   nome: string;
   cpf_cnpj?: string;
+  rg?: string;
+  nacionalidade?: string; // como deve sair no documento: "brasileiro", "brasileira"…
+  estado_civil?: string; // idem: "solteiro", "casada"…
+  profissao?: string;
   email?: string;
   telefone?: string;
   endereco?: string;

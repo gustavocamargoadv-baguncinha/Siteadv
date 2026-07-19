@@ -14,7 +14,10 @@ export default function ClientesPage() {
 
   const [busca, setBusca] = useState("");
   const [modal, setModal] = useState(false);
-  const [form, setForm] = useState({ tipo: "pf", nome: "", cpf_cnpj: "", email: "", telefone: "", endereco: "", notas: "" });
+  const [form, setForm] = useState({
+    tipo: "pf", nome: "", cpf_cnpj: "", rg: "", nacionalidade: "", estado_civil: "", profissao: "",
+    email: "", telefone: "", endereco: "", notas: "",
+  });
 
   const filtrados = useMemo(() => {
     const q = busca.toLowerCase();
@@ -30,13 +33,20 @@ export default function ClientesPage() {
       ...form,
       tipo: form.tipo as Cliente["tipo"],
       cpf_cnpj: form.cpf_cnpj || undefined,
+      rg: form.rg || undefined,
+      nacionalidade: form.nacionalidade || undefined,
+      estado_civil: form.estado_civil || undefined,
+      profissao: form.profissao || undefined,
       email: form.email || undefined,
       telefone: form.telefone || undefined,
       endereco: form.endereco || undefined,
       notas: form.notas || undefined,
     });
     setModal(false);
-    setForm({ tipo: "pf", nome: "", cpf_cnpj: "", email: "", telefone: "", endereco: "", notas: "" });
+    setForm({
+      tipo: "pf", nome: "", cpf_cnpj: "", rg: "", nacionalidade: "", estado_civil: "", profissao: "",
+      email: "", telefone: "", endereco: "", notas: "",
+    });
   }
 
   return (
@@ -100,6 +110,22 @@ export default function ClientesPage() {
           <Field rotulo="Nome completo" obrigatorio>
             <Input required value={form.nome} onChange={(e) => setForm({ ...form, nome: e.target.value })} />
           </Field>
+          {form.tipo === "pf" && (
+            <div className="grid grid-cols-2 gap-3">
+              <Field rotulo="RG">
+                <Input value={form.rg} onChange={(e) => setForm({ ...form, rg: e.target.value })} placeholder="00.000.000-0 SSP/SP" />
+              </Field>
+              <Field rotulo="Nacionalidade">
+                <Input value={form.nacionalidade} onChange={(e) => setForm({ ...form, nacionalidade: e.target.value })} placeholder="brasileiro / brasileira" />
+              </Field>
+              <Field rotulo="Estado civil">
+                <Input value={form.estado_civil} onChange={(e) => setForm({ ...form, estado_civil: e.target.value })} placeholder="solteiro / casada…" />
+              </Field>
+              <Field rotulo="Profissão">
+                <Input value={form.profissao} onChange={(e) => setForm({ ...form, profissao: e.target.value })} />
+              </Field>
+            </div>
+          )}
           <div className="grid grid-cols-2 gap-3">
             <Field rotulo="Telefone">
               <Input value={form.telefone} onChange={(e) => setForm({ ...form, telefone: e.target.value })} placeholder="(11) 9…" />

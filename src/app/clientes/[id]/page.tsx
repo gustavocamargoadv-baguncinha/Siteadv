@@ -7,6 +7,7 @@ import { useTable } from "@/lib/hooks";
 import type { Cliente, ContratoHonorarios, Documento, Lancamento, Processo } from "@/lib/types";
 import { AREAS, brl, dataBR, formatCNJ, statusLancamento, TIPOS_HONORARIOS } from "@/lib/format";
 import { Badge, Card, EmptyState, PageHeader } from "@/components/ui";
+import { GerarDocumentos } from "@/components/GerarDocumentos";
 
 export default function ClienteDetalhe() {
   const { id } = useParams<{ id: string }>();
@@ -49,6 +50,8 @@ export default function ClienteDetalhe() {
         {cli.endereco && <p className="flex items-center gap-2"><MapPin size={15} className="text-slate-400" /> {cli.endereco}</p>}
         {cli.notas && <p className="rounded-lg bg-amber-50 p-2.5 text-xs text-amber-900">📌 {cli.notas}</p>}
       </Card>
+
+      <GerarDocumentos key={cli.id} cliente={cli} />
 
       <Card className="p-4">
         <h2 className="mb-3 text-sm font-bold text-slate-900">Processos ({casos.length})</h2>
