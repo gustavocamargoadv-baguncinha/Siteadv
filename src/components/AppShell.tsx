@@ -11,7 +11,6 @@ import {
   FolderOpen,
   Home,
   Menu,
-  Scale,
   Settings,
   Users,
   UserSquare2,
@@ -68,13 +67,11 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   );
 
   const Logo = () => (
-    <div className="flex items-center gap-2.5 px-5 py-5">
-      <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-brand-500 text-slate-950">
-        <Scale size={20} />
-      </div>
-      <div>
-        <p className="text-sm font-bold leading-tight text-white">Camargo</p>
-        <p className="text-[11px] leading-tight text-slate-400">Advocacia Criminal</p>
+    <div className="px-4 py-5">
+      {/* logo em cartão claro (o menu é escuro; as letras marinho precisam de fundo claro) */}
+      <div className="rounded-xl bg-white px-4 py-3">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src="/logo-camargo.png" alt="Gustavo Camargo Advocacia" className="mx-auto w-full max-w-[168px]" />
       </div>
     </div>
   );
@@ -111,9 +108,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         <button onClick={() => setDrawer(true)} className="rounded-lg p-1.5 text-slate-600 hover:bg-slate-100 md:hidden" aria-label="Abrir menu">
           <Menu size={22} />
         </button>
-        <div className="flex items-center gap-2 md:hidden">
-          <Scale size={18} className="text-brand-600" />
-          <span className="text-sm font-bold text-slate-900">Camargo Adv</span>
+        <div className="flex items-center md:hidden">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/logo-camargo.png" alt="Gustavo Camargo Advocacia" className="h-7 w-auto" />
         </div>
         <div className="ml-auto">
           <Link href="/agenda" className="relative inline-flex rounded-lg p-2 text-slate-600 hover:bg-slate-100" aria-label="Prazos urgentes">

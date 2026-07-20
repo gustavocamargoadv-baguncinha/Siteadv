@@ -5,18 +5,10 @@
 
 import { valorPorExtenso } from "./extenso";
 import { brl, dataBR } from "./format";
+import { LOGO_DATA_URI } from "./logo";
 
-// Logo do escritório em SVG (vetor: nítida em qualquer tamanho e auto-contida).
-// Para trocar pela arte oficial, substitua este bloco pelo SVG/PNG (data URI) do arquivo.
-export const LOGO_SVG = `<svg width="330" height="94" viewBox="0 0 600 170" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Gustavo Camargo Advocacia">
-  <g fill="none" stroke="#b0904f"><circle cx="80" cy="85" r="60" stroke-width="2"/><circle cx="80" cy="85" r="49" stroke-width="1.2"/></g>
-  <text x="80" y="85" text-anchor="middle" dominant-baseline="central" font-family="Georgia,'Times New Roman',serif" font-size="42" fill="#1b2a49" letter-spacing="1">GC</text>
-  <line x1="170" y1="42" x2="170" y2="128" stroke="#c9b892" stroke-width="1.4"/>
-  <text x="196" y="74" font-family="Georgia,'Times New Roman',serif" font-size="34" fill="#1b2a49" letter-spacing="4">GUSTAVO CAMARGO</text>
-  <line x1="250" y1="105" x2="300" y2="105" stroke="#b0904f" stroke-width="1"/>
-  <text x="384" y="110" text-anchor="middle" font-family="Georgia,'Times New Roman',serif" font-size="15" fill="#b0904f" letter-spacing="8">ADVOCACIA</text>
-  <line x1="468" y1="105" x2="518" y2="105" stroke="#b0904f" stroke-width="1"/>
-</svg>`;
+// Logo oficial do escritório, embutida para o documento ser autossuficiente.
+const LOGO_IMG = `<img src="${LOGO_DATA_URI}" alt="Gustavo Camargo Advocacia" />`;
 
 export const ESCRITORIO = {
   advogado: "GUSTAVO ROBERTO DE CAMARGO",
@@ -78,7 +70,7 @@ function pagina(titulo: string, corpo: string, opcoes?: { serifa?: boolean }): s
     max-width: 175mm; margin: 0 auto; padding: 16px;
   }
   header.timbre { text-align: center; margin-bottom: 4px; }
-  header.timbre svg { max-width: 330px; height: auto; }
+  header.timbre img { width: 300px; max-width: 70%; height: auto; }
   hr.linha { border: none; border-top: 1.6px solid #b0904f; margin: 4px 0 28px; }
   h1 { text-align: center; font-size: 15pt; letter-spacing: .5px; margin: 26px 0 30px; }
   p { text-align: justify; margin: 0 0 14px; }
@@ -105,7 +97,7 @@ function pagina(titulo: string, corpo: string, opcoes?: { serifa?: boolean }): s
 </head>
 <body>
 <button class="no-print" onclick="window.print()">🖨️ Imprimir / Salvar PDF</button>
-<header class="timbre">${LOGO_SVG}</header>
+<header class="timbre">${LOGO_IMG}</header>
 <hr class="linha">
 ${corpo}
 <footer class="rodape">

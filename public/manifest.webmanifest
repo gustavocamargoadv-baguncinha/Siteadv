@@ -4,8 +4,8 @@
   "description": "Gestão do escritório: processos, prazos, clientes, financeiro e portal do cliente.",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#020617",
-  "theme_color": "#020617",
+  "background_color": "#111c34",
+  "theme_color": "#111c34",
   "lang": "pt-BR",
   "icons": [
     { "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png" },
