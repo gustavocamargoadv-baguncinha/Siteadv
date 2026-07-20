@@ -1,15 +1,17 @@
 "use client";
 
 import { useState } from "react";
-import { CalendarClock, CheckCircle2, CircleAlert, Database, FileSignature, FileSpreadsheet, Radar, Smartphone, Trash2 } from "lucide-react";
+import { CalendarClock, CheckCircle2, CircleAlert, Database, FileSignature, FileSpreadsheet, RefreshCw, Radar, Smartphone, Trash2 } from "lucide-react";
 import { supabaseConfigurado } from "@/lib/supabase";
 import {
+  atualizarMovimentacoesDataJud,
   importarAudienciasEsaj,
   importarContratosZapsign,
   importarDados2026,
   resetarDadosDemo,
   type ResultadoAudiencias,
   type ResultadoContratos,
+  type ResultadoDataJud,
   type ResultadoImportacao,
 } from "@/lib/store";
 import { CLIENTES_2026, LANCAMENTOS_2026 } from "@/lib/import-2026";
@@ -185,6 +187,53 @@ function ImportarAudiencias() {
   );
 }
 
+function AtualizarDataJud() {
+  const [rodando, setRodando] = useState(false);
+  const [resultado, setResultado] = useState<ResultadoDataJud | null>(null);
+  const [erro, setErro] = useState<string | null>(null);
+
+  async function atualizar() {
+    setRodando(true);
+    setErro(null);
+    try {
+      setResultado(await atualizarMovimentacoesDataJud());
+    } catch (e) {
+      setErro(e instanceof Error ? e.message : "falha ao consultar o DataJud");
+    } finally {
+      setRodando(false);
+    }
+  }
+
+  return (
+    <Card className="space-y-3 p-4">
+      <h2 className="flex items-center gap-2 text-sm font-bold text-slate-900">
+        <RefreshCw size={16} /> Movimentações automáticas (DataJud/CNJ)
+      </h2>
+      <p className="text-sm text-slate-600">
+        Busca as movimentações dos seus processos direto na <b>API oficial e gratuita do CNJ</b> e lança na linha do
+        tempo de cada processo. Sem custo e sem cadastro. Rode quando quiser atualizar; no ar (publicado), dá para
+        automatizar a checagem diária.
+      </p>
+      <div>
+        <button
+          onClick={atualizar}
+          disabled={rodando}
+          className="inline-flex items-center gap-1.5 rounded-lg bg-brand-600 px-3.5 py-2 text-sm font-semibold text-white transition hover:bg-brand-700 disabled:opacity-60"
+        >
+          <RefreshCw size={15} className={rodando ? "animate-spin" : ""} /> {rodando ? "Consultando…" : "Buscar movimentações agora"}
+        </button>
+      </div>
+      {resultado && (
+        <div className="rounded-lg bg-emerald-50 p-3 text-sm text-emerald-800">
+          ✓ {resultado.processosConsultados} processos consultados, {resultado.andamentosNovos} movimentações novas.
+          {resultado.erros > 0 && ` (${resultado.erros} não retornaram — normal para autos sigilosos ou muito recentes.)`}
+        </div>
+      )}
+      {erro && <div className="rounded-lg bg-red-50 p-3 text-sm text-red-700">Não foi possível consultar: {erro}</div>}
+    </Card>
+  );
+}
+
 export default function ConfiguracoesPage() {
   return (
     <div>
@@ -194,6 +243,7 @@ export default function ConfiguracoesPage() {
         <ImportarPlanilha />
         <ImportarContratos />
         <ImportarAudiencias />
+        <AtualizarDataJud />
 
         <Card className="space-y-4 p-4">
           <h2 className="flex items-center gap-2 text-sm font-bold text-slate-900"><Database size={16} /> Backend (Supabase)</h2>

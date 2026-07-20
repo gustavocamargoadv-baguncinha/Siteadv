@@ -8,7 +8,7 @@ import { CLIENTES_2026, LANCAMENTOS_2026 } from "./import-2026";
 import { CONTRATOS_ZAPSIGN } from "./import-contratos";
 import { AUDIENCIAS_ESAJ } from "./import-audiencias";
 import { getSupabase, supabaseConfigurado } from "./supabase";
-import type { Cliente, ContratoHonorarios, EventoAgenda, Lancamento, Processo, TableName } from "./types";
+import type { Andamento, Cliente, ContratoHonorarios, EventoAgenda, Lancamento, Processo, TableName } from "./types";
 
 export interface Row {
   id: string;
@@ -361,4 +361,57 @@ export async function importarAudienciasEsaj(): Promise<ResultadoAudiencias> {
   }
 
   return { novas, vinculadas };
+}
+
+export interface ResultadoDataJud {
+  processosConsultados: number;
+  andamentosNovos: number;
+  erros: number;
+}
+
+/** Busca as movimentações dos processos (com número CNJ) na API Pública do
+ *  DataJud e grava os andamentos novos. Idempotente: movimentos já registrados
+ *  (mesma data + descrição no mesmo processo) são pulados. */
+export async function atualizarMovimentacoesDataJud(): Promise<ResultadoDataJud> {
+  const s = getStore();
+  const processos = (await s.list<Processo>("processos")).filter((p) => p.numero_cnj);
+  const numeros = processos.map((p) => p.numero_cnj!);
+  if (!numeros.length) return { processosConsultados: 0, andamentosNovos: 0, erros: 0 };
+
+  const res = await fetch("/api/tribunais/datajud", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ numeros }),
+  });
+  const json = (await res.json().catch(() => ({}))) as {
+    resultado?: Record<string, { data: string; descricao: string }[]>;
+    erros?: Record<string, string>;
+  };
+  const resultado = json.resultado ?? {};
+  const erros = json.erros ? Object.keys(json.erros).length : 0;
+
+  const andamentos = await s.list<Andamento>("andamentos");
+  let andamentosNovos = 0;
+
+  for (const p of processos) {
+    const d = (p.numero_cnj ?? "").replace(/\D/g, "");
+    const movs = resultado[d] ?? [];
+    const existentes = new Set(
+      andamentos.filter((a) => a.processo_id === p.id).map((a) => `${a.data}|${a.descricao}`)
+    );
+    for (const m of movs) {
+      const chave = `${m.data}|${m.descricao}`;
+      if (existentes.has(chave)) continue;
+      existentes.add(chave);
+      await s.insert<Andamento>("andamentos", {
+        processo_id: p.id,
+        data: m.data,
+        descricao: m.descricao,
+        origem: "tribunal",
+      });
+      andamentosNovos++;
+    }
+  }
+
+  return { processosConsultados: numeros.length, andamentosNovos, erros };
 }
