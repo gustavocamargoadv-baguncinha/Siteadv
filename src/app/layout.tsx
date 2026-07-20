@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import { AppShell } from "@/components/AppShell";
+import { LoginGate } from "@/components/LoginGate";
 import { RegisterSW } from "@/components/RegisterSW";
 
 export const metadata: Metadata = {
@@ -29,7 +30,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="pt-BR">
       <body className="antialiased">
         <RegisterSW />
-        <AppShell>{children}</AppShell>
+        <LoginGate>
+          <AppShell>{children}</AppShell>
+        </LoginGate>
       </body>
     </html>
   );

@@ -1,18 +1,14 @@
--- ==========================================================================
--- SETUP COMPLETO — cole tudo isto de uma vez no SQL Editor do Supabase e RUN.
--- Junta o schema (0001) + a qualificação de clientes (0002).
--- ==========================================================================
-
--- =============================================================================
--- Camargo Advocacia — schema do sistema de gestão
--- Execute este script no SQL Editor do seu projeto Supabase.
--- Depois crie o bucket "documentos" em Storage.
--- =============================================================================
+-- ============================================================================
+-- SETUP COMPLETO — Camargo Advocacia
+-- Cole TUDO isto de uma vez no SQL Editor do Supabase e clique em RUN.
+-- Cria as tabelas e ativa a segurança: só quem estiver LOGADO acessa os dados
+-- (o público é bloqueado). O login é criado em Authentication (convite por e-mail).
+-- ============================================================================
 
 create extension if not exists "pgcrypto";
 
 -- ---------------------------------------------------------------------------
--- Equipe (vinculada ao usuário de login via auth_user_id)
+-- Equipe
 -- ---------------------------------------------------------------------------
 create table if not exists membros (
   id uuid primary key default gen_random_uuid(),
@@ -27,7 +23,7 @@ create table if not exists membros (
 );
 
 -- ---------------------------------------------------------------------------
--- Clientes (portal_user_id liga o cliente ao login dele no portal)
+-- Clientes (com qualificação completa para gerar documentos)
 -- ---------------------------------------------------------------------------
 create table if not exists clientes (
   id uuid primary key default gen_random_uuid(),
@@ -35,6 +31,10 @@ create table if not exists clientes (
   tipo text not null default 'pf' check (tipo in ('pf', 'pj')),
   nome text not null,
   cpf_cnpj text,
+  rg text,
+  nacionalidade text,
+  estado_civil text,
+  profissao text,
   email text,
   telefone text,
   endereco text,
@@ -116,7 +116,7 @@ create table if not exists tarefas (
 );
 
 -- ---------------------------------------------------------------------------
--- Documentos (arquivos no bucket "documentos" do Storage)
+-- Documentos
 -- ---------------------------------------------------------------------------
 create table if not exists documentos (
   id uuid primary key default gen_random_uuid(),
@@ -161,7 +161,6 @@ create table if not exists lancamentos (
   created_at timestamptz not null default now()
 );
 
--- Timesheet (horas trabalhadas — base para honorários por hora; UI futura)
 create table if not exists timesheet (
   id uuid primary key default gen_random_uuid(),
   membro_id uuid references membros (id) on delete set null,
@@ -173,7 +172,6 @@ create table if not exists timesheet (
   created_at timestamptz not null default now()
 );
 
--- Registro dos monitoramentos junto ao provedor de tribunais
 create table if not exists monitoramentos (
   id uuid primary key default gen_random_uuid(),
   processo_id uuid not null references processos (id) on delete cascade,
@@ -194,88 +192,30 @@ create index if not exists idx_eventos_inicio on eventos_agenda (inicio);
 create index if not exists idx_lancamentos_venc on lancamentos (vencimento);
 
 -- ---------------------------------------------------------------------------
--- Segurança (RLS)
---   Equipe: acesso conforme papel. Cliente do portal: enxerga só o que é dele.
+-- SEGURANÇA (RLS): só usuários LOGADOS acessam. O público (anônimo) é bloqueado.
+-- Modelo simples para começar: qualquer pessoa da equipe que você convidar em
+-- Authentication tem acesso. (Papéis finos e portal do cliente entram depois.)
+-- O webhook de tribunais usa a chave de serviço, que ignora o RLS.
 -- ---------------------------------------------------------------------------
-alter table membros enable row level security;
-alter table clientes enable row level security;
-alter table processos enable row level security;
-alter table andamentos enable row level security;
-alter table prazos enable row level security;
-alter table eventos_agenda enable row level security;
-alter table tarefas enable row level security;
-alter table documentos enable row level security;
-alter table contratos_honorarios enable row level security;
-alter table lancamentos enable row level security;
-alter table timesheet enable row level security;
-alter table monitoramentos enable row level security;
-
--- Usuário logado pertence à equipe?
-create or replace function is_team()
-returns boolean language sql stable security definer set search_path = public as $$
-  select exists (
-    select 1 from membros m
-    where m.auth_user_id = auth.uid() and m.ativo
-  );
-$$;
-
--- Usuário logado é admin ou advogado? (financeiro completo)
-create or replace function is_lawyer()
-returns boolean language sql stable security definer set search_path = public as $$
-  select exists (
-    select 1 from membros m
-    where m.auth_user_id = auth.uid() and m.ativo and m.papel in ('admin', 'advogado')
-  );
-$$;
-
--- id do cliente vinculado ao usuário do portal (null para a equipe)
-create or replace function portal_cliente_id()
-returns uuid language sql stable security definer set search_path = public as $$
-  select c.id from clientes c where c.portal_user_id = auth.uid() limit 1;
-$$;
-
--- Equipe: acesso total às tabelas operacionais
-create policy equipe_membros on membros for all using (is_team()) with check (is_team());
-create policy equipe_clientes on clientes for all using (is_team()) with check (is_team());
-create policy equipe_processos on processos for all using (is_team()) with check (is_team());
-create policy equipe_andamentos on andamentos for all using (is_team()) with check (is_team());
-create policy equipe_prazos on prazos for all using (is_team()) with check (is_team());
-create policy equipe_eventos on eventos_agenda for all using (is_team()) with check (is_team());
-create policy equipe_tarefas on tarefas for all using (is_team()) with check (is_team());
-create policy equipe_documentos on documentos for all using (is_team()) with check (is_team());
-create policy equipe_timesheet on timesheet for all using (is_team()) with check (is_team());
-create policy equipe_monitoramentos on monitoramentos for all using (is_team()) with check (is_team());
-
--- Financeiro: apenas admin/advogado
-create policy adv_contratos on contratos_honorarios for all using (is_lawyer()) with check (is_lawyer());
-create policy adv_lancamentos on lancamentos for all using (is_lawyer()) with check (is_lawyer());
-
--- Portal do cliente: somente leitura do que é dele
-create policy portal_proprio_cliente on clientes for select using (portal_user_id = auth.uid());
-create policy portal_processos on processos for select using (cliente_id = portal_cliente_id());
-create policy portal_andamentos on andamentos for select using (
-  processo_id in (select p.id from processos p where p.cliente_id = portal_cliente_id())
-);
-create policy portal_eventos on eventos_agenda for select using (cliente_id = portal_cliente_id());
-create policy portal_documentos on documentos for select using (
-  visivel_cliente and cliente_id = portal_cliente_id()
-);
+do $$
+declare t text;
+begin
+  foreach t in array array[
+    'membros','clientes','processos','andamentos','prazos','eventos_agenda',
+    'tarefas','documentos','contratos_honorarios','lancamentos','timesheet','monitoramentos'
+  ] loop
+    execute format('alter table %I enable row level security;', t);
+    execute format('drop policy if exists acesso_equipe on %I;', t);
+    execute format(
+      'create policy acesso_equipe on %I for all to authenticated using (true) with check (true);', t
+    );
+  end loop;
+end $$;
 
 -- ---------------------------------------------------------------------------
 -- Depois de rodar este script:
--- 1. Storage → crie o bucket privado "documentos";
--- 2. Authentication → convide os membros da equipe por e-mail;
--- 3. Insira cada membro em "membros" preenchendo auth_user_id com o id do
---    usuário criado (Authentication → Users);
--- 4. Para dar acesso ao portal a um cliente, convide-o por e-mail e preencha
---    clientes.portal_user_id com o id do usuário dele.
+-- 1. Storage → crie o bucket privado "documentos" (se ainda não criou).
+-- 2. Authentication → Users → Add user → crie o SEU login (e-mail + senha).
+--    É com esse e-mail/senha que você entra no sistema.
+-- 3. Para dar acesso a alguém da equipe, é só criar outro usuário aqui.
 -- ---------------------------------------------------------------------------
-
-
--- Qualificação completa do cliente, usada na geração automática de
--- procuração, declaração de hipossuficiência e contrato de honorários.
-
-alter table clientes add column if not exists rg text;
-alter table clientes add column if not exists nacionalidade text;
-alter table clientes add column if not exists estado_civil text;
-alter table clientes add column if not exists profissao text;

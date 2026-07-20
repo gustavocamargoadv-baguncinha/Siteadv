@@ -10,6 +10,7 @@ import {
   FileText,
   FolderOpen,
   Home,
+  LogOut,
   Menu,
   Settings,
   Users,
@@ -20,7 +21,7 @@ import {
 import { useTable } from "@/lib/hooks";
 import type { Prazo } from "@/lib/types";
 import { diasAteISO } from "@/lib/format";
-import { supabaseConfigurado } from "@/lib/supabase";
+import { sair, supabaseConfigurado } from "@/lib/supabase";
 
 const NAV = [
   { href: "/", rotulo: "Início", icone: Home },
@@ -112,7 +113,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src="/logo-camargo.png" alt="Gustavo Camargo Advocacia" className="h-7 w-auto" />
         </div>
-        <div className="ml-auto">
+        <div className="ml-auto flex items-center gap-1">
           <Link href="/agenda" className="relative inline-flex rounded-lg p-2 text-slate-600 hover:bg-slate-100" aria-label="Prazos urgentes">
             <Bell size={20} />
             {urgentes > 0 && (
@@ -121,6 +122,16 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               </span>
             )}
           </Link>
+          {supabaseConfigurado && (
+            <button
+              onClick={() => sair()}
+              className="inline-flex rounded-lg p-2 text-slate-600 hover:bg-slate-100"
+              aria-label="Sair"
+              title="Sair"
+            >
+              <LogOut size={20} />
+            </button>
+          )}
         </div>
       </header>
 
