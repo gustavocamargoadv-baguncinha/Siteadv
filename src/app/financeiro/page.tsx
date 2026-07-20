@@ -19,18 +19,22 @@ export default function FinanceiroPage() {
   const [form, setForm] = useState({ tipo: "receita", categoria: "Honorários", cliente_id: "", processo_id: "", descricao: "", valor: "", vencimento: "" });
 
   const mesAtual = hojeISO().slice(0, 7);
+  const anoAtual = hojeISO().slice(0, 4);
 
   const totais = useMemo(() => {
     const recebidoMes = lancamentos
       .filter((l) => l.tipo === "receita" && l.pago_em?.startsWith(mesAtual))
+      .reduce((s, l) => s + l.valor, 0);
+    const recebidoAno = lancamentos
+      .filter((l) => l.tipo === "receita" && l.pago_em?.startsWith(anoAtual))
       .reduce((s, l) => s + l.valor, 0);
     const aReceber = lancamentos.filter((l) => l.tipo === "receita" && !l.pago_em).reduce((s, l) => s + l.valor, 0);
     const emAtraso = lancamentos
       .filter((l) => l.tipo === "receita" && statusLancamento(l) === "atrasado")
       .reduce((s, l) => s + l.valor, 0);
     const despesasPendentes = lancamentos.filter((l) => l.tipo === "despesa" && !l.pago_em).reduce((s, l) => s + l.valor, 0);
-    return { recebidoMes, aReceber, emAtraso, despesasPendentes };
-  }, [lancamentos, mesAtual]);
+    return { recebidoMes, recebidoAno, aReceber, emAtraso, despesasPendentes };
+  }, [lancamentos, mesAtual, anoAtual]);
 
   const filtrados = useMemo(
     () =>
@@ -69,7 +73,8 @@ export default function FinanceiroPage() {
         acao={<BotaoPrimario onClick={() => setModal(true)}><Plus size={16} /> Novo lançamento</BotaoPrimario>}
       />
 
-      <div className="mb-5 grid grid-cols-2 gap-3 lg:grid-cols-4">
+      <div className="mb-5 grid grid-cols-2 gap-3 lg:grid-cols-5">
+        <StatCard rotulo={`Recebido em ${anoAtual}`} valor={brl(totais.recebidoAno)} detalhe="acumulado no ano" />
         <StatCard rotulo="Recebido no mês" valor={brl(totais.recebidoMes)} />
         <StatCard rotulo="A receber" valor={brl(totais.aReceber)} />
         <StatCard rotulo="Em atraso" valor={brl(totais.emAtraso)} destaque={totais.emAtraso > 0} />

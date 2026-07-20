@@ -4,8 +4,9 @@
 // A escolha é automática: com credenciais do Supabase no ambiente, usa Supabase.
 
 import { DEMO_SEED } from "./demo-seed";
+import { CLIENTES_2026, LANCAMENTOS_2026 } from "./import-2026";
 import { getSupabase, supabaseConfigurado } from "./supabase";
-import type { TableName } from "./types";
+import type { Cliente, Lancamento, TableName } from "./types";
 
 export interface Row {
   id: string;
@@ -137,4 +138,55 @@ export function resetarDadosDemo() {
     .filter((k) => k.startsWith(PREFIX))
     .forEach((k) => localStorage.removeItem(k));
   window.location.reload();
+}
+
+/** Marca o localStorage do modo demo como já semeado, porém vazio — usado antes
+ *  de importar dados reais para não trazer junto os exemplos fictícios. */
+function limparTudoLocal() {
+  if (typeof window === "undefined") return;
+  Object.keys(localStorage)
+    .filter((k) => k.startsWith(PREFIX))
+    .forEach((k) => localStorage.removeItem(k));
+  for (const table of Object.keys(DEMO_SEED)) {
+    localStorage.setItem(PREFIX + table, "[]");
+  }
+  localStorage.setItem(PREFIX + "seeded", "1");
+}
+
+export interface ResultadoImportacao {
+  clientesNovos: number;
+  lancamentosNovos: number;
+  jaImportados: number;
+}
+
+/** Importa os clientes e lançamentos reais de 2026 (planilha do escritório).
+ *  Idempotente: registros já importados (id com prefixo "imp26") são pulados.
+ *  Se `limparAntes`, remove os dados de demonstração fictícios primeiro. */
+export async function importarDados2026(limparAntes: boolean): Promise<ResultadoImportacao> {
+  if (limparAntes) limparTudoLocal();
+  const s = getStore();
+
+  const clientesExistentes = new Set((await s.list<Cliente>("clientes")).map((c) => c.id));
+  const lancExistentes = new Set((await s.list<Lancamento>("lancamentos")).map((l) => l.id));
+
+  let clientesNovos = 0;
+  let lancamentosNovos = 0;
+  let jaImportados = 0;
+
+  for (const c of CLIENTES_2026) {
+    if (c.id && clientesExistentes.has(c.id)) {
+      jaImportados++;
+      continue;
+    }
+    await s.insert<Cliente>("clientes", c as Partial<Cliente>);
+    clientesNovos++;
+  }
+
+  for (const l of LANCAMENTOS_2026) {
+    if (l.id && lancExistentes.has(l.id)) continue;
+    await s.insert<Lancamento>("lancamentos", l as Partial<Lancamento>);
+    lancamentosNovos++;
+  }
+
+  return { clientesNovos, lancamentosNovos, jaImportados };
 }
