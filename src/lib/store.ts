@@ -6,8 +6,9 @@
 import { DEMO_SEED } from "./demo-seed";
 import { CLIENTES_2026, LANCAMENTOS_2026 } from "./import-2026";
 import { CONTRATOS_ZAPSIGN } from "./import-contratos";
+import { AUDIENCIAS_ESAJ } from "./import-audiencias";
 import { getSupabase, supabaseConfigurado } from "./supabase";
-import type { Cliente, ContratoHonorarios, Lancamento, Processo, TableName } from "./types";
+import type { Cliente, ContratoHonorarios, EventoAgenda, Lancamento, Processo, TableName } from "./types";
 
 export interface Row {
   id: string;
@@ -308,4 +309,56 @@ export async function importarContratosZapsign(): Promise<ResultadoContratos> {
   }
 
   return { clientesNovos, clientesEnriquecidos, processosNovos, contratosNovos };
+}
+
+export interface ResultadoAudiencias {
+  novas: number;
+  vinculadas: number;
+}
+
+/** Importa as audiências do e-SAJ como eventos da agenda. Quando o processo já
+ *  existe (contratos ZapSign), vincula ao processo e ao cliente. Idempotente. */
+export async function importarAudienciasEsaj(): Promise<ResultadoAudiencias> {
+  const s = getStore();
+  const eventosExistentes = new Set((await s.list<EventoAgenda>("eventos_agenda")).map((e) => e.id));
+  const processos = await s.list<Processo>("processos");
+  const processosPorId = new Map(processos.map((p) => [p.id, p]));
+  const digitos = (c?: string) => (c ?? "").replace(/\D/g, "");
+  const processosPorCnj = new Map(processos.filter((p) => p.numero_cnj).map((p) => [digitos(p.numero_cnj), p]));
+
+  let novas = 0;
+  let vinculadas = 0;
+
+  for (const a of AUDIENCIAS_ESAJ) {
+    if (eventosExistentes.has(a.id)) continue;
+    // resolve processo: id explícito, senão por número CNJ
+    const proc = (a.processo_id && processosPorId.get(a.processo_id)) || processosPorCnj.get(digitos(a.numero_cnj));
+    if (proc) vinculadas++;
+
+    const notas = [
+      a.tipo_audiencia,
+      a.crime,
+      a.redesignada ? "AUDIÊNCIA REDESIGNADA" : null,
+      `Autos ${a.numero_cnj}`,
+      "Fonte: e-SAJ TJSP",
+    ]
+      .filter(Boolean)
+      .join(" · ");
+
+    await s.insert<EventoAgenda>("eventos_agenda", {
+      id: a.id,
+      tipo: "audiencia",
+      titulo: `Audiência — ${a.defendido}`,
+      processo_id: proc?.id,
+      cliente_id: proc?.cliente_id,
+      // horário de parede (sem conversão de fuso): a hora da audiência é sempre
+      // a mesma independente do dispositivo/fuso de quem abre a agenda
+      inicio: a.inicio.replace(/-03:00$/, ""),
+      local: a.sala,
+      notas,
+    } as Partial<EventoAgenda>);
+    novas++;
+  }
+
+  return { novas, vinculadas };
 }

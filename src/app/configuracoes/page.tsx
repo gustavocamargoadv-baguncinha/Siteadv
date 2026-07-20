@@ -1,17 +1,20 @@
 "use client";
 
 import { useState } from "react";
-import { CheckCircle2, CircleAlert, Database, FileSignature, FileSpreadsheet, Radar, Smartphone, Trash2 } from "lucide-react";
+import { CalendarClock, CheckCircle2, CircleAlert, Database, FileSignature, FileSpreadsheet, Radar, Smartphone, Trash2 } from "lucide-react";
 import { supabaseConfigurado } from "@/lib/supabase";
 import {
+  importarAudienciasEsaj,
   importarContratosZapsign,
   importarDados2026,
   resetarDadosDemo,
+  type ResultadoAudiencias,
   type ResultadoContratos,
   type ResultadoImportacao,
 } from "@/lib/store";
 import { CLIENTES_2026, LANCAMENTOS_2026 } from "@/lib/import-2026";
 import { CONTRATOS_ZAPSIGN } from "@/lib/import-contratos";
+import { AUDIENCIAS_ESAJ } from "@/lib/import-audiencias";
 import { brl } from "@/lib/format";
 import { Card, PageHeader } from "@/components/ui";
 
@@ -138,6 +141,50 @@ function ImportarContratos() {
   );
 }
 
+function ImportarAudiencias() {
+  const [rodando, setRodando] = useState(false);
+  const [resultado, setResultado] = useState<ResultadoAudiencias | null>(null);
+
+  async function importar() {
+    setRodando(true);
+    try {
+      setResultado(await importarAudienciasEsaj());
+    } finally {
+      setRodando(false);
+    }
+  }
+
+  return (
+    <Card className="space-y-3 p-4">
+      <h2 className="flex items-center gap-2 text-sm font-bold text-slate-900">
+        <CalendarClock size={16} /> Importar audiências (e-SAJ)
+      </h2>
+      <p className="text-sm text-slate-600">
+        Lança na agenda as <b>{AUDIENCIAS_ESAJ.length} audiências</b> do painel do e-SAJ (TJSP). As que já têm processo
+        cadastrado (dos contratos) são vinculadas automaticamente ao processo e ao cliente.
+      </p>
+      <p className="rounded-lg bg-amber-50 p-2.5 text-xs text-amber-900">
+        Importe <b>depois</b> dos contratos, para o vínculo com os processos acontecer.
+      </p>
+      <div>
+        <button
+          onClick={importar}
+          disabled={rodando}
+          className="rounded-lg bg-brand-600 px-3.5 py-2 text-sm font-semibold text-white transition hover:bg-brand-700 disabled:opacity-60"
+        >
+          {rodando ? "Importando…" : "Importar audiências do e-SAJ"}
+        </button>
+      </div>
+      {resultado && (
+        <div className="rounded-lg bg-emerald-50 p-3 text-sm text-emerald-800">
+          ✓ {resultado.novas} audiências na agenda ({resultado.vinculadas} vinculadas a processos).{" "}
+          <a href="/agenda" className="font-semibold underline">Ver agenda →</a>
+        </div>
+      )}
+    </Card>
+  );
+}
+
 export default function ConfiguracoesPage() {
   return (
     <div>
@@ -146,6 +193,7 @@ export default function ConfiguracoesPage() {
       <div className="space-y-4">
         <ImportarPlanilha />
         <ImportarContratos />
+        <ImportarAudiencias />
 
         <Card className="space-y-4 p-4">
           <h2 className="flex items-center gap-2 text-sm font-bold text-slate-900"><Database size={16} /> Backend (Supabase)</h2>
