@@ -36,6 +36,13 @@ export default function ClienteDetalhe() {
   const docs = documentos.filter((d) => d.cliente_id === cli.id);
   const emAberto = financeiro.filter((l) => l.tipo === "receita" && !l.pago_em).reduce((s, l) => s + l.valor, 0);
 
+  // Resumo contratado × recebido × em aberto (reproduz a antiga aba "Processos" da planilha)
+  const totalContratado = contratosCli.reduce((s, h) => s + (h.valor_fixo ?? 0), 0);
+  const totalRecebido = financeiro
+    .filter((l) => l.tipo === "receita" && l.pago_em)
+    .reduce((s, l) => s + l.valor, 0);
+  const saldoContrato = totalContratado - totalRecebido;
+
   return (
     <div className="space-y-4">
       <button onClick={() => router.back()} className="inline-flex items-center gap-1 text-sm text-slate-600 hover:text-slate-900">
@@ -50,6 +57,23 @@ export default function ClienteDetalhe() {
         {cli.endereco && <p className="flex items-center gap-2"><MapPin size={15} className="text-slate-400" /> {cli.endereco}</p>}
         {cli.notas && <p className="rounded-lg bg-amber-50 p-2.5 text-xs text-amber-900">📌 {cli.notas}</p>}
       </Card>
+
+      {totalContratado > 0 && (
+        <div className="grid grid-cols-3 gap-3">
+          <div className="rounded-xl border border-slate-200 bg-white p-3 text-center">
+            <p className="text-xs text-slate-500">Contratado</p>
+            <p className="mt-0.5 text-lg font-bold text-slate-900">{brl(totalContratado)}</p>
+          </div>
+          <div className="rounded-xl border border-slate-200 bg-white p-3 text-center">
+            <p className="text-xs text-slate-500">Recebido</p>
+            <p className="mt-0.5 text-lg font-bold text-emerald-700">{brl(totalRecebido)}</p>
+          </div>
+          <div className={`rounded-xl border p-3 text-center ${saldoContrato > 0 ? "border-amber-200 bg-amber-50" : "border-slate-200 bg-white"}`}>
+            <p className="text-xs text-slate-500">Em aberto</p>
+            <p className={`mt-0.5 text-lg font-bold ${saldoContrato > 0 ? "text-amber-700" : "text-slate-900"}`}>{brl(Math.max(0, saldoContrato))}</p>
+          </div>
+        </div>
+      )}
 
       <GerarDocumentos key={cli.id} cliente={cli} />
 

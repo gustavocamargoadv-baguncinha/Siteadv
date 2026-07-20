@@ -1,10 +1,17 @@
 "use client";
 
 import { useState } from "react";
-import { CheckCircle2, CircleAlert, Database, FileSpreadsheet, Radar, Smartphone, Trash2 } from "lucide-react";
+import { CheckCircle2, CircleAlert, Database, FileSignature, FileSpreadsheet, Radar, Smartphone, Trash2 } from "lucide-react";
 import { supabaseConfigurado } from "@/lib/supabase";
-import { importarDados2026, resetarDadosDemo, type ResultadoImportacao } from "@/lib/store";
+import {
+  importarContratosZapsign,
+  importarDados2026,
+  resetarDadosDemo,
+  type ResultadoContratos,
+  type ResultadoImportacao,
+} from "@/lib/store";
 import { CLIENTES_2026, LANCAMENTOS_2026 } from "@/lib/import-2026";
+import { CONTRATOS_ZAPSIGN } from "@/lib/import-contratos";
 import { brl } from "@/lib/format";
 import { Card, PageHeader } from "@/components/ui";
 
@@ -83,6 +90,54 @@ function ImportarPlanilha() {
   );
 }
 
+function ImportarContratos() {
+  const totalContratado = CONTRATOS_ZAPSIGN.reduce((s, c) => s + c.valor, 0);
+  const [rodando, setRodando] = useState(false);
+  const [resultado, setResultado] = useState<ResultadoContratos | null>(null);
+
+  async function importar() {
+    if (!confirm("Importar os 25 contratos do ZapSign? Isso cadastra/atualiza clientes, cria os processos e registra os contratos de honorários.")) return;
+    setRodando(true);
+    try {
+      setResultado(await importarContratosZapsign());
+    } finally {
+      setRodando(false);
+    }
+  }
+
+  return (
+    <Card className="space-y-3 p-4">
+      <h2 className="flex items-center gap-2 text-sm font-bold text-slate-900">
+        <FileSignature size={16} /> Importar contratos (ZapSign)
+      </h2>
+      <p className="text-sm text-slate-600">
+        Traz os <b>{CONTRATOS_ZAPSIGN.length} contratos</b> assinados ({brl(totalContratado)} contratados). Para cada um: o
+        contratante vira cliente (com CPF, RG, endereço e contato do contrato), o defendido e os autos viram um processo, e
+        o valor entra como contrato de honorários — <b>com o saldo em aberto</b> calculado sobre o que já foi pago. Nenhum
+        pagamento é recriado.
+      </p>
+      <p className="rounded-lg bg-amber-50 p-2.5 text-xs text-amber-900">
+        Importe <b>depois</b> dos dados da planilha 2026, para os nomes truncados serem completados em vez de duplicados.
+      </p>
+      <div>
+        <button
+          onClick={importar}
+          disabled={rodando}
+          className="rounded-lg bg-brand-600 px-3.5 py-2 text-sm font-semibold text-white transition hover:bg-brand-700 disabled:opacity-60"
+        >
+          {rodando ? "Importando…" : "Importar contratos do ZapSign"}
+        </button>
+      </div>
+      {resultado && (
+        <div className="rounded-lg bg-emerald-50 p-3 text-sm text-emerald-800">
+          ✓ {resultado.clientesEnriquecidos} clientes completados, {resultado.clientesNovos} novos, {resultado.processosNovos} processos e{" "}
+          {resultado.contratosNovos} contratos registrados. <a href="/processos" className="font-semibold underline">Ver processos →</a>
+        </div>
+      )}
+    </Card>
+  );
+}
+
 export default function ConfiguracoesPage() {
   return (
     <div>
@@ -90,6 +145,7 @@ export default function ConfiguracoesPage() {
 
       <div className="space-y-4">
         <ImportarPlanilha />
+        <ImportarContratos />
 
         <Card className="space-y-4 p-4">
           <h2 className="flex items-center gap-2 text-sm font-bold text-slate-900"><Database size={16} /> Backend (Supabase)</h2>

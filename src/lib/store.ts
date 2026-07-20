@@ -5,8 +5,9 @@
 
 import { DEMO_SEED } from "./demo-seed";
 import { CLIENTES_2026, LANCAMENTOS_2026 } from "./import-2026";
+import { CONTRATOS_ZAPSIGN } from "./import-contratos";
 import { getSupabase, supabaseConfigurado } from "./supabase";
-import type { Cliente, Lancamento, TableName } from "./types";
+import type { Cliente, ContratoHonorarios, Lancamento, Processo, TableName } from "./types";
 
 export interface Row {
   id: string;
@@ -189,4 +190,119 @@ export async function importarDados2026(limparAntes: boolean): Promise<Resultado
   }
 
   return { clientesNovos, lancamentosNovos, jaImportados };
+}
+
+export interface ResultadoContratos {
+  clientesNovos: number;
+  clientesEnriquecidos: number;
+  processosNovos: number;
+  contratosNovos: number;
+}
+
+/** Importa os contratos do ZapSign: cada contratante vira/atualiza um Cliente,
+ *  cada contrato vira um Processo (defendido + autos) e um Contrato de honorários.
+ *  Não recria pagamentos — o saldo em aberto sai dos recebimentos já importados.
+ *  Idempotente: processos e contratos usam ids estáveis (prefixo "impzp"). */
+export async function importarContratosZapsign(): Promise<ResultadoContratos> {
+  const s = getStore();
+  const clientes = await s.list<Cliente>("clientes");
+  const clientesPorId = new Map(clientes.map((c) => [c.id, c]));
+  const processosExistentes = new Set((await s.list<Processo>("processos")).map((p) => p.id));
+  const contratosExistentes = new Set((await s.list<ContratoHonorarios>("contratos_honorarios")).map((h) => h.id));
+
+  let clientesNovos = 0;
+  let clientesEnriquecidos = 0;
+  let processosNovos = 0;
+  let contratosNovos = 0;
+
+  for (const ct of CONTRATOS_ZAPSIGN) {
+    const notaRevisar = ct.revisar
+      ? " Vínculo provável com o pagamento do extrato — conferir se é a mesma pessoa."
+      : "";
+
+    // dados de qualificação vindos do contrato
+    const dadosCliente: Partial<Cliente> = {
+      nome: ct.contratante,
+      cpf_cnpj: ct.cpf || undefined,
+      rg: ct.rg || undefined,
+      nacionalidade: ct.nacionalidade || undefined,
+      estado_civil: ct.estado_civil || undefined,
+      profissao: ct.profissao || undefined,
+      endereco: ct.endereco || undefined,
+      email: ct.email || undefined,
+      telefone: ct.telefone || undefined,
+    };
+
+    // 1) resolver cliente (enriquecer o do extrato ou criar novo)
+    let clienteId: string;
+    const alvo = ct.match_id ? clientesPorId.get(ct.match_id) : undefined;
+    if (alvo) {
+      // preserva o que já existe; completa com os dados do contrato
+      const patch: Partial<Cliente> = {};
+      for (const [k, v] of Object.entries(dadosCliente)) {
+        if (v && !alvo[k as keyof Cliente]) (patch as Record<string, unknown>)[k] = v;
+      }
+      // nome truncado do extrato → nome completo do contrato
+      patch.nome = ct.contratante;
+      patch.notas = `${alvo.notas ? alvo.notas + " " : ""}Dados completados pelo contrato (ZapSign).${notaRevisar}`.trim();
+      await s.update<Cliente>("clientes", alvo.id, patch);
+      clienteId = alvo.id;
+      clientesEnriquecidos++;
+    } else {
+      const novoId = `impzp-c-${String(ct.idx).padStart(2, "0")}`;
+      if (!clientesPorId.has(novoId)) {
+        await s.insert<Cliente>("clientes", {
+          id: novoId,
+          tipo: "pf",
+          ...dadosCliente,
+          notas: `Cadastrado a partir do contrato (ZapSign).${notaRevisar}`,
+        } as Partial<Cliente>);
+        clientesNovos++;
+      }
+      clienteId = novoId;
+    }
+
+    // 2) processo (defendido + autos)
+    const processoId = `impzp-p-${String(ct.idx).padStart(2, "0")}`;
+    const defesaDe = ct.defendido ? ct.defendido : "o(a) próprio(a) contratante";
+    if (!processosExistentes.has(processoId)) {
+      await s.insert<Processo>("processos", {
+        id: processoId,
+        numero_cnj: ct.numero_cnj || undefined,
+        cliente_id: clienteId,
+        area: "criminal",
+        tribunal: "TJSP",
+        vara: ct.vara || undefined,
+        comarca: ct.comarca || undefined,
+        status: "ativo",
+        parte_contraria: "Ministério Público",
+        objeto: `Defesa de ${defesaDe}${ct.cpf_defendido ? ` (CPF ${ct.cpf_defendido})` : ""}${
+          ct.numero_cnj ? ` — autos ${ct.numero_cnj}` : ""
+        }. Origem: contrato ${ct.arquivo}.`,
+        monitorado: false,
+      } as Partial<Processo>);
+      processosNovos++;
+    }
+
+    // 3) contrato de honorários
+    const contratoId = `impzp-h-${String(ct.idx).padStart(2, "0")}`;
+    const parcela = Math.round((ct.valor / ct.parcelas) * 100) / 100;
+    if (!contratosExistentes.has(contratoId)) {
+      await s.insert<ContratoHonorarios>("contratos_honorarios", {
+        id: contratoId,
+        cliente_id: clienteId,
+        processo_id: processoId,
+        tipo: "fixo",
+        valor_fixo: ct.valor,
+        descricao: `${ct.parcelas}x de ${parcela.toLocaleString("pt-BR", {
+          style: "currency",
+          currency: "BRL",
+        })} — defesa de ${defesaDe}. Assinado em ${ct.assinatura} (${ct.status_contrato}).`,
+        status: "ativo",
+      } as Partial<ContratoHonorarios>);
+      contratosNovos++;
+    }
+  }
+
+  return { clientesNovos, clientesEnriquecidos, processosNovos, contratosNovos };
 }
