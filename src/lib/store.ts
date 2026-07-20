@@ -244,7 +244,10 @@ export async function importarContratosZapsign(): Promise<ResultadoContratos> {
       }
       // nome truncado do extrato → nome completo do contrato
       patch.nome = ct.contratante;
-      patch.notas = `${alvo.notas ? alvo.notas + " " : ""}Dados completados pelo contrato (ZapSign).${notaRevisar}`.trim();
+      // nota idempotente: remove qualquer nota ZapSign anterior antes de reescrever,
+      // para reimportar não empilhar o mesmo texto várias vezes
+      const notaBase = (alvo.notas ?? "").split("Dados completados pelo contrato")[0].trim();
+      patch.notas = `${notaBase ? notaBase + " " : ""}Dados completados pelo contrato (ZapSign).${notaRevisar}`.trim();
       await s.update<Cliente>("clientes", alvo.id, patch);
       clienteId = alvo.id;
       clientesEnriquecidos++;
