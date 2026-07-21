@@ -328,6 +328,20 @@ export async function importarContratosZapsign(): Promise<ResultadoContratos> {
         await s.update<Cliente>("clientes", alvo.id, patch);
         clientesEnriquecidos++;
       }
+    } else {
+      // cliente que ainda não existia no sistema (contrato presencial/eletrônico
+      // de quem não aparecia no extrato). Cria com os dados informados.
+      await s.insert<Cliente>("clientes", {
+        id: cm.cliente_id,
+        tipo: "pf",
+        nome: cm.contratante,
+        cpf_cnpj: cm.cpf || undefined,
+        rg: cm.rg || undefined,
+        endereco: cm.endereco || undefined,
+        notas: `Contrato combinado (fora do ZapSign).${cm.nota ? " " + cm.nota : ""}`.trim(),
+      } as Partial<Cliente>);
+      clientesPorId.set(cm.cliente_id, { id: cm.cliente_id } as Cliente);
+      clientesNovos++;
     }
 
     // entrada já paga antes do período do extrato importado
@@ -514,9 +528,11 @@ export async function gerarParcelasVincendas(): Promise<ResultadoVincendas> {
   }
 
   const pagosPorCliente = new Map<string, number>();
+  const pagoEmData = new Set<string>(); // "cliente_id|vencimento" já quitado nessa data
   for (const l of lancs) {
     if (l.tipo === "receita" && l.pago_em && l.cliente_id && !l.id.startsWith("impzp-venc-")) {
       pagosPorCliente.set(l.cliente_id, (pagosPorCliente.get(l.cliente_id) ?? 0) + l.valor);
+      pagoEmData.add(`${l.cliente_id}|${l.vencimento}`);
     }
   }
 
@@ -569,12 +585,18 @@ export async function gerarParcelasVincendas(): Promise<ResultadoVincendas> {
     const baseISO = base.toISOString().slice(0, 10);
 
     let gerouAlguma = false;
-    for (let i = 0; i < nRestantes; i++) {
-      const venc = somaMesesData(baseISO, i);
-      const ultima = i === nRestantes - 1;
+    let colocadas = 0; // parcelas a vencer já geradas
+    let mes = 0; // deslocamento de meses a partir do primeiro vencimento
+    // gera exatamente nRestantes parcelas, pulando os meses cuja data já foi
+    // quitada (ex.: 1ª parcela paga na assinatura, no próprio dia do vencimento)
+    while (colocadas < nRestantes && mes < nRestantes + 12) {
+      const venc = somaMesesData(baseISO, mes);
+      mes++;
+      if (pagoEmData.has(`${cm.cliente_id}|${venc}`)) continue;
+      const ultima = colocadas === nRestantes - 1;
       const valor = ultima ? Math.round((saldo - cm.parcela_valor * (nRestantes - 1)) * 100) / 100 : cm.parcela_valor;
       await s.insert<Lancamento>("lancamentos", {
-        id: `impzp-venc-${String(cm.idx).padStart(2, "0")}-${i + 1}`,
+        id: `impzp-venc-${String(cm.idx).padStart(2, "0")}-${colocadas + 1}`,
         tipo: "receita",
         categoria: "Honorários",
         cliente_id: cm.cliente_id,
@@ -583,6 +605,7 @@ export async function gerarParcelasVincendas(): Promise<ResultadoVincendas> {
         valor,
         vencimento: venc,
       } as Partial<Lancamento>);
+      colocadas++;
       parcelasGeradas++;
       gerouAlguma = true;
     }

@@ -86,4 +86,20 @@ export const CONTRATOS_MANUAIS: ContratoManual[] = [
     observacao: "R$ 8.000: entrada de R$ 2.000 (paga em 19/11/2025) + 10x de R$ 600 (dia 20, desde dez/2025).",
     entrada: { valor: 2000, data: "2025-11-19" },
   },
+  {
+    idx: 106,
+    cliente_id: "impzp-c-106", // cliente nova (não estava no extrato) — criada na importação
+    contratante: "Cristiane Roberta Rodrigues da Costa",
+    defendido: "David Ribeiro de Oliveira",
+    valor: 2700,
+    parcela_valor: 450,
+    parcelas: 6,
+    dia_venc: 21,
+    cpf: "321.400.418-28",
+    rg: "45.140.873-1",
+    endereco: "Rua Julio Stein 33, Jardim Paraíso, Indaiatuba-SP",
+    nota: "Defendido: David Ribeiro de Oliveira — CPF 409.522.918-78. Contrato eletrônico (ZapSign), 1ª parcela paga na assinatura.",
+    observacao: "R$ 2.700: 6x de R$ 450 (dia 21) — 1ª parcela paga na assinatura em 21/07/2026, restam 5.",
+    entrada: { valor: 450, data: "2026-07-21" },
+  },
 ];
