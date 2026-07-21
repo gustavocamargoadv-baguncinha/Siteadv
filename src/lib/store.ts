@@ -6,6 +6,7 @@
 import { DEMO_SEED } from "./demo-seed";
 import { CLIENTES_2026, LANCAMENTOS_2026 } from "./import-2026";
 import { CONTRATOS_ZAPSIGN } from "./import-contratos";
+import { CONTRATOS_MANUAIS } from "./import-contratos-extra";
 import { AUDIENCIAS_ESAJ } from "./import-audiencias";
 import { getSupabase, supabaseConfigurado } from "./supabase";
 import type { Andamento, Cliente, ContratoHonorarios, EventoAgenda, Lancamento, Processo, TableName } from "./types";
@@ -308,6 +309,50 @@ export async function importarContratosZapsign(): Promise<ResultadoContratos> {
     }
   }
 
+  // Contratos combinados fora do ZapSign (informados manualmente), vinculados a
+  // clientes que já existem.
+  for (const cm of CONTRATOS_MANUAIS) {
+    const alvo = clientesPorId.get(cm.cliente_id);
+    if (alvo) {
+      const patch: Partial<Cliente> = {};
+      if (cm.contratante && cm.contratante !== alvo.nome) patch.nome = cm.contratante;
+      if (Object.keys(patch).length) {
+        await s.update<Cliente>("clientes", alvo.id, patch);
+        clientesEnriquecidos++;
+      }
+    }
+
+    const procId = `impzp-p-${String(cm.idx).padStart(2, "0")}`;
+    if (!processosExistentes.has(procId)) {
+      await s.insert<Processo>("processos", {
+        id: procId,
+        numero_cnj: cm.numero_cnj || undefined,
+        cliente_id: cm.cliente_id,
+        area: "criminal",
+        tribunal: "TJSP",
+        status: "ativo",
+        parte_contraria: "Ministério Público",
+        objeto: `Defesa de ${cm.defendido}${cm.numero_cnj ? ` — autos ${cm.numero_cnj}` : ""}. Contrato combinado (fora do ZapSign).`,
+        monitorado: false,
+      } as Partial<Processo>);
+      processosNovos++;
+    }
+
+    const contId = `impzp-h-${String(cm.idx).padStart(2, "0")}`;
+    if (!contratosExistentes.has(contId)) {
+      await s.insert<ContratoHonorarios>("contratos_honorarios", {
+        id: contId,
+        cliente_id: cm.cliente_id,
+        processo_id: procId,
+        tipo: "fixo",
+        valor_fixo: cm.valor,
+        descricao: `${cm.observacao ?? `${cm.parcelas}x de ${cm.parcela_valor.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}`} — defesa de ${cm.defendido}.`,
+        status: "ativo",
+      } as Partial<ContratoHonorarios>);
+      contratosNovos++;
+    }
+  }
+
   return { clientesNovos, clientesEnriquecidos, processosNovos, contratosNovos };
 }
 
@@ -475,6 +520,41 @@ export async function gerarParcelasVincendas(): Promise<ResultadoVincendas> {
         cliente_id: clienteId,
         processo_id: `impzp-p-${String(ct.idx).padStart(2, "0")}`,
         descricao: `Parcela ${k}/${ct.parcelas} — honorários (${ct.contratante})`,
+        valor,
+        vencimento: venc,
+      } as Partial<Lancamento>);
+      parcelasGeradas++;
+      gerouAlguma = true;
+    }
+    if (gerouAlguma) contratos++;
+  }
+
+  // Contratos combinados (fora do ZapSign): cadência a partir do dia médio de
+  // pagamento do cliente, começando na próxima ocorrência desse dia.
+  const hojeD = new Date();
+  for (const cm of CONTRATOS_MANUAIS) {
+    const jaPago = pagosPorCliente.get(cm.cliente_id) ?? 0;
+    const saldo = Math.round((cm.valor - jaPago) * 100) / 100;
+    if (saldo < 0.5) continue; // quitado
+    const nRestantes = Math.max(1, Math.round(saldo / cm.parcela_valor));
+
+    // primeiro vencimento: próxima ocorrência do dia_venc a partir de hoje
+    let base = new Date(hojeD.getFullYear(), hojeD.getMonth(), cm.dia_venc);
+    if (base.toISOString().slice(0, 10) < cutoff) base = new Date(hojeD.getFullYear(), hojeD.getMonth() + 1, cm.dia_venc);
+    const baseISO = base.toISOString().slice(0, 10);
+
+    let gerouAlguma = false;
+    for (let i = 0; i < nRestantes; i++) {
+      const venc = somaMesesData(baseISO, i);
+      const ultima = i === nRestantes - 1;
+      const valor = ultima ? Math.round((saldo - cm.parcela_valor * (nRestantes - 1)) * 100) / 100 : cm.parcela_valor;
+      await s.insert<Lancamento>("lancamentos", {
+        id: `impzp-venc-${String(cm.idx).padStart(2, "0")}-${i + 1}`,
+        tipo: "receita",
+        categoria: "Honorários",
+        cliente_id: cm.cliente_id,
+        processo_id: `impzp-p-${String(cm.idx).padStart(2, "0")}`,
+        descricao: `Parcela a vencer — honorários (${cm.contratante})`,
         valor,
         vencimento: venc,
       } as Partial<Lancamento>);
