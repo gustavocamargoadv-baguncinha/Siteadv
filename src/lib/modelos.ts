@@ -244,7 +244,17 @@ das atividades pactuadas, vier a praticar com dolo ou culpa, gerando, comprovada
 <p style="margin-top:24px"><b>4.&nbsp;&nbsp;DO FORO</b></p>
 <p><b>Cláusula 9ª.</b> Para dirimir quaisquer controvérsias oriundas deste contrato, as partes elegem
 o foro da comarca de ${esc(ESCRITORIO.comarcaForo)}.</p>
-<p>Por estarem assim justos e contratados, firmam o presente instrumento, em duas vias de igual teor.</p>
+
+<p style="margin-top:24px"><b>5.&nbsp;&nbsp;DA FORMA E DA ASSINATURA ELETRÔNICA</b></p>
+<p><b>Cláusula 10ª.</b> O presente contrato é celebrado e firmado por meio de <b>assinatura eletrônica</b>,
+em plataforma digital que assegura a autenticidade, a integridade e a autoria das assinaturas. As partes
+reconhecem, desde já, a plena validade jurídica desta forma de contratação, nos termos da <b>Medida
+Provisória nº 2.200-2/2001</b>, da <b>Lei nº 14.063/2020</b> e do <b>art. 784, §4º, do Código de Processo
+Civil</b> (incluído pela Lei nº 14.620/2023), o qual <b>dispensa a assinatura de duas testemunhas</b> nos
+documentos assinados eletronicamente cuja integridade seja conferida por provedor de assinatura.</p>
+<p><b>Parágrafo único.</b> Por ser firmado em meio eletrônico, o presente instrumento é gerado em
+<b>via única de idêntico teor</b>, dispensada a emissão de vias físicas, tendo o arquivo digital assinado
+plena eficácia e força executiva entre as partes.</p>
 
 <p class="data">${esc(ESCRITORIO.cidade)}, ${dataPorExtensoHoje()}.</p>
 
@@ -253,10 +263,6 @@ o foro da comarca de ${esc(ESCRITORIO.comarcaForo)}.</p>
 
 <div class="bloco-ass"><b>Contratado:</b> ADVOGADO – ${esc(ESCRITORIO.oab)} ${esc(ESCRITORIO.oabNumero)}<br><br>
 <span style="display:inline-block;border-top:1px solid #111;min-width:340px;margin-top:34px"></span></div>
-
-<div class="bloco-ass"><b>Testemunhas:</b><br><br>
-1. <span style="display:inline-block;border-top:1px solid #111;min-width:300px;margin-top:30px"></span><br><br>
-2. <span style="display:inline-block;border-top:1px solid #111;min-width:300px;margin-top:10px"></span></div>
 `;
   return pagina(`Contrato de honorários — ${d.contratante.nome}`, corpo, { serifa: true });
 }
