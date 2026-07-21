@@ -35,14 +35,23 @@ export interface MovDataJud {
   descricao: string;
 }
 
-/** Busca as movimentações de um processo na API Pública do DataJud. */
-export async function buscarMovimentosDataJud(cnjDigitos: string): Promise<MovDataJud[]> {
+/** Busca as movimentações de um processo na API Pública do DataJud.
+ *  Com timeout: se o tribunal demorar, aborta para não travar a requisição. */
+export async function buscarMovimentosDataJud(cnjDigitos: string, timeoutMs = 7000): Promise<MovDataJud[]> {
   const alias = aliasTribunal(cnjDigitos);
-  const res = await fetch(`https://api-publica.datajud.cnj.jus.br/api_publica_${alias}/_search`, {
-    method: "POST",
-    headers: { Authorization: `APIKey ${CHAVE_PUBLICA}`, "Content-Type": "application/json" },
-    body: JSON.stringify({ query: { match: { numeroProcesso: cnjDigitos } }, size: 1 }),
-  });
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), timeoutMs);
+  let res: Response;
+  try {
+    res = await fetch(`https://api-publica.datajud.cnj.jus.br/api_publica_${alias}/_search`, {
+      method: "POST",
+      headers: { Authorization: `APIKey ${CHAVE_PUBLICA}`, "Content-Type": "application/json" },
+      body: JSON.stringify({ query: { match: { numeroProcesso: cnjDigitos } }, size: 1 }),
+      signal: ctrl.signal,
+    });
+  } finally {
+    clearTimeout(timer);
+  }
   if (!res.ok) throw new Error(`DataJud (${alias}) respondeu ${res.status}`);
   const json = await res.json();
   const fonte = json?.hits?.hits?.[0]?._source;
