@@ -1,10 +1,11 @@
 "use client";
 
 import { useState } from "react";
-import { CalendarClock, CheckCircle2, CircleAlert, Database, FileSignature, FileSpreadsheet, RefreshCw, Radar, Smartphone, Trash2 } from "lucide-react";
+import { CalendarClock, CalendarPlus, CheckCircle2, CircleAlert, Database, FileSignature, FileSpreadsheet, RefreshCw, Radar, Smartphone, Trash2 } from "lucide-react";
 import { supabaseConfigurado } from "@/lib/supabase";
 import {
   atualizarMovimentacoesDataJud,
+  gerarParcelasVincendas,
   importarAudienciasEsaj,
   importarContratosZapsign,
   importarDados2026,
@@ -13,6 +14,7 @@ import {
   type ResultadoContratos,
   type ResultadoDataJud,
   type ResultadoImportacao,
+  type ResultadoVincendas,
 } from "@/lib/store";
 import { CLIENTES_2026, LANCAMENTOS_2026 } from "@/lib/import-2026";
 import { CONTRATOS_ZAPSIGN } from "@/lib/import-contratos";
@@ -234,6 +236,49 @@ function AtualizarDataJud() {
   );
 }
 
+function GerarVincendas() {
+  const [rodando, setRodando] = useState(false);
+  const [resultado, setResultado] = useState<ResultadoVincendas | null>(null);
+
+  async function gerar() {
+    if (!confirm("Gerar as parcelas a vencer dos contratos no Financeiro? (Pode rodar de novo quando quiser — ele refaz as parcelas futuras.)")) return;
+    setRodando(true);
+    try {
+      setResultado(await gerarParcelasVincendas());
+    } finally {
+      setRodando(false);
+    }
+  }
+
+  return (
+    <Card className="space-y-3 p-4">
+      <h2 className="flex items-center gap-2 text-sm font-bold text-slate-900">
+        <CalendarPlus size={16} /> Gerar parcelas a vencer (contratos)
+      </h2>
+      <p className="text-sm text-slate-600">
+        Lê os contratos, desconta o que cada cliente já pagou e lança no Financeiro as <b>parcelas que ainda vão vencer</b>
+        {" "}(mensais, a partir do dia da assinatura de cada contrato). Não duplica o que já entrou. Assim você vê os
+        recebimentos futuros em <b>A receber</b>.
+      </p>
+      <div>
+        <button
+          onClick={gerar}
+          disabled={rodando}
+          className="rounded-lg bg-brand-600 px-3.5 py-2 text-sm font-semibold text-white transition hover:bg-brand-700 disabled:opacity-60"
+        >
+          {rodando ? "Gerando…" : "Gerar parcelas a vencer"}
+        </button>
+      </div>
+      {resultado && (
+        <div className="rounded-lg bg-emerald-50 p-3 text-sm text-emerald-800">
+          ✓ {resultado.parcelasGeradas} parcelas futuras lançadas ({resultado.contratos} contratos com saldo).{" "}
+          <a href="/financeiro" className="font-semibold underline">Ver no Financeiro →</a>
+        </div>
+      )}
+    </Card>
+  );
+}
+
 export default function ConfiguracoesPage() {
   return (
     <div>
@@ -242,6 +287,7 @@ export default function ConfiguracoesPage() {
       <div className="space-y-4">
         <ImportarPlanilha />
         <ImportarContratos />
+        <GerarVincendas />
         <ImportarAudiencias />
         <AtualizarDataJud />
 

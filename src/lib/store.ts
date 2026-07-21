@@ -415,3 +415,74 @@ export async function atualizarMovimentacoesDataJud(): Promise<ResultadoDataJud>
 
   return { processosConsultados: numeros.length, andamentosNovos, erros };
 }
+
+export interface ResultadoVincendas {
+  contratos: number;
+  parcelasGeradas: number;
+}
+
+function somaMesesData(iso: string, meses: number): string {
+  const [a, m, d] = iso.slice(0, 10).split("-").map(Number);
+  const alvo = new Date(a, m - 1 + meses, 1);
+  const ultimoDia = new Date(alvo.getFullYear(), alvo.getMonth() + 1, 0).getDate();
+  alvo.setDate(Math.min(d, ultimoDia));
+  return `${alvo.getFullYear()}-${String(alvo.getMonth() + 1).padStart(2, "0")}-${String(alvo.getDate()).padStart(2, "0")}`;
+}
+
+/** Gera as parcelas AINDA A VENCER de cada contrato (ZapSign), lançando-as no
+ *  Financeiro como recebimentos futuros. Desconta o que o cliente já pagou (não
+ *  duplica), segue a cadência mensal a partir do dia da assinatura e só cria as
+ *  parcelas com vencimento a partir do mês atual. Pode rodar de novo: as parcelas
+ *  a vencer geradas antes (id "impzp-venc-") são substituídas. */
+export async function gerarParcelasVincendas(): Promise<ResultadoVincendas> {
+  const s = getStore();
+  const lancs = await s.list<Lancamento>("lancamentos");
+
+  // remove as parcelas a vencer geradas em execuções anteriores (recomeça limpo)
+  for (const l of lancs.filter((x) => x.id.startsWith("impzp-venc-"))) {
+    await s.remove("lancamentos", l.id);
+  }
+
+  const pagosPorCliente = new Map<string, number>();
+  for (const l of lancs) {
+    if (l.tipo === "receita" && l.pago_em && l.cliente_id && !l.id.startsWith("impzp-venc-")) {
+      pagosPorCliente.set(l.cliente_id, (pagosPorCliente.get(l.cliente_id) ?? 0) + l.valor);
+    }
+  }
+
+  const cutoff = new Date().toISOString().slice(0, 10); // só parcelas de hoje pra frente
+
+  let contratos = 0;
+  let parcelasGeradas = 0;
+
+  for (const ct of CONTRATOS_ZAPSIGN) {
+    const clienteId = ct.match_id ?? `impzp-c-${String(ct.idx).padStart(2, "0")}`;
+    const parcela = Math.round((ct.valor / ct.parcelas) * 100) / 100;
+    const jaPago = pagosPorCliente.get(clienteId) ?? 0;
+    const pagas = Math.min(ct.parcelas, Math.max(0, Math.round(jaPago / parcela)));
+    if (pagas >= ct.parcelas) continue; // contrato quitado
+
+    let gerouAlguma = false;
+    for (let k = pagas + 1; k <= ct.parcelas; k++) {
+      const venc = somaMesesData(ct.assinatura, k - 1);
+      if (venc < cutoff) continue; // parcela no passado — assume-se resolvida (saldo fica na ficha do cliente)
+      const ultima = k === ct.parcelas;
+      const valor = ultima ? Math.round((ct.valor - parcela * (ct.parcelas - 1)) * 100) / 100 : parcela;
+      await s.insert<Lancamento>("lancamentos", {
+        id: `impzp-venc-${String(ct.idx).padStart(2, "0")}-${k}`,
+        tipo: "receita",
+        categoria: "Honorários",
+        cliente_id: clienteId,
+        processo_id: `impzp-p-${String(ct.idx).padStart(2, "0")}`,
+        descricao: `Parcela ${k}/${ct.parcelas} — honorários (${ct.contratante})`,
+        valor,
+        vencimento: venc,
+      } as Partial<Lancamento>);
+      parcelasGeradas++;
+      gerouAlguma = true;
+    }
+    if (gerouAlguma) contratos++;
+  }
+
+  return { contratos, parcelasGeradas };
+}
