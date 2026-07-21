@@ -16,6 +16,13 @@ export interface ContratoManual {
   parcelas: number; // nº total de parcelas
   dia_venc: number; // dia do mês de vencimento (média dos pagamentos)
   observacao?: string;
+  // qualificação do contratante, quando conhecida (contrato em mãos)
+  cpf?: string;
+  rg?: string;
+  endereco?: string;
+  nota?: string; // ex.: quem é o pagador (terceiro)
+  // entrada já paga antes do período do extrato importado
+  entrada?: { valor: number; data: string };
 }
 
 export const CONTRATOS_MANUAIS: ContratoManual[] = [
@@ -61,5 +68,22 @@ export const CONTRATOS_MANUAIS: ContratoManual[] = [
     parcelas: 10,
     dia_venc: 16,
     observacao: "Contratado em setembro/2025.",
+  },
+  {
+    idx: 105,
+    cliente_id: "imp26c-valquiriapach", // conta pela qual entram os pagamentos (Valquíria)
+    contratante: "Valdeci Silvestre Machado",
+    defendido: "Valdeci Silvestre Machado (em nome próprio)",
+    numero_cnj: "1500298-89.2025.8.26.0470",
+    valor: 8000,
+    parcela_valor: 600,
+    parcelas: 10,
+    dia_venc: 20,
+    cpf: "197.268.788-37",
+    rg: "28.50.172-6 SSP/SP",
+    endereco: "Rua João Higino de Meira 44, Floresta I, Guareí-SP, CEP 18.252-006",
+    nota: "Pagamentos efetuados por Valquíria (terceiro). Inquéritos 1500298-89 e 1500241-71.2025.8.26.0470.",
+    observacao: "R$ 8.000: entrada de R$ 2.000 (paga em 19/11/2025) + 10x de R$ 600 (dia 20, desde dez/2025).",
+    entrada: { valor: 2000, data: "2025-11-19" },
   },
 ];

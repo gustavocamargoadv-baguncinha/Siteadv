@@ -211,6 +211,7 @@ export async function importarContratosZapsign(): Promise<ResultadoContratos> {
   const clientesPorId = new Map(clientes.map((c) => [c.id, c]));
   const processosExistentes = new Set((await s.list<Processo>("processos")).map((p) => p.id));
   const contratosExistentes = new Set((await s.list<ContratoHonorarios>("contratos_honorarios")).map((h) => h.id));
+  const lancExistentes = new Set((await s.list<Lancamento>("lancamentos")).map((l) => l.id));
 
   let clientesNovos = 0;
   let clientesEnriquecidos = 0;
@@ -316,9 +317,33 @@ export async function importarContratosZapsign(): Promise<ResultadoContratos> {
     if (alvo) {
       const patch: Partial<Cliente> = {};
       if (cm.contratante && cm.contratante !== alvo.nome) patch.nome = cm.contratante;
+      if (cm.cpf && !alvo.cpf_cnpj) patch.cpf_cnpj = cm.cpf;
+      if (cm.rg && !alvo.rg) patch.rg = cm.rg;
+      if (cm.endereco && !alvo.endereco) patch.endereco = cm.endereco;
+      if (cm.nota) {
+        const base = (alvo.notas ?? "").split("Contrato combinado")[0].trim();
+        patch.notas = `${base ? base + " " : ""}Contrato combinado (fora do ZapSign). ${cm.nota}`.trim();
+      }
       if (Object.keys(patch).length) {
         await s.update<Cliente>("clientes", alvo.id, patch);
         clientesEnriquecidos++;
+      }
+    }
+
+    // entrada já paga antes do período do extrato importado
+    if (cm.entrada) {
+      const entradaId = `impzp-entrada-${String(cm.idx).padStart(2, "0")}`;
+      if (!lancExistentes.has(entradaId)) {
+        await s.insert<Lancamento>("lancamentos", {
+          id: entradaId,
+          tipo: "receita",
+          categoria: "Honorários",
+          cliente_id: cm.cliente_id,
+          descricao: `Entrada — honorários (${cm.contratante})`,
+          valor: cm.entrada.valor,
+          vencimento: cm.entrada.data,
+          pago_em: cm.entrada.data,
+        } as Partial<Lancamento>);
       }
     }
 
