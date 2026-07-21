@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { CalendarClock, CalendarPlus, CheckCircle2, CircleAlert, Database, FileSignature, FileSpreadsheet, RefreshCw, Radar, Smartphone, Trash2 } from "lucide-react";
+import { useEffect, useState } from "react";
+import { CalendarCheck, CalendarClock, CalendarPlus, CheckCircle2, CircleAlert, Copy, Database, FileSignature, FileSpreadsheet, RefreshCw, Radar, Smartphone, Trash2 } from "lucide-react";
 import { supabaseConfigurado } from "@/lib/supabase";
 import {
   atualizarMovimentacoesDataJud,
@@ -279,12 +279,64 @@ function GerarVincendas() {
   );
 }
 
+function GoogleAgenda() {
+  const [origin, setOrigin] = useState("");
+  const [copiado, setCopiado] = useState(false);
+  useEffect(() => setOrigin(window.location.origin), []);
+  const urlModelo = `${origin || "https://seu-site.vercel.app"}/api/calendar/feed?token=SEU_TOKEN`;
+
+  return (
+    <Card className="space-y-3 p-4">
+      <h2 className="flex items-center gap-2 text-sm font-bold text-slate-900">
+        <CalendarCheck size={16} /> Google Agenda (audiências no celular)
+      </h2>
+      <p className="text-sm text-slate-600">
+        Suas audiências e compromissos podem aparecer no seu <b>Google Agenda</b> (com alarme), atualizando sozinhos.
+        Você assina o link abaixo <b>uma vez</b> — sem instalar nada.
+      </p>
+      <ol className="list-decimal space-y-1.5 pl-5 text-sm text-slate-600">
+        <li>
+          Na <b>Vercel</b> → Settings → Environment Variables, crie <span className="font-mono text-xs">CALENDAR_FEED_TOKEN</span> com
+          uma senha longa que você inventar (ex.: <span className="font-mono text-xs">camargo-2026-x9f2</span>) e faça <b>Redeploy</b>.
+        </li>
+        <li>
+          Monte seu link trocando <span className="font-mono text-xs">SEU_TOKEN</span> pela senha que criou:
+          <div className="mt-1 flex items-center gap-2">
+            <code className="block flex-1 overflow-x-auto rounded-lg bg-slate-900 px-2.5 py-1.5 text-xs text-slate-100">{urlModelo}</code>
+            <button
+              onClick={() => {
+                navigator.clipboard.writeText(urlModelo);
+                setCopiado(true);
+                setTimeout(() => setCopiado(false), 1500);
+              }}
+              className="shrink-0 rounded-lg border border-slate-300 p-1.5 text-slate-600 hover:bg-slate-50"
+              title="Copiar"
+            >
+              <Copy size={15} />
+            </button>
+          </div>
+          {copiado && <span className="text-xs text-emerald-700">copiado!</span>}
+        </li>
+        <li>
+          No computador, abra o <b>Google Agenda</b> → menu <b>Outras agendas</b> (＋) → <b>De URL</b> → cole o link → <b>Adicionar agenda</b>.
+        </li>
+        <li>Pronto! No celular, ative essa agenda no app do Google Agenda. As audiências aparecem com alarme 2h antes.</li>
+      </ol>
+      <p className="rounded-lg bg-amber-50 p-2.5 text-xs text-amber-900">
+        O Google atualiza o feed de tempos em tempos (pode levar algumas horas para uma audiência nova aparecer). O link é
+        secreto — só compartilhe com você mesmo.
+      </p>
+    </Card>
+  );
+}
+
 export default function ConfiguracoesPage() {
   return (
     <div>
       <PageHeader titulo="Configurações" sub="Estado do sistema e integrações" />
 
       <div className="space-y-4">
+        <GoogleAgenda />
         <ImportarPlanilha />
         <ImportarContratos />
         <GerarVincendas />
