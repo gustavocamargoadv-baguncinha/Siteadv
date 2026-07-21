@@ -170,18 +170,30 @@ export interface DadosContrato {
   valorTotal: number;
   parcelas: number;
   primeiroVencimento: string; // ISO date
+  diaVencimento?: number; // dia fixo do mês combinado (1-31); usado quando a 1ª já foi paga
+  primeiraPaga?: boolean; // primeira parcela já quitada antes da assinatura
 }
 
 export function contratoHTML(d: DadosContrato): string {
   const valorParcela = Math.round((d.valorTotal / d.parcelas) * 100) / 100;
   const venc = dataBR(d.primeiroVencimento);
+  // Dia do vencimento combinado: usa o informado ou deduz da data do 1º vencimento.
+  const dia = d.diaVencimento ?? new Date(`${d.primeiroVencimento}T12:00:00`).getDate();
 
-  const pagamento =
-    d.parcelas === 1
-      ? `a importância de <b>${brl(d.valorTotal)} (${valorPorExtenso(d.valorTotal)})</b>, com vencimento em ${venc}.`
-      : `a importância equivalente a <b>${brl(d.valorTotal)} (${valorPorExtenso(d.valorTotal)})</b> em
+  let pagamento: string;
+  if (d.parcelas === 1) {
+    pagamento = d.primeiraPaga
+      ? `a importância de <b>${brl(d.valorTotal)} (${valorPorExtenso(d.valorTotal)})</b>, já quitada na presente data.`
+      : `a importância de <b>${brl(d.valorTotal)} (${valorPorExtenso(d.valorTotal)})</b>, com vencimento em ${venc}.`;
+  } else if (d.primeiraPaga) {
+    pagamento = `a importância equivalente a <b>${brl(d.valorTotal)} (${valorPorExtenso(d.valorTotal)})</b>, a serem
+pagos em ${d.parcelas} (${valorPorExtenso(d.parcelas).replace(/ reais?$/i, "")}) parcelas iguais de ${brl(valorParcela)}
+(${valorPorExtenso(valorParcela)}), com vencimento para todo dia ${dia}, sendo a primeira parcela já quitada na presente data.`;
+  } else {
+    pagamento = `a importância equivalente a <b>${brl(d.valorTotal)} (${valorPorExtenso(d.valorTotal)})</b> em
 ${d.parcelas} parcelas iguais de ${brl(valorParcela)} (${valorPorExtenso(valorParcela)}), com a primeira
 parcela para o dia ${venc} e as demais para o mesmo dia dos meses subsequentes.`;
+  }
 
   const corpo = `
 <h1 style="text-align:left;font-size:13.5pt">CONTRATO DE PRESTAÇÃO DE SERVIÇOS ADVOCATÍCIOS</h1>

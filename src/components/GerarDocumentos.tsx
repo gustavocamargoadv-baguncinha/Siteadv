@@ -61,6 +61,7 @@ export function GerarDocumentos({ cliente }: { cliente: Cliente }) {
   const [objeto, setObjeto] = useState("");
   const [objetoEditado, setObjetoEditado] = useState(false);
   const [lancarFinanceiro, setLancarFinanceiro] = useState(true);
+  const [primeiraPaga, setPrimeiraPaga] = useState(false);
 
   const cliMap = byId(clientes);
 
@@ -103,6 +104,7 @@ export function GerarDocumentos({ cliente }: { cliente: Cliente }) {
       setObjeto("");
       setObjetoEditado(false);
       setLancarFinanceiro(true);
+      setPrimeiraPaga(false);
     }
     setModal(tipo);
   }
@@ -151,6 +153,9 @@ export function GerarDocumentos({ cliente }: { cliente: Cliente }) {
     const n = Math.max(1, parseInt(parcelas, 10) || 1);
     if (!valorTotal || valorTotal <= 0 || !vencimento || !objeto.trim() || !defendidoNome) return;
 
+    const hoje = new Date().toISOString().slice(0, 10);
+    const diaVenc = new Date(`${vencimento}T12:00:00`).getDate();
+
     await persistirCadastro();
     abrirDocumento(
       contratoHTML({
@@ -159,6 +164,8 @@ export function GerarDocumentos({ cliente }: { cliente: Cliente }) {
         valorTotal,
         parcelas: n,
         primeiroVencimento: vencimento,
+        diaVencimento: diaVenc,
+        primeiraPaga,
       })
     );
 
@@ -176,6 +183,9 @@ export function GerarDocumentos({ cliente }: { cliente: Cliente }) {
       for (let i = 0; i < n; i++) {
         const ultima = i === n - 1;
         const valorDesta = ultima ? Math.round((valorTotal - valorParcela * (n - 1)) * 100) / 100 : valorParcela;
+        // Quando a 1ª parcela já foi paga antes da assinatura, ela entra como
+        // recebida (pago_em = hoje) e as demais vencem no mesmo dia dos meses seguintes.
+        const primeiraJaPaga = primeiraPaga && i === 0;
         await addLancamento({
           tipo: "receita",
           categoria: "Honorários",
@@ -183,7 +193,8 @@ export function GerarDocumentos({ cliente }: { cliente: Cliente }) {
           processo_id: procId,
           descricao: `Parcela ${i + 1}/${n} — honorários (defesa de ${defendidoNome})`,
           valor: valorDesta,
-          vencimento: somaMeses(vencimento, i),
+          vencimento: primeiraJaPaga ? hoje : somaMeses(vencimento, i),
+          ...(primeiraJaPaga ? { pago_em: hoje } : {}),
         });
       }
     }
@@ -333,6 +344,18 @@ export function GerarDocumentos({ cliente }: { cliente: Cliente }) {
               }}
             />
           </Field>
+
+          <label className="flex items-center gap-2 text-sm text-slate-700">
+            <input type="checkbox" checked={primeiraPaga} onChange={(e) => setPrimeiraPaga(e.target.checked)} className="h-4 w-4 accent-brand-600" />
+            Primeira parcela já paga antes da assinatura
+          </label>
+          {primeiraPaga && (
+            <p className="rounded-lg bg-amber-50 p-2.5 text-xs text-amber-800">
+              O contrato registrará que a 1ª parcela já foi quitada e as demais vencem
+              todo dia <b>{vencimento ? new Date(`${vencimento}T12:00:00`).getDate() : "—"}</b>.
+              No Financeiro, a 1ª parcela já entra como recebida.
+            </p>
+          )}
 
           <label className="flex items-center gap-2 text-sm text-slate-700">
             <input type="checkbox" checked={lancarFinanceiro} onChange={(e) => setLancarFinanceiro(e.target.checked)} className="h-4 w-4 accent-brand-600" />
