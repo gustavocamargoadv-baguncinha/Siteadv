@@ -16,9 +16,10 @@ const WHATS_LINK = `https://wa.me/${WHATS_NUM}?text=${encodeURIComponent(WHATS_M
 const TEL_CEL = "+5515996055581";
 const TEL_FIXO = "+551532723072";
 const EMAIL = "gustavocamargo@adv.oabsp.org.br";
-const MAPS_LINK =
-  "https://www.google.com/maps/search/?api=1&query=" +
-  encodeURIComponent("Gustavo Camargo Advocacia Rua Monsenhor Soares 647 Itapetininga SP");
+// Perfil do Google Business do escritório (avaliações + mapa).
+const GOOGLE_LINK = "https://share.google/bS1dIETXyDOdjrZkA";
+const MAPS_LINK = GOOGLE_LINK;
+const FOTO_ADVOGADO = "/advogado-gustavo-camargo.jpg";
 
 const REGIAO = [
   "Itapetininga",
@@ -164,6 +165,13 @@ function IconMail({ className = "" }: { className?: string }) {
   return (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className} aria-hidden="true">
       <rect x="2" y="4" width="20" height="16" rx="2" /><path d="m22 7-10 6L2 7" />
+    </svg>
+  );
+}
+function IconStar({ className = "" }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" fill="currentColor" className={className} aria-hidden="true">
+      <path d="M12 2l2.9 6.3 6.9.7-5.1 4.6 1.4 6.8L12 17.8 5.9 20.4l1.4-6.8L2.2 9l6.9-.7L12 2z" />
     </svg>
   );
 }
@@ -328,8 +336,74 @@ export default function CustodiaLanding() {
         </p>
       </section>
 
-      {/* PASSO A PASSO */}
+      {/* O ADVOGADO */}
       <section className="border-y border-white/10 bg-white/[0.03]">
+        <div className="mx-auto grid max-w-6xl items-center gap-10 px-4 py-14 lg:grid-cols-[minmax(0,420px)_1fr]">
+          <div className="mx-auto w-full max-w-sm">
+            <div className="relative overflow-hidden rounded-3xl border border-white/10 shadow-2xl">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={FOTO_ADVOGADO}
+                alt="Gustavo Roberto de Camargo, advogado criminalista em Itapetininga-SP (OAB/SP 431.515)"
+                width={720}
+                height={960}
+                className="h-full w-full object-cover"
+              />
+              <div className="pointer-events-none absolute inset-x-0 bottom-0 bg-gradient-to-t from-[#0a1120] via-[#0a1120]/40 to-transparent p-5 pt-16">
+                <p className="text-lg font-bold text-white">Gustavo Roberto de Camargo</p>
+                <p className="text-sm text-brand-300">Advogado Criminalista · OAB/SP 431.515</p>
+              </div>
+            </div>
+          </div>
+
+          <div>
+            <span className="inline-flex items-center gap-2 rounded-full border border-brand-400/30 bg-brand-500/10 px-3 py-1 text-xs font-semibold uppercase tracking-wider text-brand-300">
+              <IconShield className="h-3.5 w-3.5" /> Quem vai cuidar do seu caso
+            </span>
+            <h2 className="mt-4 text-2xl font-bold sm:text-3xl">Atendimento próximo, técnico e reservado</h2>
+            <p className="mt-4 leading-relaxed text-slate-300">
+              Advocacia dedicada ao Direito Criminal, com atuação em Itapetininga e nas
+              comarcas da região. O foco é acompanhar de perto cada etapa — desde a audiência
+              de custódia — buscando o relaxamento da prisão ilegal, a liberdade provisória ou
+              as medidas cautelares mais adequadas ao caso.
+            </p>
+            <p className="mt-3 leading-relaxed text-slate-300">
+              Você fala diretamente com o advogado, com clareza sobre o que está acontecendo e
+              total sigilo do início ao fim.
+            </p>
+
+            <div className="mt-6 flex flex-wrap gap-2.5">
+              {["OAB/SP 431.515", "Itapetininga e região", "Foco em Direito Criminal", "Atendimento 24h"].map((t) => (
+                <span key={t} className="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-[#0d1526] px-3.5 py-1.5 text-sm text-slate-200">
+                  <IconCheck className="h-3.5 w-3.5 text-brand-400" /> {t}
+                </span>
+              ))}
+            </div>
+
+            <div className="mt-7 flex flex-col gap-3 sm:flex-row">
+              <a
+                href={WHATS_LINK}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center justify-center gap-2.5 rounded-xl bg-[#25D366] px-6 py-3.5 text-base font-extrabold text-[#0a1120] shadow-xl shadow-emerald-500/25 transition hover:brightness-105"
+              >
+                <IconWhats className="h-5 w-5" /> Falar no WhatsApp
+              </a>
+              <a
+                href={GOOGLE_LINK}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center justify-center gap-2.5 rounded-xl border border-white/20 px-6 py-3.5 text-base font-bold text-white transition hover:bg-white/5"
+              >
+                <IconStar className="h-5 w-5 text-brand-400" /> Ver avaliações no Google
+              </a>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* PASSO A PASSO */}
+      <section>
         <div className="mx-auto max-w-6xl px-4 py-14">
           <div className="mx-auto max-w-2xl text-center">
             <h2 className="text-2xl font-bold sm:text-3xl">O que fazer agora</h2>
