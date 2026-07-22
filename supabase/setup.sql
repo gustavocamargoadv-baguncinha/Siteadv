@@ -60,6 +60,7 @@ create table processos (
   vara text,
   comarca text,
   fase text,
+  situacao text,
   status text not null default 'ativo' check (status in ('ativo', 'suspenso', 'arquivado', 'encerrado')),
   parte_contraria text,
   objeto text,

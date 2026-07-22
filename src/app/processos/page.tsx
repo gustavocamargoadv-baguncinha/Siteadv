@@ -8,6 +8,7 @@ import type { Cliente, Membro, Processo } from "@/lib/types";
 import { AREAS, formatCNJ } from "@/lib/format";
 import { Badge, BotaoPrimario, Card, EmptyState, Field, Input, PageHeader, Select, Textarea } from "@/components/ui";
 import { Modal } from "@/components/Modal";
+import { faseInfo } from "@/lib/fases";
 
 const COR_STATUS = { ativo: "verde", suspenso: "ambar", arquivado: "cinza", encerrado: "azul" } as const;
 
@@ -109,6 +110,9 @@ export default function ProcessosPage() {
                     <span className="font-mono text-xs text-slate-500">{formatCNJ(p.numero_cnj)}</span>
                     <Badge cor={COR_STATUS[p.status]}>{p.status}</Badge>
                     <Badge cor="roxo">{AREAS[p.area]}</Badge>
+                    {faseInfo(p.situacao) && (
+                      <Badge cor={faseInfo(p.situacao)!.cor}>{faseInfo(p.situacao)!.emoji} {faseInfo(p.situacao)!.rotulo}</Badge>
+                    )}
                     {p.monitorado && <Badge cor="azul">monitorado</Badge>}
                   </div>
                   <p className="mt-1.5 text-sm font-semibold text-slate-900">{cli?.nome ?? "Cliente removido"}</p>

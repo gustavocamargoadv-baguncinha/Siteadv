@@ -41,6 +41,15 @@ export type AreaProcesso =
 
 export type StatusProcesso = "ativo" | "suspenso" | "arquivado" | "encerrado";
 
+// Fase do caso no fluxo real do escritório — marcada em 1 toque e refletida
+// no portal do cliente ("em que fase está meu caso").
+export type SituacaoCaso =
+  | "precisa_agir"
+  | "aguardando_tramite"
+  | "aguardando_cliente"
+  | "encerrado"
+  | "encerrado_quitado";
+
 export interface Processo {
   id: string;
   numero_cnj?: string;
@@ -50,6 +59,7 @@ export interface Processo {
   vara?: string;
   comarca?: string;
   fase?: string;
+  situacao?: SituacaoCaso;
   status: StatusProcesso;
   parte_contraria?: string;
   objeto?: string;

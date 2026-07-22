@@ -6,6 +6,7 @@ import { useTable, byId } from "@/lib/hooks";
 import type { Andamento, Cliente, Documento, EventoAgenda, Processo } from "@/lib/types";
 import { AREAS, dataBR, dataHoraBR, formatCNJ, TIPOS_EVENTO } from "@/lib/format";
 import { Badge, Card, EmptyState, PageHeader, Select } from "@/components/ui";
+import { faseInfo } from "@/lib/fases";
 
 // Pré-visualização do Portal do Cliente: exatamente o que cada cliente enxerga
 // ao entrar com o próprio login (apenas os seus processos, andamentos e os
@@ -89,13 +90,26 @@ export default function PortalPage() {
                   .filter((a) => casosIds.has(a.processo_id) && a.processo_id === p.id)
                   .sort((a, b) => b.data.localeCompare(a.data))
                   .slice(0, 3);
+                const fase = faseInfo(p.situacao);
                 return (
                   <Card key={p.id} className="mb-2 p-3">
                     <div className="flex items-center justify-between gap-2">
                       <p className="font-mono text-[11px] text-slate-500">{formatCNJ(p.numero_cnj)}</p>
                       <Badge cor="roxo">{AREAS[p.area]}</Badge>
                     </div>
-                    <p className="mt-1 text-sm text-slate-800">{p.fase ? `Fase atual: ${p.fase}` : p.objeto}</p>
+                    {fase && (
+                      <div className={`mt-2 flex items-center gap-2 rounded-lg px-2.5 py-2 text-sm font-semibold ${
+                        fase.cor === "verde" ? "bg-emerald-50 text-emerald-800"
+                        : fase.cor === "vermelho" ? "bg-red-50 text-red-800"
+                        : fase.cor === "ambar" ? "bg-amber-50 text-amber-800"
+                        : fase.cor === "azul" ? "bg-blue-50 text-blue-800"
+                        : "bg-slate-100 text-slate-700"
+                      }`}>
+                        <span>{fase.emoji}</span>
+                        <span>{fase.rotuloCliente}</span>
+                      </div>
+                    )}
+                    <p className="mt-1.5 text-sm text-slate-800">{p.objeto}</p>
                     {movs.length > 0 && (
                       <ul className="mt-2 space-y-1 border-t border-slate-100 pt-2">
                         {movs.map((a) => (

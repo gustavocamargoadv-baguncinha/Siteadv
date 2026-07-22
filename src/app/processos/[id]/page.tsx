@@ -4,10 +4,11 @@ import { useParams, useRouter } from "next/navigation";
 import { useState } from "react";
 import { ArrowLeft, Plus, Radar } from "lucide-react";
 import { useTable, byId } from "@/lib/hooks";
-import type { Andamento, Cliente, Documento, Lancamento, Prazo, Processo } from "@/lib/types";
+import type { Andamento, Cliente, Documento, Lancamento, Prazo, Processo, SituacaoCaso } from "@/lib/types";
 import { AREAS, brl, dataBR, formatCNJ, hojeISO, rotuloDias, statusLancamento, urgenciaPrazo } from "@/lib/format";
 import { Badge, BotaoPrimario, Card, EmptyState, Field, Input, PageHeader, Textarea } from "@/components/ui";
 import { Modal } from "@/components/Modal";
+import { FASES, faseInfo } from "@/lib/fases";
 
 export default function ProcessoDetalhe() {
   const { id } = useParams<{ id: string }>();
@@ -69,6 +70,18 @@ export default function ProcessoDetalhe() {
     }
   }
 
+  async function definirFase(v: SituacaoCaso) {
+    if (!proc || proc.situacao === v) return;
+    await update(proc.id, { situacao: v });
+    // deixa rastro no histórico do caso
+    await addAndamento({
+      processo_id: proc.id,
+      data: hojeISO(),
+      origem: "manual",
+      descricao: `Fase do caso atualizada para "${faseInfo(v)?.rotulo}".`,
+    });
+  }
+
   async function salvarAndamento(e: React.FormEvent) {
     e.preventDefault();
     if (!proc || !descAndamento.trim()) return;
@@ -115,10 +128,14 @@ export default function ProcessoDetalhe() {
       />
 
       <Card className="p-4">
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <Badge cor="roxo">{AREAS[proc.area]}</Badge>
           <Badge cor={proc.status === "ativo" ? "verde" : "cinza"}>{proc.status}</Badge>
-          {proc.fase && <Badge cor="azul">{proc.fase}</Badge>}
+          {faseInfo(proc.situacao) && (
+            <Badge cor={faseInfo(proc.situacao)!.cor}>
+              {faseInfo(proc.situacao)!.emoji} {faseInfo(proc.situacao)!.rotulo}
+            </Badge>
+          )}
         </div>
         <p className="mt-3 text-sm text-slate-700">{proc.objeto}</p>
         <dl className="mt-3 grid grid-cols-1 gap-x-6 gap-y-1.5 text-sm sm:grid-cols-2">
@@ -129,6 +146,35 @@ export default function ProcessoDetalhe() {
             <div className="flex gap-2"><dt className="font-medium text-slate-500">Juízo:</dt><dd className="text-slate-800">{[proc.vara, proc.comarca, proc.tribunal].filter(Boolean).join(" — ")}</dd></div>
           )}
         </dl>
+      </Card>
+
+      <Card className="p-4">
+        <h2 className="text-sm font-bold text-slate-900">Fase do caso</h2>
+        <p className="mb-3 text-xs text-slate-500">
+          Marque em um toque. O cliente vê esta fase no portal — assim ele sabe o andamento sem precisar te perguntar.
+        </p>
+        <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+          {FASES.map((f) => {
+            const ativa = proc.situacao === f.valor;
+            return (
+              <button
+                key={f.valor}
+                onClick={() => definirFase(f.valor)}
+                className={`flex items-start gap-2 rounded-lg border px-3 py-2.5 text-left transition ${
+                  ativa
+                    ? "border-brand-500 bg-brand-50 ring-1 ring-brand-500"
+                    : "border-slate-200 bg-white hover:border-brand-300"
+                }`}
+              >
+                <span className="text-base leading-5">{f.emoji}</span>
+                <span className="min-w-0">
+                  <span className={`block text-sm font-semibold ${ativa ? "text-brand-800" : "text-slate-800"}`}>{f.rotulo}</span>
+                  <span className="block text-xs text-slate-500">{f.dica}</span>
+                </span>
+              </button>
+            );
+          })}
+        </div>
       </Card>
 
       <div className="grid gap-4 lg:grid-cols-2">
