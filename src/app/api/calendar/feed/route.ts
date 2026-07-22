@@ -8,8 +8,10 @@ import { gerarICS, type EventoICS } from "@/lib/ics";
 //
 // URL: https://SEU-SITE/api/calendar/feed?token=SEU_TOKEN
 export async function GET(req: NextRequest) {
-  const token = req.nextUrl.searchParams.get("token");
-  const esperado = process.env.CALENDAR_FEED_TOKEN;
+  // .trim() tolera espaços/quebras de linha coladas por engano no valor da
+  // variável de ambiente ou na URL — evita "token inválido" por um espacinho.
+  const token = req.nextUrl.searchParams.get("token")?.trim();
+  const esperado = process.env.CALENDAR_FEED_TOKEN?.trim();
 
   if (!esperado) {
     return NextResponse.json({ erro: "CALENDAR_FEED_TOKEN não configurado no servidor." }, { status: 501 });
