@@ -1,17 +1,25 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { usePathname } from "next/navigation";
 import type { Session } from "@supabase/supabase-js";
 import { Scale } from "lucide-react";
 import { entrar, getSessao, onAuthChange, supabaseConfigurado } from "@/lib/supabase";
+import { rotaPublica } from "@/lib/rotas-publicas";
 
 // Protege o sistema com login quando o Supabase está configurado (modo nuvem).
 // No modo demonstração (sem Supabase), abre direto — não há dados na nuvem.
 export function LoginGate({ children }: { children: React.ReactNode }) {
+  const pathname = usePathname();
+  const publica = rotaPublica(pathname);
   const [carregando, setCarregando] = useState(true);
   const [sessao, setSessao] = useState<Session | null>(null);
 
   useEffect(() => {
+    if (publica) {
+      setCarregando(false);
+      return;
+    }
     if (!supabaseConfigurado) {
       setCarregando(false);
       return;
@@ -21,7 +29,10 @@ export function LoginGate({ children }: { children: React.ReactNode }) {
       .catch(() => setSessao(null))
       .finally(() => setCarregando(false));
     return onAuthChange((s) => setSessao(s));
-  }, []);
+  }, [publica]);
+
+  // páginas públicas (landing pages de campanha): sempre abertas, sem login
+  if (publica) return <>{children}</>;
 
   // modo demo: sem login
   if (!supabaseConfigurado) return <>{children}</>;

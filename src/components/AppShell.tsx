@@ -22,6 +22,7 @@ import { useTable } from "@/lib/hooks";
 import type { Prazo } from "@/lib/types";
 import { diasAteISO } from "@/lib/format";
 import { sair, supabaseConfigurado } from "@/lib/supabase";
+import { rotaPublica } from "@/lib/rotas-publicas";
 
 const NAV = [
   { href: "/", rotulo: "Início", icone: Home },
@@ -46,6 +47,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const [drawer, setDrawer] = useState(false);
   const { rows: prazos } = useTable<Prazo>("prazos");
   const urgentes = prazos.filter((p) => p.status === "pendente" && diasAteISO(p.data_limite) <= 7).length;
+
+  // páginas públicas (landing pages de campanha): sem o menu do sistema
+  if (rotaPublica(pathname)) return <>{children}</>;
 
   const NavLinks = ({ onNavigate }: { onNavigate?: () => void }) => (
     <nav className="flex-1 space-y-1 px-3">
