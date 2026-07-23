@@ -98,7 +98,7 @@ create table prazos (
 
 create table eventos_agenda (
   id text primary key default gen_random_uuid()::text,
-  tipo text not null default 'audiencia' check (tipo in ('audiencia', 'reuniao', 'sustentacao', 'atendimento', 'outro')),
+  tipo text not null default 'audiencia' check (tipo in ('audiencia', 'reuniao', 'sustentacao', 'atendimento', 'video', 'outro')),
   titulo text not null,
   processo_id text references processos (id) on delete cascade,
   cliente_id text references clientes (id) on delete set null,

@@ -29,7 +29,7 @@ export async function GET(req: NextRequest) {
   const sb = createClient(url, serviceKey);
   const { data, error } = await sb
     .from("eventos_agenda")
-    .select("id, titulo, inicio, fim, local, notas")
+    .select("id, titulo, inicio, fim, local, notas, link_virtual")
     .order("inicio", { ascending: true });
 
   if (error) {
@@ -43,6 +43,7 @@ export async function GET(req: NextRequest) {
     fim: e.fim ?? undefined,
     local: e.local ?? undefined,
     notas: e.notas ?? undefined,
+    link: e.link_virtual ?? undefined,
   }));
 
   return new NextResponse(gerarICS(eventos), {

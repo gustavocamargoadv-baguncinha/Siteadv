@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Plus } from "lucide-react";
+import { Plus, Video } from "lucide-react";
 import { useTable, byId } from "@/lib/hooks";
 import type { Cliente, EventoAgenda, Membro, Prazo, Processo } from "@/lib/types";
 import { dataBR, dataHoraBR, diasAteISO, formatCNJ, hojeISO, rotuloDias, urgenciaPrazo, TIPOS_EVENTO } from "@/lib/format";
@@ -170,17 +170,26 @@ export default function AgendaPage() {
               <Card key={e.id} className="p-4">
                 <div className="flex flex-wrap items-center gap-2">
                   <p className="text-sm font-semibold text-slate-900">{e.titulo}</p>
-                  <Badge cor={e.tipo === "audiencia" ? "roxo" : e.tipo === "sustentacao" ? "vermelho" : "azul"}>{TIPOS_EVENTO[e.tipo]}</Badge>
+                  <Badge cor={e.tipo === "audiencia" ? "roxo" : e.tipo === "sustentacao" ? "vermelho" : e.tipo === "video" ? "verde" : "azul"}>{TIPOS_EVENTO[e.tipo]}</Badge>
                   {emDias <= 1 && <Badge cor="ambar">{emDias === 0 ? "hoje" : "amanhã"}</Badge>}
                 </div>
                 <p className="mt-1 text-xs text-slate-500">
                   {dataHoraBR(e.inicio)}
                   {e.local && ` · ${e.local}`}
-                  {e.link_virtual && " · virtual"}
                   {cli && ` · ${cli.nome}`}
                   {proc && ` · ${formatCNJ(proc.numero_cnj)}`}
                 </p>
                 {e.notas && <p className="mt-1.5 text-xs text-slate-600">{e.notas}</p>}
+                {e.link_virtual && (
+                  <a
+                    href={e.link_virtual}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="mt-2 inline-flex items-center gap-1.5 rounded-lg bg-brand-600 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-brand-700"
+                  >
+                    <Video size={14} /> Entrar na reunião
+                  </a>
+                )}
               </Card>
             );
           })}
@@ -253,8 +262,8 @@ export default function AgendaPage() {
             <Field rotulo="Local">
               <Input value={formEvento.local} onChange={(e) => setFormEvento({ ...formEvento, local: e.target.value })} placeholder="Fórum, escritório…" />
             </Field>
-            <Field rotulo="Link (virtual)">
-              <Input value={formEvento.link_virtual} onChange={(e) => setFormEvento({ ...formEvento, link_virtual: e.target.value })} placeholder="https://…" />
+            <Field rotulo="Link da videochamada">
+              <Input value={formEvento.link_virtual} onChange={(e) => setFormEvento({ ...formEvento, link_virtual: e.target.value })} placeholder="Cole o link do Teams / Meet / Zoom" />
             </Field>
           </div>
           <Field rotulo="Notas">

@@ -9,6 +9,7 @@ export interface EventoICS {
   fim?: string;
   local?: string;
   notas?: string;
+  link?: string; // link de videochamada (Teams/Meet/Zoom)
 }
 
 // Horário de Brasília é fixo em UTC-3 (o Brasil não tem mais horário de verão).
@@ -57,6 +58,11 @@ export function gerarICS(eventos: EventoICS[], nomeCalendario = "Camargo — Age
     if (!e.inicio) continue;
     const inicio = paraUTCCompacto(e.inicio);
     const fim = paraUTCCompacto(e.fim ?? new Date(new Date(e.inicio.length > 19 ? e.inicio : e.inicio + "-03:00").getTime() + 3600000).toISOString());
+    // Descrição: o link da videochamada primeiro (o Google Agenda o torna
+    // clicável), seguido das notas.
+    const descricao = [e.link ? `Entrar na reunião: ${e.link}` : "", e.notas ?? ""]
+      .filter(Boolean)
+      .join("\n\n");
     linhas.push(
       "BEGIN:VEVENT",
       `UID:${esc(e.id)}@camargo-adv`,
@@ -64,8 +70,10 @@ export function gerarICS(eventos: EventoICS[], nomeCalendario = "Camargo — Age
       `DTSTART:${inicio}`,
       `DTEND:${fim}`,
       dobrar(`SUMMARY:${esc(e.titulo)}`),
-      ...(e.local ? [dobrar(`LOCATION:${esc(e.local)}`)] : []),
-      ...(e.notas ? [dobrar(`DESCRIPTION:${esc(e.notas)}`)] : []),
+      // sem local físico numa reunião por vídeo, o link vira o "local"
+      ...(e.local || e.link ? [dobrar(`LOCATION:${esc(e.local || e.link!)}`)] : []),
+      ...(descricao ? [dobrar(`DESCRIPTION:${esc(descricao)}`)] : []),
+      ...(e.link ? [dobrar(`URL:${e.link}`)] : []),
       "BEGIN:VALARM",
       "TRIGGER:-PT2H",
       "ACTION:DISPLAY",

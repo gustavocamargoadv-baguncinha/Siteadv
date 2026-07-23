@@ -86,6 +86,7 @@ export const TIPOS_EVENTO: Record<string, string> = {
   reuniao: "Reunião",
   sustentacao: "Sustentação oral",
   atendimento: "Atendimento",
+  video: "Reunião por vídeo",
   outro: "Outro",
 };
 

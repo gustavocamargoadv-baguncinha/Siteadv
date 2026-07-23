@@ -92,7 +92,7 @@ export interface Prazo {
   created_at?: string;
 }
 
-export type TipoEvento = "audiencia" | "reuniao" | "sustentacao" | "atendimento" | "outro";
+export type TipoEvento = "audiencia" | "reuniao" | "sustentacao" | "atendimento" | "video" | "outro";
 
 export interface EventoAgenda {
   id: string;
