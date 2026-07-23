@@ -2,10 +2,10 @@
 
 import Link from "next/link";
 import { useMemo, useState } from "react";
-import { Plus, Search } from "lucide-react";
+import { Plus, Search, Download, Loader2 } from "lucide-react";
 import { useTable, byId } from "@/lib/hooks";
 import type { Cliente, Membro, Processo } from "@/lib/types";
-import { AREAS, formatCNJ } from "@/lib/format";
+import { AREAS, formatCNJ, dataBR } from "@/lib/format";
 import { Badge, BotaoPrimario, Card, EmptyState, Field, Input, PageHeader, Select, Textarea } from "@/components/ui";
 import { Modal } from "@/components/Modal";
 import { faseInfo } from "@/lib/fases";
@@ -21,6 +21,8 @@ export default function ProcessosPage() {
   const [busca, setBusca] = useState("");
   const [filtroStatus, setFiltroStatus] = useState("ativo");
   const [modal, setModal] = useState(false);
+  const [buscandoCnj, setBuscandoCnj] = useState(false);
+  const [cnjMsg, setCnjMsg] = useState<{ tipo: "ok" | "vazio" | "erro"; texto: string } | null>(null);
   const [form, setForm] = useState({
     numero_cnj: "",
     cliente_id: "",
@@ -51,6 +53,67 @@ export default function ProcessosPage() {
       .sort((a, b) => (b.created_at ?? "").localeCompare(a.created_at ?? ""));
   }, [processos, busca, filtroStatus, cliMap]);
 
+  function abrirNovo() {
+    setCnjMsg(null);
+    setModal(true);
+  }
+
+  async function buscarDadosCnj() {
+    const d = form.numero_cnj.replace(/\D/g, "");
+    if (d.length !== 20) {
+      setCnjMsg({ tipo: "erro", texto: "Digite o número completo (20 dígitos) antes de buscar." });
+      return;
+    }
+    setBuscandoCnj(true);
+    setCnjMsg(null);
+    try {
+      const res = await fetch("/api/tribunais/consulta", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ numero: d }),
+      });
+      const json = await res.json();
+      if (!res.ok || json?.erro) throw new Error(json?.erro || "falha");
+      const dd = json.dados;
+      if (!dd?.encontrado) {
+        setCnjMsg({
+          tipo: "vazio",
+          texto: "Nada encontrado no DataJud — pode estar em segredo de justiça ou ainda não indexado. Preencha os campos manualmente.",
+        });
+        return;
+      }
+      // infere a área a partir da classe/assunto (sem sobrescrever o que já houver)
+      const txt = `${dd.classe ?? ""} ${dd.assunto ?? ""}`.toLowerCase();
+      const area = /execu[çc][aã]o penal|vep|progress|remi[çc]/.test(txt)
+        ? "execucao_penal"
+        : /penal|crime|criminal/.test(txt)
+          ? "criminal"
+          : form.area;
+      const objetoAuto = [
+        dd.classe && `Classe: ${dd.classe}`,
+        dd.assunto && `Assunto: ${dd.assunto}`,
+        dd.dataAjuizamento && `Ajuizado em ${dataBR(dd.dataAjuizamento)}`,
+      ]
+        .filter(Boolean)
+        .join(" — ");
+      // só preenche campos ainda vazios (não apaga o que você já digitou)
+      setForm((f) => ({
+        ...f,
+        area,
+        tribunal: f.tribunal || dd.tribunal || "",
+        vara: f.vara || dd.vara || "",
+        comarca: f.comarca || dd.comarca || "",
+        objeto: f.objeto || objetoAuto,
+      }));
+      const resumo = [dd.classe, dd.vara].filter(Boolean).join(" · ");
+      setCnjMsg({ tipo: "ok", texto: `Encontrado${resumo ? `: ${resumo}` : ""}. Confira e ajuste o que precisar.` });
+    } catch {
+      setCnjMsg({ tipo: "erro", texto: "Não consegui consultar agora. Tente de novo ou preencha manualmente." });
+    } finally {
+      setBuscandoCnj(false);
+    }
+  }
+
   async function salvar(e: React.FormEvent) {
     e.preventDefault();
     if (!form.cliente_id) return;
@@ -71,7 +134,7 @@ export default function ProcessosPage() {
       <PageHeader
         titulo="Processos"
         sub={`${filtrados.length} de ${processos.length} casos`}
-        acao={<BotaoPrimario onClick={() => setModal(true)}><Plus size={16} /> Novo processo</BotaoPrimario>}
+        acao={<BotaoPrimario onClick={abrirNovo}><Plus size={16} /> Novo processo</BotaoPrimario>}
       />
 
       <div className="mb-4 flex flex-wrap gap-2">
@@ -138,7 +201,28 @@ export default function ProcessosPage() {
             </Select>
           </Field>
           <Field rotulo="Número CNJ">
-            <Input value={form.numero_cnj} onChange={(e) => setForm({ ...form, numero_cnj: e.target.value })} placeholder="0000000-00.0000.0.00.0000" />
+            <div className="flex gap-2">
+              <div className="flex-1">
+                <Input value={form.numero_cnj} onChange={(e) => setForm({ ...form, numero_cnj: e.target.value })} placeholder="0000000-00.0000.0.00.0000" />
+              </div>
+              <button
+                type="button"
+                onClick={buscarDadosCnj}
+                disabled={buscandoCnj}
+                className="inline-flex shrink-0 items-center gap-1.5 rounded-lg border border-brand-500 bg-brand-50 px-3 text-sm font-semibold text-brand-700 transition hover:bg-brand-100 disabled:opacity-60"
+              >
+                {buscandoCnj ? <Loader2 size={15} className="animate-spin" /> : <Download size={15} />}
+                {buscandoCnj ? "Buscando…" : "Buscar dados"}
+              </button>
+            </div>
+            {cnjMsg && (
+              <p className={`mt-1.5 text-xs ${cnjMsg.tipo === "ok" ? "text-emerald-700" : cnjMsg.tipo === "vazio" ? "text-amber-700" : "text-red-700"}`}>
+                {cnjMsg.texto}
+              </p>
+            )}
+            <p className="mt-1 text-xs text-slate-400">
+              Cola o número e clique em “Buscar dados” — preenche vara, tribunal e assunto pelo DataJud. Tudo continua editável.
+            </p>
           </Field>
           <div className="grid grid-cols-2 gap-3">
             <Field rotulo="Área">
