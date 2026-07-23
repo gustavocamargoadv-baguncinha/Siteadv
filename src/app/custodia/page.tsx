@@ -14,7 +14,6 @@ const WHATS_MSG =
   "Olá, Dr. Gustavo. Preciso de ajuda com uma audiência de custódia em Itapetininga e região.";
 const WHATS_LINK = `https://wa.me/${WHATS_NUM}?text=${encodeURIComponent(WHATS_MSG)}`;
 const TEL_CEL = "+5515996055581";
-const TEL_FIXO = "+551532723072";
 const EMAIL = "gustavocamargo@adv.oabsp.org.br";
 // Perfil do Google Business do escritório (avaliações + mapa).
 const GOOGLE_LINK = "https://share.google/bS1dIETXyDOdjrZkA";
@@ -39,7 +38,12 @@ const REGIAO = [
   "Bofete",
 ];
 
+// Endereço final do site (configure NEXT_PUBLIC_SITE_URL na Vercel com o seu
+// domínio; sem isso, usa um padrão só para o build não reclamar).
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://camargo-advocacia.vercel.app";
+
 export const metadata: Metadata = {
+  metadataBase: new URL(SITE_URL),
   title:
     "Advogado de Audiência de Custódia em Itapetininga-SP | Gustavo Camargo — Plantão Criminal 24h",
   description:
@@ -550,10 +554,6 @@ export default function CustodiaLanding() {
                 <a href={WHATS_LINK} target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 text-slate-200 transition hover:text-white">
                   <span className="grid h-10 w-10 place-items-center rounded-lg bg-brand-500/15 text-brand-400"><IconWhats className="h-5 w-5" /></span>
                   <span><span className="block text-xs text-slate-400">WhatsApp / Celular</span>(15) 99605-5581</span>
-                </a>
-                <a href={TEL_FIXO.replace("+", "tel:+")} className="flex items-center gap-3 text-slate-200 transition hover:text-white">
-                  <span className="grid h-10 w-10 place-items-center rounded-lg bg-brand-500/15 text-brand-400"><IconPhone className="h-5 w-5" /></span>
-                  <span><span className="block text-xs text-slate-400">Telefone fixo</span>(15) 3272-3072</span>
                 </a>
                 <a href={`mailto:${EMAIL}`} className="flex items-center gap-3 text-slate-200 transition hover:text-white">
                   <span className="grid h-10 w-10 place-items-center rounded-lg bg-brand-500/15 text-brand-400"><IconMail className="h-5 w-5" /></span>
