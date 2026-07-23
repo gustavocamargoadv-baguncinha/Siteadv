@@ -9,6 +9,7 @@ import {
   CalendarDays,
   FileText,
   FolderOpen,
+  Gamepad2,
   Home,
   LogOut,
   Menu,
@@ -32,6 +33,7 @@ const NAV = [
   { href: "/documentos", rotulo: "Documentos", icone: FolderOpen },
   { href: "/equipe", rotulo: "Equipe", icone: UserSquare2 },
   { href: "/portal", rotulo: "Portal do Cliente", icone: FileText },
+  { href: "/jogo", rotulo: "Jogo (Beta)", icone: Gamepad2 },
   { href: "/configuracoes", rotulo: "Configurações", icone: Settings },
 ];
 
