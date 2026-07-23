@@ -4,7 +4,7 @@ import { useParams, useRouter } from "next/navigation";
 import { useState } from "react";
 import { ArrowLeft, Plus, Radar } from "lucide-react";
 import { useTable, byId } from "@/lib/hooks";
-import type { Andamento, Cliente, Documento, Lancamento, Prazo, Processo, SituacaoCaso } from "@/lib/types";
+import type { Andamento, Cliente, Documento, Lancamento, Prazo, Processo, SituacaoCaso, StatusProcesso } from "@/lib/types";
 import { AREAS, brl, dataBR, formatCNJ, hojeISO, rotuloDias, statusLancamento, urgenciaPrazo } from "@/lib/format";
 import { Badge, BotaoPrimario, Card, EmptyState, Field, Input, PageHeader, Textarea } from "@/components/ui";
 import { Modal } from "@/components/Modal";
@@ -72,13 +72,30 @@ export default function ProcessoDetalhe() {
 
   async function definirFase(v: SituacaoCaso) {
     if (!proc || proc.situacao === v) return;
-    await update(proc.id, { situacao: v });
+    const info = faseInfo(v);
+    const patch: Partial<Processo> = { situacao: v };
+    // Fase encerrada arquiva o caso (sai dos "Ativos"); voltar a uma fase
+    // ativa reativa o caso automaticamente.
+    if (info?.encerrado) patch.status = "encerrado";
+    else if (proc.status === "encerrado") patch.status = "ativo";
+    await update(proc.id, patch);
     // deixa rastro no histórico do caso
     await addAndamento({
       processo_id: proc.id,
       data: hojeISO(),
       origem: "manual",
-      descricao: `Fase do caso atualizada para "${faseInfo(v)?.rotulo}".`,
+      descricao: `Fase do caso atualizada para "${info?.rotulo}".`,
+    });
+  }
+
+  async function definirStatus(s: StatusProcesso) {
+    if (!proc || proc.status === s) return;
+    await update(proc.id, { status: s });
+    await addAndamento({
+      processo_id: proc.id,
+      data: hojeISO(),
+      origem: "manual",
+      descricao: `Situação processual alterada para "${s}".`,
     });
   }
 
@@ -130,12 +147,26 @@ export default function ProcessoDetalhe() {
       <Card className="p-4">
         <div className="flex flex-wrap items-center gap-2">
           <Badge cor="roxo">{AREAS[proc.area]}</Badge>
-          <Badge cor={proc.status === "ativo" ? "verde" : "cinza"}>{proc.status}</Badge>
           {faseInfo(proc.situacao) && (
             <Badge cor={faseInfo(proc.situacao)!.cor}>
               {faseInfo(proc.situacao)!.emoji} {faseInfo(proc.situacao)!.rotulo}
             </Badge>
           )}
+          <label className="ml-auto flex items-center gap-1.5 text-xs font-medium text-slate-500">
+            Situação:
+            <select
+              value={proc.status}
+              onChange={(e) => definirStatus(e.target.value as StatusProcesso)}
+              className={`rounded-md border px-2 py-1 text-xs font-semibold ${
+                proc.status === "ativo" ? "border-emerald-300 bg-emerald-50 text-emerald-800" : "border-slate-300 bg-slate-50 text-slate-700"
+              }`}
+            >
+              <option value="ativo">Ativo</option>
+              <option value="suspenso">Suspenso</option>
+              <option value="arquivado">Arquivado</option>
+              <option value="encerrado">Encerrado</option>
+            </select>
+          </label>
         </div>
         <p className="mt-3 text-sm text-slate-700">{proc.objeto}</p>
         <dl className="mt-3 grid grid-cols-1 gap-x-6 gap-y-1.5 text-sm sm:grid-cols-2">
