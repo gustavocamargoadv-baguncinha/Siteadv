@@ -20,7 +20,7 @@ export const ESCRITORIO = {
   cidade: "Itapetininga",
   comarcaForo: "Itapetininga-SP",
   rodape1: "Rua Monsenhor Soares 647, Centro - Itapetininga/SP – CEP 18.200-009",
-  rodape2: "Contato: (15) 99605-5581 – (15) 3272-3072 E-mail: gustavocamargo@adv.oabsp.org.br",
+  rodape2: "Contato: (15) 99605-5581 E-mail: gustavocamargo@adv.oabsp.org.br",
   dadosBancarios:
     "depósito na conta corrente nº 17.779-7, Agência: 6522-6, Banco do Brasil, ou mediante PIX na mesma conta (chave pix – CPF: 413.468.888-41) de titularidade do Gustavo Roberto de Camargo",
 };
