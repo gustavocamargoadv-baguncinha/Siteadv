@@ -75,6 +75,8 @@ Parte pública do sistema, em **`/blog`** (a única área aberta a visitantes �
 
 No banco: tabelas `pautas` e `posts` (migração `supabase/migrations/0003_blog.sql`). A RLS libera **leitura pública** só dos posts *publicados*; rascunhos e a caixa de pautas ficam restritos à equipe.
 
+**SEO:** a parte pública é **renderizada no servidor** (bom para Google e AdSense), com título/descrição por post, OpenGraph, dados estruturados (`NewsArticle`), `sitemap.xml` e `robots.txt` (que mantém a área de gestão fora dos buscadores). O conteúdo usa revalidação incremental (posts novos aparecem sem novo deploy). Defina `NEXT_PUBLIC_SITE_URL` quando tiver domínio próprio; na Vercel o domínio de produção é detectado sozinho. Num projeto Vercel dedicado ao blog, `BLOG_ONLY=1` faz a raiz `/` abrir direto em `/blog`.
+
 > **Nota ética:** o formato é informativo/jornalístico, compatível com o Provimento 205/2021 da OAB (publicidade da advocacia). O rodapé do blog já traz o aviso de que o conteúdo não constitui aconselhamento jurídico.
 
 ## Arquitetura

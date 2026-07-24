@@ -1,16 +1,33 @@
-"use client";
-
+import type { Metadata } from "next";
 import Link from "next/link";
-import { useTable } from "@/lib/hooks";
-import type { Post } from "@/lib/types";
 import { BlogShell, EspacoAnuncio } from "@/components/BlogShell";
+import { listarPostsPublicados } from "@/lib/posts-server";
 import { dataHoraBR } from "@/lib/format";
+import { baseUrl } from "@/lib/site";
 
-export default function BlogHome() {
-  const { rows, loading } = useTable<Post>("posts");
-  const publicados = rows
-    .filter((p) => p.status === "publicado")
-    .sort((a, b) => (b.publicado_em ?? "").localeCompare(a.publicado_em ?? ""));
+export const revalidate = 300;
+
+const TITULO = "Radar Penal — notícias e julgados de direito penal";
+const DESCRICAO =
+  "Julgados do STF e do STJ e projetos de lei penais em Brasília, explicados sem juridiquês. Por Gustavo Roberto de Camargo (OAB/SP 431.515).";
+
+export const metadata: Metadata = {
+  title: TITULO,
+  description: DESCRICAO,
+  alternates: { canonical: "/blog" },
+  openGraph: {
+    title: TITULO,
+    description: DESCRICAO,
+    url: `${baseUrl()}/blog`,
+    siteName: "Radar Penal",
+    locale: "pt_BR",
+    type: "website",
+  },
+  twitter: { card: "summary_large_image", title: TITULO, description: DESCRICAO },
+};
+
+export default async function BlogHome() {
+  const posts = await listarPostsPublicados();
 
   return (
     <BlogShell>
@@ -21,15 +38,13 @@ export default function BlogHome() {
         </p>
       </div>
 
-      {loading ? (
-        <p className="text-sm text-slate-400">Carregando…</p>
-      ) : publicados.length === 0 ? (
+      {posts.length === 0 ? (
         <p className="rounded-lg border border-dashed border-slate-300 bg-slate-50 p-8 text-center text-sm text-slate-500">
           Ainda não há publicações. Volte em breve.
         </p>
       ) : (
         <div className="space-y-8">
-          {publicados.map((post, i) => (
+          {posts.map((post, i) => (
             <div key={post.id}>
               <article className="group">
                 <Link href={`/blog/${post.slug}`}>
@@ -51,7 +66,6 @@ export default function BlogHome() {
                   Ler mais →
                 </Link>
               </article>
-              {/* um anúncio a cada 3 posts */}
               {i % 3 === 2 && <EspacoAnuncio />}
             </div>
           ))}
