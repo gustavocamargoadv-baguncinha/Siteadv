@@ -1,0 +1,1217 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8" />
+<title>Vida de Advogado</title>
+<meta name="description" content="Jogo de gestão e probabilidade: monte seu escritório de advocacia, negocie honorários, escolha as teses certas e evite as roubadas (e a cadeia)." />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<meta name="theme-color" content="#0e1420" />
+<style>
+  :root {
+    --ink: #0e1420;
+    --ink-2: #0b111b;
+    --panel: #18212f;
+    --panel-2: #1e293b;
+    --line: #2a3646;
+    --brass: #e3ae41;
+    --brass-dim: #b98a2f;
+    --parch: #ece4d3;
+    --muted: #93a1b5;
+    --muted-2: #6c7a90;
+    --good: #43c78a;
+    --bad: #e06666;
+    --crime: #b088e0;
+    --sky: #6fb7e8;
+    --violet: #9d8be6;
+    --rose: #e08aa0;
+    --radius: 14px;
+    color-scheme: dark;
+  }
+  * { box-sizing: border-box; }
+  html { -webkit-tap-highlight-color: transparent; }
+  body {
+    margin: 0;
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    color: var(--parch);
+    background:
+      radial-gradient(1200px 600px at 50% -200px, #1a2434 0%, transparent 60%),
+      radial-gradient(900px 500px at 100% 100%, #14202f 0%, transparent 55%),
+      var(--ink);
+    min-height: 100dvh;
+    line-height: 1.5;
+  }
+  .wrap { max-width: 620px; margin: 0 auto; padding: 0 14px 40px; }
+
+  h1, h2, h3, .serif {
+    font-family: Georgia, "Iowan Old Style", "Times New Roman", serif;
+  }
+  .tnum { font-variant-numeric: tabular-nums; }
+
+  /* ---------- Top bar ---------- */
+  .topbar {
+    position: sticky; top: 0; z-index: 20;
+    background: linear-gradient(180deg, rgba(14,20,32,.96), rgba(14,20,32,.86));
+    backdrop-filter: blur(8px);
+    border-bottom: 1px solid rgba(227,174,65,.22);
+    padding: 12px 14px 11px;
+    display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  }
+  .topbar .brandwrap { max-width: 620px; margin: 0 auto; width: 100%; display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+  .brand { display: flex; align-items: center; gap: 9px; min-width: 0; }
+  .seal {
+    width: 34px; height: 34px; border-radius: 9px; flex: none;
+    display: grid; place-items: center; font-size: 18px;
+    background: radial-gradient(circle at 30% 25%, #3a2f16, #1a1608);
+    border: 1px solid var(--brass-dim);
+    box-shadow: inset 0 1px 0 rgba(227,174,65,.35);
+  }
+  .brand h1 { font-size: 18px; margin: 0; letter-spacing: .3px; color: var(--parch); }
+  .brand .sub { font-size: 11.5px; color: var(--muted); margin-top: 1px; }
+  .ghostbtn {
+    font: inherit; font-size: 11.5px; font-weight: 600;
+    color: var(--muted); background: transparent;
+    border: 1px solid var(--line); border-radius: 9px;
+    padding: 6px 10px; cursor: pointer; display: inline-flex; align-items: center; gap: 5px;
+  }
+  .ghostbtn:hover { color: var(--parch); border-color: var(--brass-dim); }
+
+  /* ---------- Status panel ---------- */
+  .panel {
+    background: linear-gradient(180deg, var(--panel), var(--panel-2));
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 14px;
+    margin-top: 14px;
+    box-shadow: 0 10px 30px -18px rgba(0,0,0,.8);
+  }
+  .statgrid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
+  @media (min-width: 460px) { .statgrid { grid-template-columns: repeat(4, 1fr); } }
+  .stat { display: flex; align-items: center; gap: 9px; min-width: 0; }
+  .stat .ic { color: var(--brass); flex: none; font-size: 15px; width: 18px; text-align: center; }
+  .stat .lbl { font-size: 9.5px; text-transform: uppercase; letter-spacing: .8px; color: var(--muted-2); font-weight: 700; }
+  .stat .val { font-size: 15px; font-weight: 700; color: var(--parch); }
+  .stat .val.neg { color: var(--bad); }
+  .stat .vsub { font-size: 10px; color: var(--muted-2); }
+  .pips { display: flex; gap: 4px; margin-top: 3px; }
+  .pip { width: 10px; height: 10px; border-radius: 50%; background: #313d4f; }
+  .pip.on { background: var(--brass); box-shadow: 0 0 6px rgba(227,174,65,.6); }
+
+  .attrs { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-top: 14px; padding-top: 13px; border-top: 1px solid var(--line); }
+  .attr .row { display: flex; justify-content: space-between; align-items: center; font-size: 11px; color: var(--muted); margin-bottom: 5px; }
+  .attr .row b { color: var(--parch); font-size: 12px; }
+  .bar { height: 6px; border-radius: 99px; background: #2a3646; overflow: hidden; }
+  .bar > span { display: block; height: 100%; border-radius: 99px; transition: width .35s ease; }
+
+  /* ---------- Tabs ---------- */
+  .tabs { display: flex; gap: 4px; background: #131c29; border: 1px solid var(--line); padding: 4px; border-radius: 12px; margin-top: 14px; }
+  .tab { flex: 1; position: relative; border: 0; background: transparent; color: var(--muted); font: inherit; font-size: 13px; font-weight: 700; padding: 8px 4px; border-radius: 9px; cursor: pointer; }
+  .tab.active { background: linear-gradient(180deg, #26344a, #1d2839); color: var(--parch); box-shadow: inset 0 1px 0 rgba(255,255,255,.05); }
+  .tab .dot { position: absolute; top: 5px; right: 8px; width: 7px; height: 7px; border-radius: 50%; background: var(--crime); box-shadow: 0 0 7px var(--crime); }
+
+  /* ---------- Sections & cards ---------- */
+  section { margin-top: 18px; }
+  .sechead { display: flex; align-items: center; gap: 7px; font-size: 13px; font-weight: 700; color: var(--parch); margin: 0 0 9px; letter-spacing: .3px; }
+  .sechead .count { font-family: system-ui; font-weight: 600; color: var(--muted-2); font-size: 11.5px; }
+  .card { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 13px; }
+  .card + .card { margin-top: 9px; }
+  .empty { border: 1px dashed #33425a; border-radius: var(--radius); background: rgba(255,255,255,.015); color: var(--muted); font-size: 13px; text-align: center; padding: 18px; }
+
+  .casehead { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; }
+  .casetitle { font-weight: 700; font-size: 14px; color: var(--parch); display: flex; align-items: center; gap: 7px; }
+  .casesub { font-size: 11.5px; color: var(--muted); margin-top: 2px; }
+  .chip { font-size: 10px; font-weight: 700; letter-spacing: .4px; text-transform: uppercase; padding: 2px 7px; border-radius: 6px; background: rgba(227,174,65,.12); color: var(--brass); border: 1px solid rgba(227,174,65,.25); }
+  .value { text-align: right; }
+  .value .v { font-size: 14px; font-weight: 800; color: var(--parch); }
+  .dots { margin-top: 2px; letter-spacing: 1px; font-size: 9px; }
+  .dots .f { color: var(--brass); } .dots .e { color: #38455a; }
+  .resumo { font-size: 12.5px; color: #c3cede; margin: 9px 0 0; }
+  .limit { font-size: 11px; color: var(--brass); margin-top: 4px; }
+
+  .read { margin-top: 9px; border-radius: 10px; padding: 9px 10px; font-size: 12px; }
+  .read.info { background: rgba(111,183,232,.1); border: 1px solid rgba(111,183,232,.25); color: #bfe0f5; }
+  .read.warn { background: rgba(224,102,102,.12); border: 1px solid rgba(224,102,102,.3); color: #f2b9b9; }
+  .read b { color: #fff; }
+
+  .actions { display: flex; gap: 8px; margin-top: 11px; flex-wrap: wrap; }
+  button.btn { font: inherit; font-weight: 700; font-size: 12.5px; border-radius: 10px; padding: 9px 12px; cursor: pointer; border: 1px solid transparent; transition: transform .05s, filter .15s; }
+  button.btn:active { transform: scale(.97); }
+  button.btn:disabled { opacity: .4; cursor: not-allowed; }
+  .btn.gold { background: linear-gradient(180deg, #eab84f, #c9922e); color: #241a06; box-shadow: 0 6px 16px -8px rgba(227,174,65,.7); flex: 1; }
+  .btn.gold:hover:not(:disabled) { filter: brightness(1.06); }
+  .btn.ghost { background: transparent; color: var(--muted); border-color: var(--line); }
+  .btn.ghost:hover:not(:disabled) { color: var(--parch); border-color: var(--brass-dim); }
+  .btn.dark { background: #0f1826; color: var(--parch); border-color: var(--line); width: 100%; }
+  .btn.dark:hover:not(:disabled) { border-color: var(--brass-dim); }
+  .btn.danger { background: linear-gradient(180deg, #d75c5c, #b23e3e); color: #fff; flex: 1; }
+  .btn.danger-ghost { background: transparent; color: var(--bad); border-color: rgba(224,102,102,.4); flex: 1; }
+
+  .endday { width: 100%; margin-top: 8px; background: linear-gradient(180deg, #202c3e, #141d2b); color: var(--parch); border: 1px solid var(--line); border-radius: var(--radius); padding: 13px; font: inherit; font-weight: 700; font-size: 14px; cursor: pointer; }
+  .endday:hover { border-color: var(--brass-dim); }
+  .endday .c { color: var(--muted); font-weight: 600; font-size: 12px; }
+
+  /* ---------- Evoluir ---------- */
+  .grid2 { display: grid; grid-template-columns: 1fr; gap: 9px; }
+  @media (min-width: 460px) { .grid2 { grid-template-columns: 1fr 1fr; } }
+  .mini-title { font-weight: 700; font-size: 13px; color: var(--parch); }
+  .mini-desc { font-size: 11.5px; color: var(--muted); margin-top: 3px; }
+  .cur { color: var(--brass); }
+
+  /* ---------- Crime ---------- */
+  .crime { background: linear-gradient(180deg, #2a1622, #1c1119); border: 1px solid rgba(176,136,224,.35); border-radius: var(--radius); padding: 15px; }
+  .crime .ct { display: flex; align-items: center; gap: 8px; font-weight: 800; color: #e8d3f5; font-size: 14px; font-family: Georgia, serif; }
+  .crime .cd { font-size: 13px; color: #d5c2df; margin: 9px 0; }
+  .crime .box { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 11px 0; }
+  .crime .box > div { background: rgba(0,0,0,.28); border-radius: 9px; padding: 8px 10px; }
+  .crime .box .k { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: .5px; }
+  .crime .box .p { font-weight: 800; font-size: 13px; margin-top: 2px; }
+  .crime .warnline { font-size: 11px; color: #cbb0d8; margin-bottom: 11px; }
+
+  /* ---------- Feed ---------- */
+  .feed { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+  .feed li { font-size: 12px; border-radius: 9px; padding: 8px 11px; border: 1px solid transparent; }
+  .feed .d { color: var(--muted-2); font-weight: 700; }
+  .fe-bom { background: rgba(67,199,138,.1); color: #b3ecd0; border-color: rgba(67,199,138,.2); }
+  .fe-ruim { background: rgba(224,102,102,.1); color: #f0c0c0; border-color: rgba(224,102,102,.2); }
+  .fe-crime { background: rgba(176,136,224,.12); color: #e2ccf3; border-color: rgba(176,136,224,.22); }
+  .fe-neutro { background: rgba(255,255,255,.03); color: var(--muted); border-color: var(--line); }
+
+  /* ---------- Jail banner ---------- */
+  .jail { display: flex; gap: 11px; align-items: center; background: rgba(224,102,102,.1); border: 1px solid rgba(224,102,102,.3); border-radius: var(--radius); padding: 13px; margin-top: 16px; color: #f2c4c4; font-size: 12.5px; }
+  .jail .big { font-size: 22px; }
+  .jail b { color: #fff; display: block; margin-bottom: 2px; font-size: 13.5px; }
+
+  /* ---------- Modal ---------- */
+  .overlay { position: fixed; inset: 0; z-index: 50; background: rgba(4,7,12,.66); backdrop-filter: blur(3px); display: flex; align-items: flex-end; justify-content: center; }
+  @media (min-width: 560px) { .overlay { align-items: center; padding: 16px; } }
+  .modal { width: 100%; max-width: 460px; max-height: 92dvh; overflow-y: auto; background: linear-gradient(180deg, var(--panel-2), var(--panel)); border: 1px solid var(--line); border-radius: 18px 18px 0 0; padding: 18px; box-shadow: 0 -20px 60px -20px rgba(0,0,0,.9); }
+  @media (min-width: 560px) { .modal { border-radius: 18px; } }
+  .modal h3 { margin: 0; font-size: 17px; color: var(--parch); }
+  .modal .msub { font-size: 12px; color: var(--muted); margin-top: 2px; }
+  .faixas { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 14px; }
+  .faixa { text-align: left; border: 1px solid var(--line); background: #131c29; border-radius: 12px; padding: 10px; cursor: pointer; }
+  .faixa.sel { border-color: var(--brass); background: rgba(227,174,65,.1); box-shadow: 0 0 0 1px var(--brass) inset; }
+  .faixa .fn { font-weight: 800; font-size: 13.5px; color: var(--parch); }
+  .faixa .fh { font-size: 10.5px; color: var(--muted); }
+  .faixa .fv { margin-top: 5px; font-weight: 800; color: var(--brass); font-size: 14px; }
+  .summary { margin-top: 13px; background: #101a27; border: 1px solid var(--line); border-radius: 12px; padding: 12px; font-size: 13px; }
+  .summary .r { display: flex; justify-content: space-between; padding: 2px 0; }
+  .summary .r span { color: var(--muted); } .summary .r b { color: var(--parch); }
+  .prob { margin-top: 8px; }
+  .prob .r { display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 5px; }
+  .thesis { display: flex; flex-direction: column; gap: 7px; margin-top: 10px; }
+  .thesis button { display: flex; gap: 9px; align-items: flex-start; text-align: left; border: 1px solid var(--line); background: #131c29; border-radius: 11px; padding: 10px; cursor: pointer; font: inherit; font-size: 12.5px; color: #cbd5e4; }
+  .thesis button.sel { border-color: var(--brass); background: rgba(227,174,65,.09); color: var(--parch); }
+  .checkbox { width: 18px; height: 18px; flex: none; border-radius: 5px; border: 1px solid #48566b; display: grid; place-items: center; font-size: 12px; color: transparent; margin-top: 1px; }
+  .thesis button.sel .checkbox { background: var(--brass); border-color: var(--brass); color: #241a06; }
+  .modal-actions { display: flex; gap: 9px; margin-top: 16px; }
+
+  /* ---------- Toast ---------- */
+  .toast-wrap { position: fixed; left: 0; right: 0; bottom: 18px; z-index: 60; display: flex; justify-content: center; pointer-events: none; padding: 0 14px; }
+  .toast { max-width: 560px; width: 100%; background: #1c2636; border: 1px solid var(--brass-dim); border-radius: 12px; padding: 11px 14px; font-size: 12.5px; color: var(--parch); box-shadow: 0 14px 40px -12px rgba(0,0,0,.9); transform: translateY(140%); transition: transform .3s cubic-bezier(.2,.8,.2,1); }
+  .toast.show { transform: translateY(0); }
+  .toast.bom { border-color: rgba(67,199,138,.6); }
+  .toast.ruim { border-color: rgba(224,102,102,.6); }
+  .toast.crime { border-color: rgba(176,136,224,.6); }
+
+  /* ---------- Game over ---------- */
+  .gameover { position: fixed; inset: 0; z-index: 70; background: rgba(4,7,12,.85); display: grid; place-items: center; padding: 20px; }
+  .gameover .box { max-width: 360px; background: var(--panel-2); border: 1px solid var(--line); border-radius: 18px; padding: 26px; text-align: center; }
+  .gameover .box .sk { font-size: 42px; }
+  .gameover h2 { margin: 8px 0 6px; color: var(--parch); }
+  .gameover p { color: var(--muted); font-size: 13px; margin: 0 0 18px; }
+
+  /* ---------- Arte / ilustrações ---------- */
+  .identity { display: flex; align-items: center; gap: 12px; padding-bottom: 13px; margin-bottom: 13px; border-bottom: 1px solid var(--line); }
+  .portrait { width: 62px; height: 68px; border-radius: 12px; overflow: hidden; flex: none; border: 1px solid var(--brass-dim); box-shadow: inset 0 1px 0 rgba(227,174,65,.3), 0 8px 18px -12px #000; }
+  .portrait svg { display: block; width: 100%; height: 100%; }
+  .identity .who { min-width: 0; }
+  .identity .role { font-family: Georgia, serif; font-size: 15px; font-weight: 700; color: var(--parch); }
+  .identity .place { font-size: 11.5px; color: var(--muted); margin-top: 1px; }
+  .identity .place b { color: var(--brass); font-weight: 600; }
+  .thumbwrap { position: relative; flex: none; width: 46px; height: 46px; }
+  .thumb { width: 46px; height: 46px; border-radius: 11px; overflow: hidden; border: 1px solid var(--line); }
+  .thumb svg { display: block; width: 100%; height: 100%; }
+  .abadge { position: absolute; right: -5px; bottom: -5px; width: 22px; height: 22px; border-radius: 7px; overflow: hidden; border: 2px solid var(--panel); box-shadow: 0 2px 6px rgba(0,0,0,.5); }
+  .abadge svg { display: block; width: 100%; height: 100%; }
+  .lead { display: flex; align-items: center; gap: 12px; min-width: 0; }
+  .interns { display: flex; gap: 6px; margin-top: 10px; flex-wrap: wrap; align-items: center; }
+  .intern { width: 40px; height: 40px; border-radius: 9px; overflow: hidden; border: 1px solid var(--line); }
+  .intern svg { display: block; width: 100%; height: 100%; }
+  .intern.slotvazio { border-style: dashed; opacity: 0.4; display: grid; place-items: center; color: var(--muted-2); font-size: 18px; }
+  .crime-art { width: 100%; height: 116px; border-radius: 12px; overflow: hidden; margin-bottom: 13px; border: 1px solid rgba(176,136,224,.3); }
+  .crime-art svg { display: block; width: 100%; height: 100%; }
+  .jail-art { width: 50px; height: 50px; flex: none; border-radius: 10px; overflow: hidden; border: 1px solid rgba(224,102,102,.35); }
+  .jail-art svg { display: block; width: 100%; height: 100%; }
+
+  @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+  button:focus-visible, .tab:focus-visible { outline: 2px solid var(--brass); outline-offset: 2px; }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="brandwrap">
+    <div class="brand">
+      <div class="seal">⚖️</div>
+      <div>
+        <h1>Vida de Advogado</h1>
+        <div class="sub" id="topsub">Dia 1</div>
+      </div>
+    </div>
+    <button class="ghostbtn" data-act="reiniciar">↺ Recomeçar</button>
+  </div>
+</div>
+
+<div class="wrap">
+  <div id="app"></div>
+</div>
+
+<div class="toast-wrap"><div class="toast" id="toast"></div></div>
+
+<script>
+(function () {
+  "use strict";
+
+  // ================================================================
+  // CONTEÚDO
+  // ================================================================
+  var ROTULO_AREA = { trabalhista:"Trabalhista", civel:"Cível", consumidor:"Consumidor", familia:"Família", criminal:"Criminal", empresarial:"Empresarial" };
+  var EMOJI_AREA = { trabalhista:"👷", civel:"⚖️", consumidor:"🛒", familia:"👨‍👩‍👧", criminal:"🚔", empresarial:"🏢" };
+
+  var ARQUETIPOS = [
+    // ===== TIER 1 — começo de carreira (causas locais) =====
+    { area:"trabalhista", tier:1, titulo:"Horas extras no comércio local", complexidade:2, valorBase:4500,
+      resumo:"Balconista de mercadinho fez hora extra todo dia por 2 anos, sem registro nem pagamento. Colegas confirmam e há fotos do ponto.",
+      sinal:"Prova testemunhal e indícios da jornada — pedido consistente.",
+      teses:[ [1,"Horas extras com adicional de 50% e reflexos em férias, 13º e FGTS"], [1,"Prova da jornada por testemunhas e registros informais"], [1,"Intervalo intrajornada não usufruído (art. 71 CLT)"], [0,"Pedir estabilidade decenal já revogada há décadas"], [0,"Dano moral por mero descumprimento contratual"] ] },
+    { area:"trabalhista", tier:1, titulo:"Verbas rescisórias não pagas", complexidade:1, valorBase:3500,
+      resumo:"Trabalhador dispensado sem receber saldo de salário, aviso prévio e férias. A empresa some quando cobrada.",
+      sinal:"Verbas incontroversas não pagas — caminho direto.",
+      teses:[ [1,"Saldo de salário, aviso prévio, férias + 1/3 e 13º proporcional"], [1,"Multa do art. 477 da CLT pelo atraso na quitação"], [1,"Liberação do FGTS + 40% e guias do seguro-desemprego"], [0,"Pedir reintegração sem qualquer estabilidade"], [0,"Reconhecer justa causa do próprio empregado"] ] },
+    { area:"consumidor", tier:1, titulo:"Produto com vício não resolvido", complexidade:1, valorBase:3000,
+      resumo:"Celular novo apresentou defeito, foi 3 vezes à assistência em 30 dias e não foi resolvido. Cliente tem as ordens de serviço.",
+      sinal:"Prazo de 30 dias esgotado sem solução, com ordens de serviço.",
+      teses:[ [1,"Opções do art. 18 do CDC (troca, abatimento ou restituição)"], [1,"Responsabilidade solidária de fabricante e loja"], [1,"Dano moral pelo desgaste e privação prolongada do bem"], [0,"Rescindir todo o contrato de telefonia da operadora por tabela"], [0,"Pedir a prisão do gerente da loja"] ] },
+    { area:"consumidor", tier:1, titulo:"Voo cancelado sem assistência", complexidade:2, valorBase:4200,
+      resumo:"Companhia cancelou o voo e deixou o cliente 14h no aeroporto sem hotel nem alimentação. Ele tem os comprovantes de gastos.",
+      sinal:"Falha clara na prestação do serviço, com comprovantes.",
+      teses:[ [1,"Responsabilidade objetiva do fornecedor (art. 14 CDC)"], [1,"Dano moral pela falha e pelo descaso na assistência"], [1,"Danos materiais com base nos comprovantes de gastos"], [0,"Invocar a Convenção de Montreal para limitar a própria indenização"], [0,"Pedir a cassação da concessão da companhia aérea"] ] },
+    { area:"consumidor", tier:1, titulo:"Cobrança indevida na conta", complexidade:1, valorBase:2800,
+      resumo:"O banco debitou por meses tarifas e um 'seguro' que o cliente nunca contratou.",
+      sinal:"Débitos sem contratação — devolução em dobro cabível.",
+      teses:[ [1,"Declaração de inexistência do débito e fim da cobrança"], [1,"Repetição do indébito em dobro (art. 42, § único, CDC)"], [1,"Inversão do ônus da prova quanto à contratação"], [0,"Quebra do sigilo bancário de todos os correntistas do banco"], [0,"Prisão do gerente por estelionato na ação cível"] ] },
+    { area:"civel", tier:1, titulo:"Acidente de trânsito leve", complexidade:2, valorBase:4000,
+      resumo:"Cliente teve o carro atingido por condutor que avançou a preferencial. Tem BO e orçamentos do conserto.",
+      sinal:"Culpa demonstrável e danos com orçamentos.",
+      teses:[ [1,"Responsabilidade civil por culpa (art. 186 CC) e nexo causal"], [1,"Danos materiais pelo conserto conforme orçamentos"], [1,"Despesas com transporte durante o período de reparo"], [0,"Responsabilidade objetiva do particular sem previsão legal"], [0,"Dano moral por simples avaria, sem qualquer repercussão"] ] },
+    { area:"civel", tier:1, titulo:"Vazamento do apartamento de cima", complexidade:2, valorBase:2500,
+      resumo:"Infiltração vinda do apartamento superior danificou o teto e os móveis do cliente. O vizinho se recusa a arcar.",
+      sinal:"Dano material com nexo no imóvel superior — laudo resolve.",
+      teses:[ [1,"Prova pericial da origem do vazamento no imóvel de cima"], [1,"Indenização dos danos materiais (reparos e móveis)"], [1,"Notificação e produção antecipada de prova, se necessário"], [0,"Pedir a demolição do apartamento vizinho"], [0,"Ação penal por dano, que exige dolo aqui inexistente"] ] },
+    { area:"familia", tier:1, titulo:"Divórcio consensual", complexidade:1, valorBase:3500,
+      resumo:"Casal sem filhos menores e com poucos bens quer se divorciar de forma amigável e rápida.",
+      sinal:"Consenso entre as partes — via rápida, até extrajudicial.",
+      teses:[ [1,"Divórcio consensual, inclusive por escritura pública em cartório"], [1,"Partilha amigável dos bens conforme o acordo"], [1,"Retomada do nome de solteiro, se desejado"], [0,"Discutir a culpa pelo fim do casamento, hoje irrelevante"], [0,"Exigir audiência de instrução em caso totalmente consensual"] ] },
+    { area:"familia", tier:1, titulo:"Fixação de pensão alimentícia", complexidade:2, valorBase:3800,
+      resumo:"Mãe precisa fixar alimentos para o filho de 6 anos; o pai tem emprego formal, mas não contribui.",
+      sinal:"Binômio necessidade-possibilidade favorável, pai com renda.",
+      teses:[ [1,"Alimentos pelo binômio necessidade × possibilidade"], [1,"Alimentos provisórios já no início da ação"], [1,"Desconto direto em folha de pagamento do alimentante"], [0,"Prisão do pai antes mesmo da fixação dos alimentos"], [0,"Vincular a pensão às visitas, o que é vedado"] ] },
+    { area:"criminal", tier:1, titulo:"Furto de pequeno valor", complexidade:3, valorBase:5000,
+      resumo:"Réu primário preso por furtar um item de baixo valor em mercado. Bom comportamento, confessou, mercadoria recuperada.",
+      sinal:"Réu primário, res de pequeno valor e bem restituído.",
+      teses:[ [1,"Princípio da insignificância (bagatela) diante do ínfimo valor"], [1,"Furto privilegiado (art. 155, §2º CP) por primariedade e pequeno valor"], [1,"Atenuante da confissão espontânea (art. 65, III, 'd', CP)"], [0,"Legítima defesa como excludente em crime patrimonial"], [0,"Negar autoria apesar da confissão e das câmeras"] ] },
+    { area:"criminal", tier:1, titulo:"Lesão corporal leve em briga", complexidade:2, valorBase:4500,
+      resumo:"Cliente se envolveu em briga de bar e responde por lesão leve. Houve provocação e ele tem bons antecedentes.",
+      sinal:"Réu primário, provocação da vítima e lesão de menor gravidade.",
+      teses:[ [1,"Legítima defesa diante da agressão iniciada pela vítima"], [1,"Atenuantes de primariedade e bons antecedentes"], [1,"Transação penal / composição civil (Lei 9.099/95)"], [0,"Alegar inimputabilidade sem qualquer laudo"], [0,"Negar a autoria diante de várias testemunhas"] ] },
+    { area:"criminal", tier:1, titulo:"Embriaguez ao volante", complexidade:2, valorBase:5500,
+      resumo:"Cliente autuado no art. 306 do CTB. Recusou o bafômetro e não houve exame de sangue.",
+      sinal:"Prova da embriaguez frágil sem teste — foco na materialidade.",
+      teses:[ [1,"Fragilidade probatória sem exame ou teste conclusivo"], [1,"Ausência de comprovação da concentração exigida em lei"], [1,"Suspensão condicional do processo, se cabível"], [0,"Confessar a embriaguez e pedir só a redução da multa"], [0,"Alegar estado de necessidade sem nenhuma emergência"] ] },
+    { area:"empresarial", tier:1, titulo:"Cobrança de dívida documentada", complexidade:2, valorBase:6500,
+      resumo:"Pequena empresa não recebeu por serviços prestados. Tem contrato assinado, notas e e-mails confirmando a dívida.",
+      sinal:"Prova escrita robusta da dívida — bom para monitória.",
+      teses:[ [1,"Ação monitória com prova escrita sem eficácia executiva"], [1,"Correção monetária e juros de mora desde o vencimento"], [1,"Protesto e negativação do devedor como reforço"], [0,"Pedir a falência da empresa por uma única fatura em atraso"], [0,"Prisão do sócio por dívida civil"] ] },
+
+    // ===== TIER 2 — escritório consolidado (causas maiores) =====
+    { area:"trabalhista", tier:2, titulo:"Horas extras de bancário", complexidade:3, valorBase:9000,
+      resumo:"Bancário trabalhou anos além da 6ª hora sem receber a 7ª e a 8ª como extras, sob metas e pressão por resultados.",
+      sinal:"Jornada especial do bancário (6h) — 7ª e 8ª horas como extra.",
+      teses:[ [1,"7ª e 8ª horas como extras (jornada de 6h, art. 224 CLT)"], [1,"Reflexos das extras em férias, 13º, FGTS e repousos"], [1,"Afastar o cargo de confiança do art. 224, §2º, da CLT"], [0,"Pedir adicional de insalubridade sem qualquer agente nocivo"], [0,"Sustentar vínculo com o cliente do banco, e não com o banco"] ] },
+    { area:"trabalhista", tier:2, titulo:"Reversão de justa causa", complexidade:3, valorBase:6000,
+      resumo:"Empregado dispensado por 'desídia', mas nunca foi advertido antes e a punição veio meses depois do fato.",
+      sinal:"Faltam imediatidade e gradação da pena — bom para reversão.",
+      teses:[ [1,"Ausência de imediatidade entre a falta e a punição"], [1,"Falta de gradação/proporcionalidade da pena disciplinar"], [1,"Reversão para dispensa imotivada com verbas + FGTS+40%"], [0,"Confessar o ato faltoso e apenas pedir redução da multa"], [0,"Alegar acidente de trabalho sem nexo nem CAT"] ] },
+    { area:"trabalhista", tier:2, titulo:"Reconhecimento de vínculo (PJ x CLT)", complexidade:4, valorBase:9000,
+      resumo:"Prestador 'PJ' que batia ponto, tinha chefe e metas por 3 anos. Quer reconhecer o vínculo e as verbas.",
+      sinal:"Presentes pessoalidade, subordinação, habitualidade e onerosidade.",
+      teses:[ [1,"Vínculo pela primazia da realidade (art. 9º CLT)"], [1,"Pessoalidade, subordinação, habitualidade e onerosidade"], [1,"Verbas rescisórias, FGTS e anotação em CTPS"], [0,"Sustentar que a 'pejotização' foi lícita por haver contrato"], [0,"Dano moral por assédio sem nenhum episódio narrado"] ] },
+    { area:"consumidor", tier:2, titulo:"Plano de saúde negou procedimento", complexidade:3, valorBase:8000,
+      resumo:"Operadora negou cirurgia indicada por médico, alegando que não consta no rol. Cliente tem laudo e urgência.",
+      sinal:"Negativa contra indicação médica — jurisprudência favorável.",
+      teses:[ [1,"Abusividade da negativa diante da indicação médica (CDC)"], [1,"Rol da ANS como referência, não vedação absoluta"], [1,"Tutela de urgência para autorização imediata do procedimento"], [0,"Pedir o descredenciamento da operadora pela ANS na ação"], [0,"Rescindir o contrato do cliente como 'punição' à operadora"] ] },
+    { area:"consumidor", tier:2, titulo:"Negativação indevida", complexidade:2, valorBase:3800,
+      resumo:"Cliente foi negativado por dívida que já havia pago. Tem o comprovante. Não possui outras negativações.",
+      sinal:"Prova de pagamento em mãos e nome limpo fora essa inscrição.",
+      teses:[ [1,"Inversão do ônus da prova (art. 6º, VIII, CDC)"], [1,"Dano moral in re ipsa pela inscrição indevida"], [1,"Repetição do indébito em dobro (art. 42, § único, CDC)"], [0,"Insistir em dano moral ignorando a Súmula 385 do STJ"], [0,"Pedir prisão civil do gerente do banco"] ] },
+    { area:"civel", tier:2, titulo:"Acidente com sequelas permanentes", complexidade:3, valorBase:8000,
+      resumo:"Cliente foi abalroado por motorista que furou o sinal. Tem BO, laudo e ficou com sequela no joelho.",
+      sinal:"Nexo causal e culpa bem documentados (BO + testemunha + laudo).",
+      teses:[ [1,"Responsabilidade por culpa (art. 186 CC) e nexo causal"], [1,"Danos materiais e lucros cessantes comprovados"], [1,"Dano moral e estético pela sequela permanente"], [0,"Responsabilidade objetiva do particular sem previsão legal"], [0,"Apreensão definitiva do veículo do réu"] ] },
+    { area:"familia", tier:2, titulo:"Guarda e alimentos", complexidade:3, valorBase:5500,
+      resumo:"Mãe busca regularizar a guarda e fixar pensão. O pai é presente, mas as partes não se entendem sobre a convivência.",
+      sinal:"Pai presente e com renda — cenário clássico de guarda compartilhada.",
+      teses:[ [1,"Guarda compartilhada como regra (art. 1.584, §2º CC)"], [1,"Melhor interesse da criança como vetor da convivência"], [1,"Alimentos pelo binômio necessidade × possibilidade"], [0,"Acusar alienação parental sem laudo nem qualquer prova"], [0,"Pedir a perda do poder familiar do pai por mera divergência"] ] },
+    { area:"familia", tier:2, titulo:"União estável e partilha", complexidade:3, valorBase:9000,
+      resumo:"Cliente viveu 12 anos com o companheiro, construíram patrimônio, mas nada está no nome dela. Ele nega a união.",
+      sinal:"Convivência pública e duradoura, com patrimônio comum.",
+      teses:[ [1,"Reconhecimento da união estável (convivência pública e duradoura)"], [1,"Partilha dos bens onerosos da constância (comunhão parcial)"], [1,"Prova por testemunhas, fotos e documentos da vida em comum"], [0,"Pleitear herança de companheiro ainda vivo"], [0,"Exigir 50% de bens anteriores ao início da união"] ] },
+    { area:"criminal", tier:2, titulo:"Tráfico — desclassificação para uso", complexidade:4, valorBase:12000,
+      resumo:"Cliente preso com pequena quantidade, primário, sem ligação com organização. Acusado de tráfico.",
+      sinal:"Pequena quantidade e primariedade — uso ou tráfico privilegiado.",
+      teses:[ [1,"Desclassificação para porte de uso próprio (art. 28) pelo contexto"], [1,"Tráfico privilegiado (art. 33, §4º) por primariedade"], [1,"Nulidade se houve busca domiciliar sem fundadas razões"], [0,"Alegar legítima defesa no crime de tráfico"], [0,"Negar a posse diante de flagrante e testemunhas"] ] },
+    { area:"criminal", tier:2, titulo:"Roubo — participação menor", complexidade:4, valorBase:11000,
+      resumo:"Réu jovem que apenas dirigiu o carro, sem portar arma nem entrar no local. Primário.",
+      sinal:"Conduta periférica — participação de menor importância.",
+      teses:[ [1,"Participação de menor importância (art. 29, §1º CP)"], [1,"Afastamento da majorante de arma que ele não portava"], [1,"Atenuantes da menoridade relativa e primariedade"], [0,"Assumir coautoria plena para 'colaborar'"], [0,"Legítima defesa contra a vítima do roubo"] ] },
+    { area:"empresarial", tier:2, titulo:"Rescisão contratual empresarial", complexidade:3, valorBase:12000,
+      resumo:"Empresa quer romper contrato de fornecimento por descumprimento reiterado da outra parte, com multa prevista.",
+      sinal:"Inadimplemento documentado autoriza a resolução com multa.",
+      teses:[ [1,"Resolução do contrato por inadimplemento (art. 475 CC)"], [1,"Cobrança da multa contratual e perdas e danos"], [1,"Notificação prévia e prova do descumprimento"], [0,"Rescisão unilateral imotivada ignorando o contrato"], [0,"Pedir a falência da contraparte por descumprimento"] ] },
+
+    // ===== TIER 3 — banca de referência (grandes causas) =====
+    { area:"trabalhista", tier:3, titulo:"Equiparação salarial em multinacional", complexidade:4, valorBase:22000,
+      resumo:"Gerente exercia funções idênticas às de colega mais bem pago, mesma produtividade, na mesma empresa e cidade.",
+      sinal:"Identidade de funções e mesma localidade — equiparação (art. 461).",
+      teses:[ [1,"Equiparação salarial por identidade de funções (art. 461 CLT)"], [1,"Diferenças salariais retroativas e seus reflexos"], [1,"Prova do paradigma e da mesma produtividade e técnica"], [0,"Equiparar com paradigma de empresa diferente"], [0,"Invocar quadro de carreira homologado inexistente"] ] },
+    { area:"trabalhista", tier:3, titulo:"Dano moral coletivo (sindicato)", complexidade:5, valorBase:30000,
+      resumo:"Empresa impunha revistas vexatórias e metas abusivas a centenas de empregados. O sindicato quer agir.",
+      sinal:"Lesão a direitos de toda a categoria — tutela coletiva.",
+      teses:[ [1,"Legitimidade do sindicato para a tutela coletiva da categoria"], [1,"Dano moral coletivo pelas práticas degradantes reiteradas"], [1,"Obrigação de fazer para cessar revistas e metas abusivas"], [0,"Pedir a dissolução compulsória da empresa"], [0,"Individualizar cada trabalhador numa ação de dano coletivo"] ] },
+    { area:"consumidor", tier:3, titulo:"Ação coletiva e recall", complexidade:5, valorBase:28000,
+      resumo:"Lote de um eletrodoméstico apresenta defeito que causa incêndios. Muitos consumidores foram afetados.",
+      sinal:"Vício que atinge a coletividade — ação coletiva de consumo.",
+      teses:[ [1,"Ação coletiva de consumo pelo defeito do produto"], [1,"Determinação de recall e reparação dos consumidores"], [1,"Inversão do ônus e responsabilidade objetiva do fornecedor"], [0,"Exigir a prisão dos diretores como condição da ação cível"], [0,"Renunciar à tutela coletiva e propor só uma ação individual"] ] },
+    { area:"civel", tier:3, titulo:"Erro médico com dano grave", complexidade:5, valorBase:35000,
+      resumo:"Paciente sofreu sequela após cirurgia com falha grave e sem consentimento informado adequado.",
+      sinal:"Falha e nexo com a sequela; consentimento deficiente.",
+      teses:[ [1,"Responsabilidade do hospital (objetiva) e do médico (por culpa)"], [1,"Prova pericial do erro e do nexo com a sequela"], [1,"Falha no dever de informação e consentimento esclarecido"], [0,"Responsabilidade objetiva pessoal do médico como regra"], [0,"Dispensar a perícia médica confiando só no relato do cliente"] ] },
+    { area:"civel", tier:3, titulo:"Distrato de imóvel na planta", complexidade:4, valorBase:30000,
+      resumo:"Comprador desistiu do imóvel na planta; a construtora quer reter quase tudo o que foi pago.",
+      sinal:"A retenção deve respeitar os limites da Lei do Distrato.",
+      teses:[ [1,"Restituição com retenção limitada pela Lei 13.786/2018"], [1,"Nulidade de cláusulas de retenção integral abusivas"], [1,"Devolução em parcela única quando aplicável a jurisprudência"], [0,"Exigir 100% do valor de volta, ignorando a lei do distrato"], [0,"Cobrar lucros cessantes de imóvel que o cliente não recebeu"] ] },
+    { area:"familia", tier:3, titulo:"Partilha de patrimônio elevado", complexidade:4, valorBase:40000,
+      resumo:"Divórcio litigioso com empresas, imóveis e uma holding familiar. Há suspeita de ocultação de bens.",
+      sinal:"Patrimônio complexo — avaliação e rastreio de bens.",
+      teses:[ [1,"Partilha conforme o regime de bens, com avaliação do acervo"], [1,"Exibição e rastreio de bens e quotas ocultadas"], [1,"Perícia contábil na holding e nas empresas do casal"], [0,"Penhorar de imediato todos os bens antes de qualquer prova"], [0,"Ignorar o regime de bens e dividir tudo pela metade"] ] },
+    { area:"criminal", tier:3, titulo:"Tribunal do Júri — homicídio", complexidade:5, valorBase:45000,
+      resumo:"Cliente responde por homicídio alegando legítima defesa após ameaça real e iminente. Vai a júri.",
+      sinal:"Tese defensiva forte para o plenário (legítima defesa).",
+      teses:[ [1,"Legítima defesa (art. 25 CP), com moderação e agressão iminente"], [1,"Desclassificação para excesso culposo, subsidiariamente"], [1,"Teses e quesitos bem construídos para os jurados"], [0,"Confessar homicídio qualificado buscando 'boa impressão'"], [0,"Alegar inimputabilidade sem laudo psiquiátrico"] ] },
+    { area:"criminal", tier:3, titulo:"Organização criminosa e lavagem", complexidade:5, valorBase:60000,
+      resumo:"Empresário acusado, em grande operação, de integrar organização e lavar dinheiro. Provas por interceptação.",
+      sinal:"Atacar a licitude das provas e a tipicidade da associação.",
+      teses:[ [1,"Questionar a licitude das interceptações e provas derivadas"], [1,"Atipicidade da organização por falta de estabilidade e hierarquia"], [1,"Distinguir atos lícitos de gestão da suposta lavagem"], [0,"Assumir a organização em troca de delação sem análise"], [0,"Negar fatos documentados incontroversos, minando a defesa"] ] },
+    { area:"criminal", tier:3, titulo:"Colarinho branco — peculato", complexidade:5, valorBase:50000,
+      resumo:"Servidor acusado de desviar verbas públicas. A defesa sustenta ausência de dolo e de proveito próprio.",
+      sinal:"Foco no elemento subjetivo (dolo) e na destinação dos valores.",
+      teses:[ [1,"Ausência de dolo de apropriação e de proveito próprio"], [1,"Falha na individualização da conduta na cadeia administrativa"], [1,"Fragilidade da prova pericial sobre o suposto desvio"], [0,"Alegar insignificância em desvio de vultosa verba pública"], [0,"Confessar o desvio esperando apenas a suspensão da pena"] ] },
+    { area:"empresarial", tier:3, titulo:"Recuperação judicial", complexidade:4, valorBase:55000,
+      resumo:"Empresa viável, mas endividada, quer se reorganizar e evitar a falência. Tem plano e ativos relevantes.",
+      sinal:"Empresa viável — recuperação para reestruturar dívidas.",
+      teses:[ [1,"Recuperação judicial com plano de soerguimento (Lei 11.101)"], [1,"Stay period suspendendo execuções por 180 dias"], [1,"Negociação com credores em assembleia por classes"], [0,"Pedir a autofalência de uma empresa ainda viável"], [0,"Ocultar ativos dos credores no plano apresentado"] ] },
+    { area:"empresarial", tier:3, titulo:"Disputa societária", complexidade:4, valorBase:45000,
+      resumo:"Sócio minoritário foi afastado da gestão e não recebe lucros há anos. Quer sair recebendo sua parte.",
+      sinal:"Quebra da affectio societatis — dissolução parcial e apuração.",
+      teses:[ [1,"Dissolução parcial com apuração de haveres do sócio"], [1,"Prestação de contas e distribuição dos lucros retidos"], [1,"Perícia para avaliação da participação societária"], [0,"Dissolução total de empresa lucrativa e saudável"], [0,"Penhorar bens dos sócios sem desconsideração deferida"] ] }
+  ];
+
+  var ARQUETIPOS_BUXA = [
+    { area:"civel", tier:1, titulo:"Indenização por 'traição'", complexidade:2, valorBase:1500,
+      resumo:"Cliente exaltado quer processar o ex-cônjuge por infidelidade pedindo R$ 500 mil de dano moral. Sem qualquer ilícito além do fim do relacionamento.",
+      sinal:"Não há ilícito indenizável — pretensão emocional, sem causa de pedir.",
+      teses:[ [0,"Dano moral por quebra do dever de fidelidade conjugal"], [0,"Pedir R$ 500 mil sem prova de qualquer dano concreto"], [0,"Danos materiais inexistentes"] ] },
+    { area:"civel", tier:1, titulo:"Causa já prescrita", complexidade:2, valorBase:1200,
+      resumo:"Cliente quer cobrar dívida de fato ocorrido há 8 anos. A pretensão prescreveu há tempos, mas ele insiste e promete 'pagar bem'.",
+      sinal:"Pretensão fulminada pela prescrição — derrota quase certa.",
+      teses:[ [0,"Ignorar a prescrição e ajuizar assim mesmo"], [0,"Alegar causa interruptiva inexistente da prescrição"], [0,"Sustentar imprescritibilidade sem base legal"] ] },
+    { area:"empresarial", tier:2, titulo:"Cliente quer fraudar credores", complexidade:3, valorBase:20000,
+      resumo:"Empresário pede para 'blindar' o patrimônio transferindo bens para laranjas antes de uma execução iminente. Paga adiantado, em dinheiro.",
+      sinal:"Proposta antiética e ilegal (fraude à execução) — risco à OAB e à ficha.",
+      teses:[ [0,"Simular vendas de bens para terceiros de confiança"], [0,"Ocultar patrimônio às vésperas da execução"], [0,"Usar laranjas para esvaziar o patrimônio"] ] },
+    { area:"trabalhista", tier:1, titulo:"Não paga nem assina contrato", complexidade:3, valorBase:800,
+      resumo:"Reclamação frágil, sem provas. O cliente recusa entrada, recusa contrato e diz que 'paga quando ganhar'. Já trocou de advogado 3 vezes.",
+      sinal:"Recusa entrada e contrato, histórico de calote — prejuízo provável.",
+      teses:[ [0,"Aceitar só no êxito, sem contrato escrito"], [0,"Ajuizar sem provas confiando na palavra do cliente"], [0,"Inflar pedidos para 'assustar' a empresa"] ] },
+    { area:"consumidor", tier:2, titulo:"Litigância de má-fé disfarçada", complexidade:2, valorBase:900,
+      resumo:"Cliente 'profissional' que já move dezenas de ações idênticas por danos morais fabricados, buscando acordos rápidos. Quer mais uma.",
+      sinal:"Padrão de litigância predatória — risco de má-fé e sanção.",
+      teses:[ [0,"Fabricar dano moral genérico para forçar acordo"], [0,"Omitir que o cliente já tem ações idênticas"], [0,"Multiplicar ações sobre o mesmo fato"] ] },
+    { area:"familia", tier:1, titulo:"Herança de parente vivo", complexidade:2, valorBase:1000,
+      resumo:"Cliente quer 'antecipar' a herança de um tio ainda vivo e saudável, brigando com a família por bens que não são dele.",
+      sinal:"Não há herança de pessoa viva — pretensão juridicamente impossível.",
+      teses:[ [0,"Ajuizar inventário de pessoa ainda viva"], [0,"Pedir a parte da herança antes da morte"], [0,"Bloquear os bens do tio saudável"] ] },
+    { area:"civel", tier:2, titulo:"Cliente mente sobre os fatos", complexidade:3, valorBase:1500,
+      resumo:"A versão do cliente é desmentida pelos próprios documentos que ele trouxe; ainda assim, ele quer que você 'dê um jeito'.",
+      sinal:"Fatos contra prova documental — derrota e risco ético.",
+      teses:[ [0,"Sustentar versão contrariada pelos próprios documentos"], [0,"Omitir provas desfavoráveis do processo"], [0,"Instruir o cliente a alterar a versão dos fatos"] ] },
+    { area:"trabalhista", tier:2, titulo:"Ação por vingança, sem prova", complexidade:3, valorBase:1200,
+      resumo:"Cliente saiu bem, recebeu tudo e teve rescisão homologada, mas quer processar 'por vingança', inventando assédio sem qualquer prova.",
+      sinal:"Pretensão sem lastro e com risco de litigância de má-fé.",
+      teses:[ [0,"Alegar assédio moral sem episódio nem testemunha"], [0,"Pedir danos morais vultosos sem qualquer prova"], [0,"Reabrir verbas já quitadas e homologadas"] ] }
+  ];
+
+  var CRIMES = [
+    // tier 1
+    { tier:1, titulo:"Caixa 2 do escritório", ganho:9000, chanceBase:0.7, penaDias:4, multa:15000, perdaReputacao:20,
+      descricao:"Deixar de declarar parte dos honorários para pagar menos imposto. Sonegação fiscal — cai bem no bolso até a fiscalização bater." },
+    { tier:1, titulo:"Sacar benefício de segurado falecido", ganho:8000, chanceBase:0.66, penaDias:5, multa:14000, perdaReputacao:24,
+      descricao:"Continuar sacando a aposentadoria de um cliente que já morreu, ocultando o óbito do INSS. Estelionato previdenciário." },
+    { tier:1, titulo:"Levar celular ao preso no parlatório", ganho:9000, chanceBase:0.58, penaDias:6, multa:16000, perdaReputacao:28,
+      descricao:"Um cliente pede para você entrar um celular e um chip escondidos na visita, usando a prerrogativa de advogado. Favorecimento e mais." },
+    // tier 2
+    { tier:2, titulo:"'Pombo-correio' de facção", ganho:16000, chanceBase:0.55, penaDias:8, multa:18000, perdaReputacao:38,
+      descricao:"Um líder preso paga alto para você levar e trazer bilhetes com 'recados' para os membros lá fora. Comunicação de ordens da facção." },
+    { tier:2, titulo:"Comprar o silêncio de uma testemunha", ganho:20000, chanceBase:0.52, penaDias:8, multa:20000, perdaReputacao:36,
+      descricao:"Pagar por fora para uma testemunha 'esquecer' o que viu e mudar o depoimento. Coação e fraude processual." },
+    { tier:2, titulo:"Propina a servidor por decisão", ganho:30000, chanceBase:0.5, penaDias:9, multa:25000, perdaReputacao:42,
+      descricao:"Um contato promete 'agilizar' uma decisão em troca de um valor por fora ao servidor. Corrupção ativa." },
+    { tier:2, titulo:"Honorário em dinheiro vivo suspeito", ganho:18000, chanceBase:0.62, penaDias:6, multa:12000, perdaReputacao:26,
+      descricao:"Um 'cliente' oferece pagar tudo em espécie, muito acima do mercado, sem recibo. Cheira a lavagem de dinheiro." },
+    // tier 3
+    { tier:3, titulo:"Ser o 'núcleo jurídico' da facção", ganho:42000, chanceBase:0.45, penaDias:12, multa:30000, perdaReputacao:55,
+      descricao:"O grupo quer que você gerencie o caixa deles e repasse os 'salves' dos chefes presos, burlando o isolamento. Integrar organização criminosa." },
+    { tier:3, titulo:"Assessoria fixa para organização", ganho:40000, chanceBase:0.45, penaDias:12, multa:30000, perdaReputacao:50,
+      descricao:"Um grupo oferece uma 'mensalidade' gorda para você ser o advogado de plantão deles em tudo. Ganho recorrente, ficha manchada para sempre." },
+    { tier:3, titulo:"Gerir a divulgação do tráfico", ganho:35000, chanceBase:0.48, penaDias:10, multa:28000, perdaReputacao:48,
+      descricao:"Repassar para fora fotos e vídeos de drogas passados pelo chefe preso, para atrair compradores. Associação e tráfico." },
+    { tier:3, titulo:"Operar um esquema de propina milionário", ganho:55000, chanceBase:0.42, penaDias:12, multa:40000, perdaReputacao:55,
+      descricao:"Intermediar pagamentos de propina entre uma empreiteira e agentes públicos, lavando tudo por honorários fictícios." }
+  ];
+
+  var ESCRITORIOS = [
+    { nome:"Mesa em coworking", descricao:"Uma mesa alugada e muita fé. Todo começo é assim.", aluguel:60, slots:2, qualidade:1, energiaBonus:0, maxEstagiarios:0, custoUpgrade:0 },
+    { nome:"Sala própria no centro", descricao:"Placa na porta, secretária compartilhada e clientela um pouco melhor.", aluguel:240, slots:3, qualidade:1.25, energiaBonus:1, maxEstagiarios:1, custoUpgrade:9000 },
+    { nome:"Andar comercial", descricao:"Recepção, salas de reunião e casos de maior porte batendo à porta.", aluguel:750, slots:5, qualidade:1.6, energiaBonus:2, maxEstagiarios:3, custoUpgrade:40000 },
+    { nome:"Escritório boutique", descricao:"Marca respeitada, clientes selecionados e honorários generosos.", aluguel:1900, slots:7, qualidade:2.1, energiaBonus:3, maxEstagiarios:5, custoUpgrade:130000 },
+    { nome:"Banca de referência nacional", descricao:"Nome no topo da lista. Grandes causas, grandes honorários, grande responsabilidade.", aluguel:5200, slots:10, qualidade:3, energiaBonus:5, maxEstagiarios:8, custoUpgrade:420000 }
+  ];
+
+  var CIDADES = [
+    { id:"interior", nome:"Cidade do interior", descricao:"Custo de vida baixo, causas menores, concorrência tranquila.", qualidade:0.85, custoMudanca:0 },
+    { id:"media", nome:"Cidade média", descricao:"Mais indústria e comércio — causas trabalhistas e cíveis de bom porte.", qualidade:1.1, custoMudanca:7000 },
+    { id:"capital", nome:"Capital", descricao:"Volume alto de casos e honorários maiores. Concorrência feroz.", qualidade:1.4, custoMudanca:28000 },
+    { id:"sp", nome:"São Paulo", descricao:"O maior mercado jurídico do país. Causas milionárias circulando.", qualidade:1.8, custoMudanca:95000 }
+  ];
+
+  var TREINOS = [
+    { id:"oratoria", nome:"Curso de oratória e negociação", descricao:"Fecha mais contratos e convence o cliente a aceitar honorários maiores.", atributo:"carisma", ganho:6, custo:1400, energia:1 },
+    { id:"pos", nome:"Pós-graduação / especialização", descricao:"Mais técnica: aumenta a chance de ganhar casos e de ler bem uma causa.", atributo:"tecnica", ganho:6, custo:2800, energia:1 },
+    { id:"networking", nome:"Evento de networking", descricao:"Um empurrão no carisma e nas relações. Barato e rápido.", atributo:"carisma", ganho:3, custo:600, energia:1 },
+    { id:"jurisprudencia", nome:"Imersão em jurisprudência", descricao:"Fim de semana estudando os tribunais. Técnica afiada.", atributo:"tecnica", ganho:3, custo:900, energia:1 }
+  ];
+
+  var NOMES = ["Cristiane Alves","Rogério Pinto","Marcos Vinícius","Fernanda Lima","João Batista","Aparecida Souza","Ricardo Menezes","Patrícia Gomes","Sebastião Rocha","Juliana Prado","Wellington Dias","Cláudia Ferreira","Anderson Melo","Beatriz Nunes","Otávio Camargo","Vera Lúcia","Diego Ramos","Sandra Regina","Thiago Barros","Mônica Teixeira","Gilberto Antunes","Renata Cardoso","Paulo Sérgio","Débora Farias","Edson Moreira"];
+
+  var MULT_FAIXA = { conservador:0.7, justo:1.0, ousado:1.5, abusivo:2.2 };
+  var ACEITE_BASE = { conservador:0.92, justo:0.75, ousado:0.5, abusivo:0.28 };
+  var FAIXAS = [ {id:"conservador",nome:"Conservador",hint:"menor valor, quase certo"}, {id:"justo",nome:"Justo",hint:"valor de mercado"}, {id:"ousado",nome:"Ousado",hint:"valor alto, mais risco"}, {id:"abusivo",nome:"Abusivo",hint:"vale ouro, difícil fechar"} ];
+
+  var CHAVE = "jogo-advogado-artifact-v2";
+  var CUSTO_ESTAGIARIO = 3000, SALARIO_ESTAGIARIO = 40;
+
+  // ================================================================
+  // UTIL
+  // ================================================================
+  function chance(p){ return Math.random() < p; }
+  function clamp(v,mn,mx){ if(mn===undefined)mn=0; if(mx===undefined)mx=100; return Math.max(mn, Math.min(mx, v)); }
+  function pick(a){ return a[Math.floor(Math.random()*a.length)]; }
+  function embaralhar(a){ a=a.slice(); for(var i=a.length-1;i>0;i--){ var j=Math.floor(Math.random()*(i+1)); var t=a[i]; a[i]=a[j]; a[j]=t; } return a; }
+  function uid(){ return Math.random().toString(36).slice(2,10); }
+  function jitter(base,pct){ pct=pct===undefined?0.25:pct; var f=1+(Math.random()*2-1)*pct; return Math.round(base*f/10)*10; }
+  function esc(s){ return String(s).replace(/[&<>"]/g, function(c){ return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]; }); }
+
+  function brl(v){ return v.toLocaleString("pt-BR",{style:"currency",currency:"BRL",maximumFractionDigits:0}); }
+  function brlCurto(v){ var a=Math.abs(v); if(a>=1000) return (v<0?"-":"")+"R$ "+(a/1000).toFixed(a%1000===0?0:1)+"k"; return brl(v); }
+
+  // ================================================================
+  // ESTADO
+  // ================================================================
+  var S, UI = { aba:"escritorio", modal:null };
+
+  function estadoInicial(){
+    var s = { versao:2, dia:1, dinheiro:2000, reputacao:8, carisma:15, tecnica:18, energia:4, energiaMax:4,
+      nivel:1, xp:0, escritorioNivel:0, cidadeId:"interior", estagiarios:0, ofertas:[], ativos:[], crime:null,
+      ultimosTitulos:[], ultimoCrime:"", preso:0, feed:[], vitorias:0, derrotas:0, encerrado:false };
+    s.ofertas = gerarOfertas(s, 3);
+    s.crime = chance(0.4) ? gerarCrime(s) : null;
+    registrar(s, "Você abriu seu escritório. Boa sorte, doutor(a)! ⚖️", "neutro");
+    return s;
+  }
+  function carregar(){ try{ var b=localStorage.getItem(CHAVE); if(!b) return null; var e=JSON.parse(b); if(e.versao!==2) return null; return e; }catch(_){ return null; } }
+  function salvar(){ try{ localStorage.setItem(CHAVE, JSON.stringify(S)); }catch(_){} }
+
+  function registrar(s, texto, tipo){ s.feed.unshift({ id:uid(), dia:s.dia, texto:texto, tipo:tipo }); if(s.feed.length>60) s.feed.length=60; }
+
+  // ---------- Geração ----------
+  function multQualidade(s){ var q=ESCRITORIOS[s.escritorioNivel].qualidade; var c=CIDADES.filter(function(x){return x.id===s.cidadeId;})[0]; return q*(c?c.qualidade:1); }
+  function indiceCidade(s){ var i=0; CIDADES.forEach(function(c,k){ if(c.id===s.cidadeId) i=k; }); return i; }
+  // Faixa de "tier" liberada pela evolução (escritório + cidade).
+  function faixaTier(s){ var nm=s.escritorioNivel+indiceCidade(s); var max = nm>=4?3 : nm>=2?2 : 1; var min = max===3?2:1; return {min:min, max:max}; }
+  function ofertaDe(a, buxa, mult){
+    return { id:uid(), cliente:pick(NOMES), area:a.area, titulo:a.titulo, resumo:a.resumo, complexidade:a.complexidade,
+      valorBase:Math.max(400, jitter(a.valorBase*mult)), buxa:buxa, sinal:a.sinal,
+      aceitaEntrada: !buxa || chance(0.15),
+      // Embaralha as teses para a ordem não entregar as certas.
+      teses:embaralhar(a.teses.map(function(t){ return { id:uid(), texto:t[1], correta: t[0]===1 }; })), analisado:false };
+  }
+  function gerarOfertas(s, n){
+    var m=multQualidade(s), ft=faixaTier(s);
+    var reais = ARQUETIPOS.filter(function(a){ return a.tier>=ft.min && a.tier<=ft.max; });
+    var evitar = {}; (s.ultimosTitulos||[]).forEach(function(t){ evitar[t]=1; });
+    var usados = {}, out=[];
+    for(var i=0;i<n;i++){
+      var buxa=chance(0.28), arq;
+      if(buxa){
+        var bx = ARQUETIPOS_BUXA.filter(function(a){ return a.tier<=ft.max && !usados[a.titulo]; });
+        arq = pick(bx.length?bx:ARQUETIPOS_BUXA);
+      } else {
+        var cand = reais.filter(function(a){ return !usados[a.titulo] && !evitar[a.titulo]; });
+        if(cand.length===0) cand = reais.filter(function(a){ return !usados[a.titulo]; });
+        if(cand.length===0) cand = reais;
+        arq = pick(cand);
+      }
+      usados[arq.titulo]=1;
+      out.push(ofertaDe(arq, buxa, m));
+    }
+    s.ultimosTitulos = out.map(function(o){ return o.titulo; });
+    return out;
+  }
+  function gerarCrime(s){
+    var ft=faixaTier(s);
+    var pool = CRIMES.filter(function(c){ return c.tier<=ft.max && c.titulo!==s.ultimoCrime; });
+    if(pool.length===0) pool = CRIMES.filter(function(c){ return c.tier<=ft.max; });
+    if(pool.length===0) pool = CRIMES.slice();
+    var c=pick(pool); s.ultimoCrime=c.titulo;
+    return { id:uid(), titulo:c.titulo, descricao:c.descricao, ganho:jitter(c.ganho,0.2), chanceBase:c.chanceBase, penaDias:c.penaDias, multa:c.multa, perdaReputacao:c.perdaReputacao };
+  }
+
+  // ---------- Probabilidades ----------
+  function honorarioDe(o, faixa){ return Math.round(o.valorBase*MULT_FAIXA[faixa]/10)*10; }
+  function chanceAceite(s, o, faixa){
+    var p = ACEITE_BASE[faixa]; p += (s.carisma/100)*0.25; p += (s.reputacao/100)*0.15; p -= (o.complexidade-2)*0.03; if(o.buxa) p += 0.2;
+    return clamp(p, 0.05, 0.98);
+  }
+  function chanceVitoria(s, caso, tesesIds){
+    var p = 0.32; var tecEf = clamp(s.tecnica + s.estagiarios*6);
+    p += (tecEf/100)*0.28; p += (s.carisma/100)*0.08; p += (s.reputacao/100)*0.1; p -= (caso.complexidade-2)*0.05;
+    var corretas = caso.teses.filter(function(t){return t.correta;}).length, acertos=0;
+    tesesIds.forEach(function(id){ var t=caso.teses.filter(function(x){return x.id===id;})[0]; if(!t)return; if(t.correta){p+=0.13; acertos++;} else {p-=0.1;} });
+    if(corretas>0) p -= (corretas-acertos)*0.04;
+    if(caso.buxa) p = Math.min(p, 0.12);
+    return clamp(p, 0.03, 0.97);
+  }
+  function leituraTecnica(s, o){
+    var nitidez = clamp(s.tecnica + s.estagiarios*5)/100;
+    var ideais = o.teses.filter(function(t){return t.correta;}).map(function(t){return t.id;});
+    var real = chanceVitoria(s, o, ideais);
+    var ruido = (Math.random()*2-1)*(1-nitidez)*0.35;
+    return { chanceEstim: clamp(real+ruido, 0.02, 0.98), buxaRevelada: o.buxa && nitidez>0.35 };
+  }
+  function ganharXp(s, xp){ s.xp += xp; while(s.xp >= s.nivel*100){ s.xp -= s.nivel*100; s.nivel++; s.energiaMax++; } }
+
+  // ================================================================
+  // AÇÕES
+  // ================================================================
+  function flash(msg, tipo){
+    var t = document.getElementById("toast");
+    t.textContent = msg; t.className = "toast " + (tipo||"neutro") + " show";
+    clearTimeout(flash._t); flash._t = setTimeout(function(){ t.className = "toast " + (tipo||"neutro"); }, 2600);
+  }
+  function ultimoFeed(){ return S.feed[0]; }
+  function after(){ salvar(); render(); var f=ultimoFeed(); if(f) flash(f.texto, f.tipo); }
+
+  function actAnalisar(id){
+    if(S.energia<1){ flash("Sem energia para analisar. Encerre o dia.", "ruim"); return; }
+    var o=S.ofertas.filter(function(x){return x.id===id;})[0]; if(!o)return;
+    S.energia--; o.analisado=true; salvar(); render();
+  }
+  function actRecusar(id){
+    var o=S.ofertas.filter(function(x){return x.id===id;})[0];
+    S.ofertas = S.ofertas.filter(function(x){return x.id!==id;});
+    if(o && o.buxa){ registrar(S,'Você dispensou "'+o.titulo+'". Faro afiado — era roubada.',"bom"); S.reputacao=clamp(S.reputacao+1); }
+    else if(o){ registrar(S,'Você recusou "'+o.titulo+'". O cliente procurou outro.',"neutro"); }
+    after();
+  }
+  function actAceitar(id, faixa){
+    var o=S.ofertas.filter(function(x){return x.id===id;})[0]; if(!o)return;
+    if(S.energia<1){ flash("Sem energia para negociar. Encerre o dia.","ruim"); return; }
+    var slots=ESCRITORIOS[S.escritorioNivel].slots;
+    if(S.ativos.length>=slots){ flash("Sem vaga para novos casos. Resolva casos ou amplie o escritório.","ruim"); return; }
+    var p=chanceAceite(S,o,faixa), hon=honorarioDe(o,faixa);
+    S.energia--; S.ofertas=S.ofertas.filter(function(x){return x.id!==id;});
+    if(!chance(p)){ registrar(S, o.cliente+" achou "+brlCurto(hon)+" caro e não fechou. 🙁", "ruim"); UI.modal=null; after(); return; }
+    var entrada = o.aceitaEntrada ? Math.round(hon*0.25) : 0;
+    var ativo = { id:o.id, cliente:o.cliente, area:o.area, titulo:o.titulo, resumo:o.resumo, complexidade:o.complexidade,
+      valorBase:o.valorBase, buxa:o.buxa, sinal:o.sinal, aceitaEntrada:o.aceitaEntrada, teses:o.teses,
+      honorario:hon, entrada:entrada, faixa:faixa, diaLimite:S.dia+6 };
+    S.dinheiro += entrada; S.ativos.push(ativo); ganharXp(S,10);
+    var txt = entrada>0 ? " Entrada de "+brlCurto(entrada)+" no caixa." : " Sem entrada (cuidado).";
+    registrar(S, 'Fechou "'+o.titulo+'" por '+brlCurto(hon)+"."+txt, entrada>0?"bom":"neutro");
+    UI.modal=null; after();
+  }
+  function actProtocolar(id, tesesIds){
+    var c=S.ativos.filter(function(x){return x.id===id;})[0]; if(!c)return;
+    if(S.energia<2){ flash("Protocolar exige 2 de energia. Encerre o dia.","ruim"); return; }
+    var p=chanceVitoria(S,c,tesesIds), venceu=chance(p), restante=Math.max(0, c.honorario-c.entrada);
+    S.energia-=2; S.ativos=S.ativos.filter(function(x){return x.id!==id;});
+    if(venceu){
+      S.dinheiro+=restante; S.reputacao=clamp(S.reputacao+3+Math.round(c.complexidade)); S.tecnica=clamp(S.tecnica+1); S.vitorias++;
+      ganharXp(S, 25+c.complexidade*5);
+      registrar(S, '🏆 Ganhou "'+c.titulo+'"! Recebeu '+brlCurto(restante)+" e ganhou reputação.", "bom");
+    } else {
+      S.reputacao=clamp(S.reputacao-(c.buxa?2:4)); S.derrotas++; ganharXp(S,6);
+      var nota = c.buxa ? "Era um caso buxa — perdeu tempo e um pouco de reputação." : "Perdeu o caso. A reputação sofreu.";
+      registrar(S, '❌ Perdeu "'+c.titulo+'". '+nota, "ruim");
+    }
+    UI.modal=null; after();
+  }
+  function actCrime(aceitar){
+    if(!aceitar){ S.crime=null; registrar(S,"Você recusou a proposta suja. Ficha limpa.","neutro"); after(); return; }
+    if(!S.crime) return;
+    if(S.energia<2){ flash("Sem energia para essa 'empreitada'.","ruim"); return; }
+    var c=S.crime, p=clamp(c.chanceBase + (S.tecnica/100)*0.15 - (S.reputacao/100)*0.1, 0.1, 0.9);
+    S.energia-=2; S.crime=null;
+    if(chance(p)){ S.dinheiro+=c.ganho; S.reputacao=clamp(S.reputacao-3); registrar(S,"🤫 Deu certo. "+brlCurto(c.ganho)+" no bolso, sem rastros... por enquanto.","crime"); }
+    else { S.dinheiro-=c.multa; S.reputacao=clamp(S.reputacao-c.perdaReputacao); S.preso=c.penaDias; registrar(S,"🚔 Você foi pego! Multa de "+brlCurto(c.multa)+", "+c.penaDias+" dias preso e a reputação em frangalhos.","crime"); }
+    after();
+  }
+  function actTreinar(idt){
+    var t=TREINOS.filter(function(x){return x.id===idt;})[0]; if(!t)return;
+    if(S.dinheiro<t.custo){ flash("Dinheiro insuficiente para esse treino.","ruim"); return; }
+    if(S.energia<t.energia){ flash("Sem energia para treinar hoje.","ruim"); return; }
+    S.dinheiro-=t.custo; S.energia-=t.energia; S[t.atributo]=clamp(S[t.atributo]+t.ganho);
+    registrar(S,"📚 "+t.nome+": +"+t.ganho+" de "+t.atributo+".","bom"); after();
+  }
+  function actContratar(){
+    var e=ESCRITORIOS[S.escritorioNivel];
+    if(S.estagiarios>=e.maxEstagiarios){ flash("Seu escritório não comporta mais estagiários. Amplie primeiro.","ruim"); return; }
+    if(S.dinheiro<CUSTO_ESTAGIARIO){ flash("Sem caixa para contratar agora.","ruim"); return; }
+    S.dinheiro-=CUSTO_ESTAGIARIO; S.estagiarios++; registrar(S,"🧑‍🎓 Novo estagiário contratado. Mais técnica na equipe.","bom"); after();
+  }
+  function actDemitir(){ if(S.estagiarios<=0)return; S.estagiarios--; registrar(S,"Estagiário dispensado. Menos salário a pagar.","neutro"); after(); }
+  function actUpgrade(){
+    var prox=ESCRITORIOS[S.escritorioNivel+1]; if(!prox){ flash("Você já está no topo. 🏛️","neutro"); return; }
+    if(S.dinheiro<prox.custoUpgrade){ flash("Falta caixa para essa mudança de sede.","ruim"); return; }
+    S.dinheiro-=prox.custoUpgrade; S.escritorioNivel++; S.energiaMax+=prox.energiaBonus; S.reputacao=clamp(S.reputacao+5);
+    registrar(S,"🏢 Novo escritório: "+prox.nome+"! Mais vagas, melhores casos.","bom"); after();
+  }
+  function actMudarCidade(cid){
+    var c=CIDADES.filter(function(x){return x.id===cid;})[0]; if(!c||c.id===S.cidadeId)return;
+    if(S.dinheiro<c.custoMudanca){ flash("Mudar de cidade custa mais do que você tem agora.","ruim"); return; }
+    S.dinheiro-=c.custoMudanca; S.cidadeId=c.id; registrar(S,"📍 Escritório transferido para "+c.nome+". Novos horizontes.","bom"); after();
+  }
+  function actEncerrarDia(){
+    var e=ESCRITORIOS[S.escritorioNivel];
+    var custoFixo = e.aluguel + S.estagiarios*SALARIO_ESTAGIARIO;
+    S.dinheiro -= custoFixo;
+    var expirados = S.ativos.filter(function(c){ return c.diaLimite <= S.dia+1; });
+    S.ativos = S.ativos.filter(function(c){ return c.diaLimite > S.dia+1; });
+    var estavaPreso = S.preso>0;
+    S.dia++; S.energia = S.energiaMax + e.energiaBonus;
+    if(S.preso>0) S.preso--;
+    if(S.preso<=0){ S.ofertas = gerarOfertas(S,3); S.crime = chance(0.35)?gerarCrime(S):null; }
+    else { S.ofertas=[]; S.crime=null; }
+    registrar(S, "— Dia "+S.dia+" — Custos do dia: "+brlCurto(custoFixo)+".", "neutro");
+    expirados.forEach(function(c){ S.reputacao=clamp(S.reputacao-3); registrar(S,'⏰ "'+c.titulo+'" expirou sem protocolo. Cliente insatisfeito.',"ruim"); });
+    if(estavaPreso && S.preso<=0) registrar(S,"🔓 Você saiu da prisão. Hora de reconstruir a carreira.","neutro");
+    else if(S.preso>0) registrar(S,"🔒 Ainda preso: faltam "+S.preso+" dia(s).","ruim");
+    if(S.dinheiro <= -3000){ S.encerrado=true; registrar(S,"💥 Falência! As dívidas te afundaram. Fim de jogo — reinicie para tentar de novo.","ruim"); }
+    after();
+  }
+  function actReiniciar(){ if(!confirm("Recomeçar do zero? O progresso será perdido.")) return; S=estadoInicial(); UI={aba:"escritorio",modal:null}; salvar(); render(); }
+
+  // ================================================================
+  // RENDER
+  // ================================================================
+  var app;
+
+  function barColor(v, cor){ return '<span style="width:'+v+'%;background:'+cor+'"></span>'; }
+  function probBar(p){ var col = p>0.6?"var(--good)":p>0.35?"var(--brass)":"var(--bad)"; return '<div class="bar"><span style="width:'+(p*100)+'%;background:'+col+'"></span></div>'; }
+  function dots(n){ var s=""; for(var i=0;i<5;i++) s += i<n ? '<span class="f">●</span>' : '<span class="e">●</span>'; return '<div class="dots">'+s+'</div>'; }
+
+  // ================================================================
+  // ARTE (SVG inline, autocontida — estilo caricato)
+  // ================================================================
+  function darken(hex, f){ var n=parseInt(hex.slice(1),16); var r=Math.round(((n>>16)&255)*f), g=Math.round(((n>>8)&255)*f), b=Math.round((n&255)*f); return '#'+((1<<24)+(r<<16)+(g<<8)+b).toString(16).slice(1); }
+
+  var ROTULO_ADV = ["Advogado(a) iniciante","Advogado(a)","Advogado(a) atuante","Advogado(a) renomado(a)","Banca de referência"];
+
+  // --- Avatar que evolui com o escritório ---
+  var AVATAR = [
+    { bg:["#243247","#141d2a"], garment:"#5b6472", collar:"tshirt", tie:null,      hair:"#3a2f28", style:"messy", skin:"#e6b58f", brow:"#3a2f28", mouth:"worried",   glasses:false, tired:true,  mug:true,  pin:false, scales:false, stubble:true,  sweat:true,  teeth:false, broad:false },
+    { bg:["#26344a","#161f2e"], garment:"#8fa0b4", collar:"shirt",  tie:"#7aa15a", hair:"#332a22", style:"neat",  skin:"#e6b58f", brow:"#332a22", mouth:"small",     glasses:false, tired:false, mug:false, pin:false, scales:false, stubble:false, sweat:false, teeth:false, broad:false },
+    { bg:["#2b3c54","#18222f"], garment:"#33455f", collar:"blazer", tie:"#c9922e", hair:"#2c241d", style:"neat",  skin:"#e6b58f", brow:"#2c241d", mouth:"smile",     glasses:true,  tired:false, mug:false, pin:false, scales:false, stubble:false, sweat:false, teeth:true,  broad:false },
+    { bg:["#30425c","#1a2634"], garment:"#2b3a52", collar:"suit",   tie:"#e3ae41", hair:"#241d17", style:"slick", skin:"#e6b58f", brow:"#241d17", mouth:"smirk",     glasses:false, tired:false, mug:false, pin:true,  scales:false, stubble:false, sweat:false, teeth:false, broad:false },
+    { bg:["#3a2f16","#151b28"], garment:"#1c2740", collar:"suit",   tie:"#e3ae41", hair:"#1f1811", style:"slick", skin:"#e6b58f", brow:"#1f1811", mouth:"confident", glasses:false, tired:false, mug:false, pin:true,  scales:true,  stubble:false, sweat:false, teeth:false, broad:true  }
+  ];
+
+  function svgAvatar(tier){
+    var a = AVATAR[Math.max(0, Math.min(tier, AVATAR.length-1))];
+    var s = darken(a.skin, 0.8), s2 = darken(a.skin, 0.6);
+    var hw = a.broad ? 56 : 46;
+    var p = '<svg viewBox="0 0 120 140" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg">';
+    p += '<defs><linearGradient id="bg'+tier+'" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="'+a.bg[0]+'"/><stop offset="1" stop-color="'+a.bg[1]+'"/></linearGradient></defs>';
+    p += '<rect width="120" height="140" fill="url(#bg'+tier+')"/>';
+    if(a.scales){
+      p += '<circle cx="60" cy="54" r="46" fill="#e3ae41" opacity="0.09"/>';
+      p += '<g opacity="0.22" fill="none" stroke="#e3ae41" stroke-width="2" stroke-linecap="round"><circle cx="60" cy="13" r="3"/><line x1="60" y1="16" x2="60" y2="37"/><line x1="34" y1="23" x2="86" y2="23"/><path d="M28 23 l-6 12 h12 z"/><path d="M92 23 l-6 12 h12 z"/></g>';
+    }
+    // ombros / roupa
+    p += '<path d="M'+(60-hw)+' 140 V120 a'+hw+' 36 0 0 1 '+(2*hw)+' 0 V140 Z" fill="'+a.garment+'"/>';
+    // colarinho / gravata
+    if(a.collar==="tshirt"){
+      p += '<path d="M60 104 q-16 -1 -17 12 h34 q-1 -13 -17 -12 z" fill="'+darken(a.garment,0.82)+'"/>';
+    } else {
+      if(a.collar==="blazer" || a.collar==="suit"){
+        p += '<path d="M42 108 L60 101 L56 140 L34 140 Z" fill="'+darken(a.garment,0.78)+'"/>';
+        p += '<path d="M78 108 L60 101 L64 140 L86 140 Z" fill="'+darken(a.garment,0.78)+'"/>';
+      }
+      p += '<path d="M60 99 L49 110 L60 128 L71 110 Z" fill="#e9edf3"/>';
+      if(a.tie){
+        p += '<path d="M55 103 h10 l-1 6 h-8 z" fill="'+darken(a.tie,0.7)+'"/>';
+        p += '<path d="M60 109 l-5 7 l5 22 l5 -22 z" fill="'+a.tie+'"/>';
+      }
+    }
+    if(a.pin) p += '<circle cx="70" cy="114" r="3" fill="#e3ae41"/>';
+    // pescoço
+    p += '<path d="M51 100 v-13 a9 9 0 0 0 18 0 v13 z" fill="'+a.skin+'"/>';
+    p += '<path d="M51 95 q9 7 18 0 v5 h-18 z" fill="'+s+'" opacity="0.45"/>';
+    // orelhas grandes
+    p += '<ellipse cx="30" cy="60" rx="6" ry="8" fill="'+a.skin+'"/><ellipse cx="90" cy="60" rx="6" ry="8" fill="'+a.skin+'"/>';
+    // cabeça grande (caricata)
+    p += '<ellipse cx="60" cy="56" rx="32" ry="34" fill="'+a.skin+'"/>';
+    p += '<circle cx="42" cy="66" r="6" fill="'+darken(a.skin,0.95)+'" opacity="0.35"/><circle cx="78" cy="66" r="6" fill="'+darken(a.skin,0.95)+'" opacity="0.35"/>';
+    if(a.stubble) p += '<path d="M36 66 q24 26 48 0 q-6 22 -24 22 q-18 0 -24 -22 z" fill="'+s2+'" opacity="0.16"/>';
+    // cabelo
+    if(a.style==="messy"){
+      p += '<path d="M28 58 Q26 15 60 15 Q94 15 92 58 Q86 37 78 43 Q74 27 64 40 Q60 25 50 40 Q42 29 40 46 Q34 39 28 58 Z" fill="'+a.hair+'"/>';
+    } else {
+      p += '<path d="M28 60 Q26 15 60 15 Q94 15 92 60 Q84 33 60 33 Q36 33 28 60 Z" fill="'+a.hair+'"/>';
+      if(a.style==="slick"){
+        p += '<path d="M60 17 Q66 27 63 35" stroke="'+darken(a.hair,0.65)+'" stroke-width="2.5" fill="none"/>';
+        p += '<path d="M38 27 Q52 19 70 23" stroke="#fff" stroke-width="2" fill="none" opacity="0.18" stroke-linecap="round"/>';
+      }
+    }
+    // sobrancelhas grossas e expressivas
+    if(a.tired) p += '<path d="M40 45 q8 4 16 1 M64 46 q8 -3 16 -1" stroke="'+a.brow+'" stroke-width="4" fill="none" stroke-linecap="round"/>';
+    else if(a.mouth==="smirk"||a.mouth==="confident") p += '<path d="M40 43 q8 -4 16 -2 M64 40 q8 -3 16 1" stroke="'+a.brow+'" stroke-width="4" fill="none" stroke-linecap="round"/>';
+    else p += '<path d="M40 43 q8 -3 16 -1 M64 42 q8 -1 16 1" stroke="'+a.brow+'" stroke-width="4" fill="none" stroke-linecap="round"/>';
+    // olhos grandes
+    p += '<ellipse cx="48" cy="55" rx="7" ry="8.5" fill="#f6f8fb"/><ellipse cx="72" cy="55" rx="7" ry="8.5" fill="#f6f8fb"/>';
+    p += '<circle cx="49" cy="56" r="3.4" fill="#241d19"/><circle cx="73" cy="56" r="3.4" fill="#241d19"/>';
+    p += '<circle cx="50.4" cy="54.6" r="1.1" fill="#fff"/><circle cx="74.4" cy="54.6" r="1.1" fill="#fff"/>';
+    if(a.tired) p += '<path d="M42 63 q6 3 12 0 M66 63 q6 3 12 0" stroke="'+s+'" stroke-width="1.6" fill="none" stroke-linecap="round" opacity="0.8"/>';
+    // nariz grande
+    p += '<path d="M60 56 q-6 10 -1 14 q4 2 8 -1" stroke="'+s+'" stroke-width="2.2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>';
+    // boca
+    if(a.teeth){
+      p += '<path d="M48 76 q12 12 24 0 q-12 6 -24 0 z" fill="'+s2+'"/><path d="M50 77 q10 4 20 0 q-10 3 -20 0 z" fill="#fff"/>';
+    } else {
+      var m = { worried:"M49 82 q11 -6 22 0", small:"M52 78 q8 5 16 0", smirk:"M50 80 q12 7 21 -4", confident:"M52 79 q8 3 16 -1" }[a.mouth] || "M52 78 q8 4 16 0";
+      p += '<path d="'+m+'" stroke="'+s2+'" stroke-width="3" fill="none" stroke-linecap="round"/>';
+    }
+    if(a.sweat) p += '<path d="M87 41 q4 6 0 10 q-4 -4 0 -10 z" fill="#8fd0f0" opacity="0.9"/>';
+    // óculos redondos
+    if(a.glasses) p += '<g fill="none" stroke="#1c2029" stroke-width="3"><circle cx="48" cy="55" r="9.5"/><circle cx="72" cy="55" r="9.5"/><line x1="57.5" y1="55" x2="62.5" y2="55"/><line x1="38.5" y1="53" x2="30" y2="51"/><line x1="81.5" y1="53" x2="90" y2="51"/></g>';
+    // caneca de café (novato)
+    if(a.mug) p += '<g><path d="M84 110 q2 -6 0 -10 M91 110 q2 -6 0 -10" stroke="#9fb0c4" stroke-width="1.8" fill="none" opacity="0.7" stroke-linecap="round"/><rect x="80" y="112" width="20" height="18" rx="2" fill="#c04a38"/><rect x="80" y="112" width="20" height="4" rx="1" fill="#eef2f6" opacity="0.85"/><path d="M100 116 a5 5 0 0 1 0 9" fill="none" stroke="#c04a38" stroke-width="3"/></g>';
+    p += '</svg>';
+    return p;
+  }
+
+  // --- Estagiário (jovem de óculos grossos) ---
+  function svgIntern(){
+    var skin = "#eeb98f", hair = "#3a2a1e", s = darken(skin, 0.6);
+    var p = '<svg viewBox="0 0 48 48" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg">';
+    p += '<rect width="48" height="48" rx="12" fill="#1b2636"/>';
+    p += '<path d="M7 48 V40 a17 12 0 0 1 34 0 V48 Z" fill="#4f6b8a"/>';           // moletom
+    p += '<path d="M20 41 l4 5 l4 -5 z" fill="#e9edf3"/>';                          // camiseta
+    p += '<path d="M18 34 v-5 a6 6 0 0 0 12 0 v5 z" fill="'+skin+'"/>';             // pescoço
+    p += '<ellipse cx="24" cy="22" rx="13" ry="14" fill="'+skin+'"/>';             // cabeça
+    p += '<circle cx="11" cy="24" r="2.6" fill="'+skin+'"/><circle cx="37" cy="24" r="2.6" fill="'+skin+'"/>';
+    p += '<path d="M11 25 Q10 6 24 6 Q38 6 37 25 Q34 15 24 15 Q14 15 11 25 Z" fill="'+hair+'"/>'; // corte tigelinha
+    p += '<path d="M24 7 q3 3 1 6" stroke="'+darken(hair,0.6)+'" stroke-width="1.5" fill="none"/>';
+    p += '<g fill="#dff0f7" stroke="#20242c" stroke-width="3"><circle cx="18" cy="24" r="6.5"/><circle cx="30" cy="24" r="6.5"/></g>'; // óculos grossos
+    p += '<line x1="23" y1="23" x2="25" y2="23" stroke="#20242c" stroke-width="3"/>';
+    p += '<circle cx="18" cy="24" r="2" fill="#241d19"/><circle cx="30" cy="24" r="2" fill="#241d19"/>';
+    p += '<path d="M20 33 q4 4 8 0" stroke="'+s+'" stroke-width="2" fill="none" stroke-linecap="round"/>'; // sorriso animado
+    p += '<circle cx="14" cy="30" r="0.9" fill="'+s+'" opacity="0.5"/><circle cx="34" cy="30" r="0.9" fill="'+s+'" opacity="0.5"/>';
+    p += '</svg>';
+    return p;
+  }
+
+  // --- Rosto de cliente (paramétrico, estável por caso) ---
+  function hstr(str){ var h=2166136261>>>0; str=String(str); for(var i=0;i<str.length;i++){ h^=str.charCodeAt(i); h=Math.imul(h,16777619); } return h>>>0; }
+  var CL_SKIN = ["#f2c6a0","#e8b78e","#d59e78","#b9805a","#946043"];
+  var CL_HAIR = ["#241d17","#3f2c1c","#5b3f27","#7a5a34","#4a4a52","#b9b3ac","#c9a24a","#171717"];
+  var CL_ROUPA = ["#5b6472","#4f6b8a","#6a5a7a","#7a5a4a","#4a6b5f","#8a8a92","#8a5a4a"];
+  function svgClient(seed){
+    var h = hstr(seed);
+    var skin = CL_SKIN[h % CL_SKIN.length];
+    var hair = CL_HAIR[(h>>>3) % CL_HAIR.length];
+    var style = (h>>>6) % 6;   // 0 curto,1 lado,2 careca,3 longo,4 coque,5 boné
+    var expr  = (h>>>9) % 4;   // 0 neutro,1 preocupado,2 esperançoso,3 tenso
+    var roupa = CL_ROUPA[(h>>>12) % CL_ROUPA.length];
+    var acc   = (h>>>15) % 5;  // 0 nada,1 óculos,2 bigode,3 barba,4 brinco
+    var s = darken(skin, 0.6);
+    var hs = (hair === "#171717") ? "#333" : hair;
+    var p = '<svg viewBox="0 0 48 48" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg">';
+    p += '<rect width="48" height="48" rx="12" fill="#141d2a"/><rect width="48" height="48" fill="#22314552" /><rect width="48" height="48" fill="#233247" opacity="0.4"/>';
+    p += '<path d="M8 48 V41 a16 11 0 0 1 32 0 V48 Z" fill="'+roupa+'"/>';
+    p += '<path d="M18 35 v-5 a6 6 0 0 0 12 0 v5 z" fill="'+skin+'"/>';
+    p += '<ellipse cx="24" cy="22" rx="13" ry="14" fill="'+skin+'"/>';
+    p += '<circle cx="11" cy="24" r="2.6" fill="'+skin+'"/><circle cx="37" cy="24" r="2.6" fill="'+skin+'"/>';
+    if(style===3) p += '<path d="M9 41 Q7 7 24 7 Q41 7 39 41 Q40 21 34 20 Q36 11 24 11 Q12 11 12 20 Q8 21 9 41 Z" fill="'+hair+'"/>';
+    else if(style===0) p += '<path d="M11 24 Q10 7 24 7 Q38 7 37 24 Q33 15 24 15 Q15 15 11 24 Z" fill="'+hair+'"/>';
+    else if(style===1) p += '<path d="M11 24 Q10 7 24 7 Q38 7 37 22 Q30 12 20 14 Q14 15 11 24 Z" fill="'+hair+'"/>';
+    else if(style===4) p += '<path d="M11 24 Q10 8 24 8 Q38 8 37 24 Q33 15 24 15 Q15 15 11 24 Z" fill="'+hair+'"/><circle cx="24" cy="7" r="4" fill="'+hair+'"/>';
+    else if(style===5) p += '<path d="M10 21 h28 l-2 -3 Q24 9 12 18 z" fill="'+hair+'"/><rect x="8" y="20" width="32" height="3" rx="1" fill="'+darken(hair,0.7)+'"/>';
+    // sobrancelhas
+    p += '<path d="M15 19 q3 -1.5 6 0 M27 19 q3 -1.5 6 0" stroke="'+darken(hs,0.85)+'" stroke-width="2" fill="none" stroke-linecap="round"/>';
+    // olhos
+    p += '<circle cx="18" cy="23" r="2.1" fill="#f6f8fb"/><circle cx="30" cy="23" r="2.1" fill="#f6f8fb"/>';
+    p += '<circle cx="18" cy="23.4" r="1.3" fill="#241d19"/><circle cx="30" cy="23.4" r="1.3" fill="#241d19"/>';
+    // nariz
+    p += '<path d="M24 24 q-1.6 3 0 4" stroke="'+s+'" stroke-width="1.4" fill="none" stroke-linecap="round"/>';
+    // boca por expressão
+    var mm = ["M20 31 q4 2 8 0","M20 32 q4 -2.5 8 0","M20 31 q4 4 8 0","M21 31 h6"][expr];
+    p += '<path d="'+mm+'" stroke="'+s+'" stroke-width="1.8" fill="none" stroke-linecap="round"/>';
+    // acessórios
+    if(acc===1) p += '<g fill="none" stroke="#20242c" stroke-width="1.6"><circle cx="18" cy="23" r="3.4"/><circle cx="30" cy="23" r="3.4"/><line x1="21.4" y1="23" x2="26.6" y2="23"/></g>';
+    if(acc===2) p += '<path d="M19 29 q5 3 10 0" stroke="'+darken(hs,0.85)+'" stroke-width="2.4" fill="none" stroke-linecap="round"/>';
+    if(acc===3) p += '<path d="M13 26 q11 15 22 0 q-3 10 -11 10 q-8 0 -11 -10 z" fill="'+hair+'" opacity="0.92"/>';
+    if(acc===4) p += '<circle cx="11" cy="29" r="1.6" fill="none" stroke="#e3ae41" stroke-width="1.2"/><circle cx="37" cy="29" r="1.6" fill="none" stroke="#e3ae41" stroke-width="1.2"/>';
+    p += '</svg>';
+    return p;
+  }
+
+  // --- Emblemas ilustrados por área ---
+  var AREA_COR = { trabalhista:"#f0c14e", civel:"#e3ae41", consumidor:"#4bb59f", familia:"#e08a5a", criminal:"#e06666", empresarial:"#6f9bd8" };
+  function areaIcone(area, c){
+    var st = ' stroke="'+c+'" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round"';
+    if(area==="trabalhista") return '<path d="M15 31 h18 a9 10 0 0 0 -18 0 z" fill="'+c+'"/><rect x="10" y="31" width="28" height="4" rx="2" fill="'+c+'"/><rect x="22" y="15" width="4" height="8" rx="1" fill="'+c+'"/>';
+    if(area==="civel") return '<line x1="24" y1="13" x2="24" y2="35"'+st+'/><line x1="13" y1="17" x2="35" y2="17"'+st+'/><rect x="18" y="35" width="12" height="2.5" rx="1" fill="'+c+'"/><path d="M9 26 a5 3 0 0 0 10 0 l-5 -9 z" fill="'+c+'"/><path d="M29 26 a5 3 0 0 0 10 0 l-5 -9 z" fill="'+c+'"/>';
+    if(area==="consumidor") return '<path d="M9 14 h5 l4 17 h13 l3 -11 h-19"'+st+'/><circle cx="19" cy="35" r="2.4" fill="'+c+'"/><circle cx="29" cy="35" r="2.4" fill="'+c+'"/>';
+    if(area==="familia") return '<path d="M12 25 L24 14 L36 25 V36 H12 Z"'+st+'/><circle cx="20" cy="30" r="2.6" fill="'+c+'"/><circle cx="28" cy="30" r="2.6" fill="'+c+'"/>';
+    if(area==="criminal") return '<circle cx="17" cy="28" r="6.5"'+st+'/><circle cx="31" cy="28" r="6.5"'+st+'/><rect x="21" y="25.5" width="6" height="5" rx="1" fill="'+c+'"/>';
+    return '<rect x="12" y="20" width="24" height="16" rx="2"'+st+'/><path d="M19 20 v-3 a5 3 0 0 1 10 0 v3"'+st+'/><rect x="21" y="26" width="6" height="4" rx="1" fill="'+c+'"/>';
+  }
+  function svgArea(area){
+    var c = AREA_COR[area] || "#e3ae41";
+    return '<svg viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg"><rect width="48" height="48" rx="10" fill="#0f1826"/><rect width="48" height="48" rx="10" fill="'+c+'" opacity="0.12"/>'+areaIcone(area,c)+'</svg>';
+  }
+
+  // --- Cena do submundo (beco à noite, figura suspeita com maleta) ---
+  function svgCrime(){
+    return '<svg viewBox="0 0 320 120" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid slice">'
+      + '<defs><linearGradient id="cr" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#241326"/><stop offset="1" stop-color="#140b14"/></linearGradient>'
+      + '<radialGradient id="lamp" cx="0.5" cy="0" r="0.9"><stop offset="0" stop-color="#b088e0" stop-opacity="0.5"/><stop offset="1" stop-color="#b088e0" stop-opacity="0"/></radialGradient></defs>'
+      + '<rect width="320" height="120" fill="url(#cr)"/>'
+      + '<rect x="0" y="86" width="320" height="34" fill="#0d0810"/>'
+      // paredes / prédios ao fundo
+      + '<g fill="#1c1020" opacity="0.9"><rect x="14" y="30" width="52" height="60"/><rect x="250" y="20" width="60" height="70"/></g>'
+      + '<g fill="#3a2350" opacity="0.5"><rect x="22" y="40" width="8" height="10"/><rect x="40" y="40" width="8" height="10"/><rect x="264" y="34" width="9" height="11"/><rect x="284" y="34" width="9" height="11"/><rect x="264" y="56" width="9" height="11"/></g>'
+      // poste de luz
+      + '<rect x="228" y="16" width="4" height="74" fill="#241a2c"/><ellipse cx="230" cy="16" rx="10" ry="5" fill="#e6c65a"/><path d="M230 20 L205 90 L255 90 Z" fill="url(#lamp)"/>'
+      // figura encapuzada
+      + '<g transform="translate(150,34)">'
+      + '<path d="M0 8 q14 -12 28 0 l4 44 h-36 z" fill="#120a16"/>' // capuz/casaco
+      + '<ellipse cx="14" cy="16" rx="9" ry="10" fill="#0c070f"/>' // sombra do rosto
+      + '<ellipse cx="14" cy="18" rx="5" ry="6" fill="#2a1c33"/>'
+      + '<circle cx="11" cy="17" r="1.4" fill="#e0b0ff"/><circle cx="17" cy="17" r="1.4" fill="#e0b0ff"/>'
+      + '</g>'
+      // maleta de dinheiro
+      + '<g transform="translate(120,74)"><rect x="0" y="0" width="26" height="18" rx="2" fill="#5a4326"/><rect x="0" y="0" width="26" height="5" fill="#6e5330"/><rect x="10" y="-3" width="6" height="4" rx="1" fill="#4a3620"/><rect x="4" y="6" width="18" height="9" rx="1" fill="#3f7a52"/><text x="13" y="13" font-size="7" fill="#bfe6c9" text-anchor="middle" font-family="Georgia,serif">R$</text></g>'
+      + '</svg>';
+  }
+
+  // --- Cena da cadeia (grades) ---
+  function svgJail(){
+    return '<svg viewBox="0 0 52 52" xmlns="http://www.w3.org/2000/svg"><rect width="52" height="52" rx="8" fill="#1a0f10"/>'
+      + '<g fill="#0d0708"><rect x="0" y="0" width="52" height="52" rx="8" opacity="0.4"/></g>'
+      + '<circle cx="26" cy="20" r="7" fill="#3a2b2b"/><path d="M15 44 q0 -14 11 -14 q11 0 11 14 z" fill="#3a2b2b"/>'
+      + '<g stroke="#c9bcae" stroke-width="3"><line x1="10" y1="4" x2="10" y2="48"/><line x1="21" y1="4" x2="21" y2="48"/><line x1="32" y1="4" x2="32" y2="48"/><line x1="43" y1="4" x2="43" y2="48"/><line x1="6" y1="9" x2="46" y2="9"/></g>'
+      + '</svg>';
+  }
+
+  function render(){
+    var e = ESCRITORIOS[S.escritorioNivel];
+    var cidade = CIDADES.filter(function(x){return x.id===S.cidadeId;})[0];
+    document.getElementById("topsub").textContent = "Dia "+S.dia+" · Nível "+S.nivel+" · "+S.vitorias+"V / "+S.derrotas+"D";
+
+    var html = "";
+    html += statusPanel(e, cidade);
+    html += tabsBar();
+    if(S.preso>0) html += jailBanner();
+    html += '<div id="tabcontent">';
+    if(UI.aba==="escritorio") html += tabEscritorio(e);
+    else if(UI.aba==="evoluir") html += tabEvoluir(e);
+    else if(UI.aba==="submundo") html += tabSubmundo();
+    else html += tabRegistro();
+    html += '</div>';
+    app.innerHTML = html;
+
+    renderModal();
+    renderGameOver();
+  }
+
+  function statusPanel(e, cidade){
+    var pipsMax = S.energiaMax + e.energiaBonus, pips="";
+    for(var i=0;i<pipsMax;i++) pips += '<span class="pip'+(i<S.energia?" on":"")+'"></span>';
+    return '<div class="panel">'
+      + '<div class="identity"><div class="portrait">'+svgAvatar(S.escritorioNivel)+'</div>'
+        + '<div class="who"><div class="role">'+ROTULO_ADV[Math.min(S.escritorioNivel, ROTULO_ADV.length-1)]+'</div>'
+        + '<div class="place">'+esc(e.nome)+' · <b>'+esc(cidade.nome)+'</b></div></div></div>'
+      + '<div class="statgrid">'
+        + statItem("💰","Caixa", '<span class="'+(S.dinheiro<0?"neg":"")+'">'+brl(S.dinheiro)+"</span>", null, true)
+        + '<div class="stat"><span class="ic">⚡</span><div><div class="lbl">Energia</div><div class="pips">'+pips+'</div></div></div>'
+        + statItem("🏆","XP", S.xp+"/"+(S.nivel*100), "nível "+S.nivel, true)
+        + statItem("⚖️","Placar", S.vitorias+"V / "+S.derrotas+"D", "casos julgados", true)
+      + '</div>'
+      + '<div class="attrs">'
+        + attr("Reputação", S.reputacao, "var(--violet)")
+        + attr("Carisma", S.carisma, "var(--rose)")
+        + attr("Técnica", S.tecnica, "var(--sky)")
+      + '</div></div>';
+  }
+  function statItem(ic, lbl, val, sub, tnum){
+    return '<div class="stat"><span class="ic">'+ic+'</span><div style="min-width:0"><div class="lbl">'+lbl+'</div>'
+      + '<div class="val '+(tnum?"tnum":"")+'">'+val+'</div>'+(sub?'<div class="vsub">'+sub+'</div>':"")+'</div></div>';
+  }
+  function attr(lbl, v, cor){
+    return '<div class="attr"><div class="row"><span>'+lbl+'</span><b class="tnum">'+Math.round(v)+'</b></div><div class="bar">'+barColor(v,cor)+'</div></div>';
+  }
+
+  function tabsBar(){
+    var temCrime = !!S.crime && S.preso<=0;
+    var items = [["escritorio","Escritório",false],["evoluir","Evoluir",false],["submundo","Submundo",temCrime],["registro","Registro",false]];
+    return '<div class="tabs">'+items.map(function(it){
+      return '<button class="tab'+(UI.aba===it[0]?" active":"")+'" data-tab="'+it[0]+'">'+it[1]+(it[2]?'<span class="dot"></span>':"")+'</button>';
+    }).join("")+'</div>';
+  }
+
+  function jailBanner(){
+    return '<div class="jail"><div class="jail-art">'+svgJail()+'</div><div><b>Você está preso.</b>Faltam '+S.preso+' dia(s). Encerre os dias para cumprir a pena — os casos param enquanto isso.</div></div>';
+  }
+
+  // ---------- Escritório ----------
+  function tabEscritorio(e){
+    var h = '<section><div class="sechead">💼 Casos em andamento <span class="count">'+S.ativos.length+'/'+e.slots+'</span></div>';
+    if(S.ativos.length===0) h += '<div class="empty">Nenhum caso em andamento. Aceite um caso abaixo.</div>';
+    else h += S.ativos.map(cardAtivo).join("");
+    h += '</section>';
+
+    h += '<section><div class="sechead">✨ Novos casos na porta</div>';
+    if(S.preso>0) h += '<div class="empty">Nada chega enquanto você está preso.</div>';
+    else if(S.ofertas.length===0) h += '<div class="empty">Sem novos casos hoje. Encerre o dia para novas oportunidades.</div>';
+    else h += S.ofertas.map(cardOferta).join("");
+    h += '</section>';
+
+    h += '<button class="endday" data-act="encerrar">🌙 Encerrar o dia '+S.dia+' <span class="c">· custo '+brlCurto(e.aluguel+S.estagiarios*SALARIO_ESTAGIARIO)+'</span></button>';
+    return h;
+  }
+  function retrato(caso){
+    return '<div class="thumbwrap"><div class="thumb">'+svgClient(caso.id+"|"+caso.cliente)+'</div><div class="abadge">'+svgArea(caso.area)+'</div></div>';
+  }
+  function cardAtivo(c){
+    return '<div class="card"><div class="casehead"><div class="lead">'+retrato(c)+'<div style="min-width:0">'
+      + '<div class="casetitle">'+esc(c.titulo)+'</div>'
+      + '<div class="casesub">'+esc(c.cliente)+' · '+ROTULO_AREA[c.area]+' · honorário '+brlCurto(c.honorario)+'</div>'
+      + '<div class="limit">Protocolar até o dia '+c.diaLimite+'</div></div></div>'
+      + '<button class="btn gold" style="flex:none" data-work="'+c.id+'">Trabalhar</button></div></div>';
+  }
+  function cardOferta(o){
+    var h = '<div class="card"><div class="casehead"><div class="lead">'+retrato(o)+'<div style="min-width:0">'
+      + '<div class="casetitle">'+esc(o.titulo)+'</div>'
+      + '<div class="casesub">'+esc(o.cliente)+' · '+ROTULO_AREA[o.area]+'</div></div></div>'
+      + '<div class="value"><div class="v tnum">≈ '+brlCurto(o.valorBase)+'</div>'+dots(o.complexidade)+'</div></div>'
+      + '<p class="resumo">'+esc(o.resumo)+'</p>';
+    if(o.analisado){
+      var l = leituraTecnica(S, o);
+      if(l.buxaRevelada) h += '<div class="read warn"><b>⚠️ Caso buxa!</b> '+esc(o.sinal)+'</div>';
+      else h += '<div class="read info">🔎 Leitura: chance estimada de vitória <b>'+Math.round(l.chanceEstim*100)+'%</b>. '+esc(o.sinal)+(o.aceitaEntrada?"":' <b>💸 Sem entrada.</b>')+'</div>';
+    }
+    h += '<div class="actions">';
+    if(!o.analisado) h += '<button class="btn ghost" data-analisar="'+o.id+'">🔎 Analisar (1⚡)</button>';
+    h += '<button class="btn gold" data-negociar="'+o.id+'">Negociar honorário</button>';
+    h += '<button class="btn ghost" data-recusar="'+o.id+'">Recusar</button>';
+    h += '</div></div>';
+    return h;
+  }
+
+  // ---------- Evoluir ----------
+  function tabEvoluir(e){
+    var prox = ESCRITORIOS[S.escritorioNivel+1];
+    var h = '<section><div class="sechead">📈 Treinar o personagem</div><div class="grid2">';
+    h += TREINOS.map(function(t){
+      var falta = S.dinheiro<t.custo || S.energia<t.energia;
+      return '<div class="card"><div class="mini-title">'+esc(t.nome)+'</div><div class="mini-desc">'+esc(t.descricao)+'</div>'
+        + '<button class="btn gold" style="margin-top:10px;width:100%" data-treinar="'+t.id+'"'+(falta?" disabled":"")+'>+'+t.ganho+' '+t.atributo+' · '+brlCurto(t.custo)+' · '+t.energia+'⚡</button></div>';
+    }).join("");
+    h += '</div></section>';
+
+    h += '<section><div class="sechead">👥 Estagiários</div><div class="card">';
+    h += '<div style="font-size:13px">Na equipe: <b class="cur">'+S.estagiarios+'</b> / '+e.maxEstagiarios+'</div>';
+    h += '<div class="mini-desc">Cada estagiário reforça a técnica nos casos (custa R$ 40/dia de salário).</div>';
+    if(e.maxEstagiarios>0){
+      var eqs = '';
+      for(var i=0;i<e.maxEstagiarios;i++) eqs += (i<S.estagiarios) ? '<div class="intern">'+svgIntern()+'</div>' : '<div class="intern slotvazio">+</div>';
+      h += '<div class="interns">'+eqs+'</div>';
+    }
+    h += '<div class="actions"><button class="btn gold" data-act="contratar"'+((S.estagiarios>=e.maxEstagiarios||S.dinheiro<CUSTO_ESTAGIARIO)?" disabled":"")+'>Contratar · R$ 3k</button>';
+    h += '<button class="btn ghost" data-act="demitir"'+(S.estagiarios<=0?" disabled":"")+'>Dispensar</button></div>';
+    if(e.maxEstagiarios===0) h += '<div class="limit" style="margin-top:8px">Amplie o escritório para poder contratar.</div>';
+    h += '</div></section>';
+
+    h += '<section><div class="sechead">💼 Escritório</div><div class="card">';
+    h += '<div class="mini-title">'+esc(e.nome)+'</div><div class="mini-desc">'+esc(e.descricao)+'</div>';
+    h += '<div class="limit" style="color:var(--muted-2);margin-top:6px">Vagas de casos: '+e.slots+' · Aluguel '+brlCurto(e.aluguel)+'/dia</div>';
+    if(prox) h += '<button class="btn dark" style="margin-top:10px" data-act="upgrade"'+(S.dinheiro<prox.custoUpgrade?" disabled":"")+'>Mudar para "'+esc(prox.nome)+'" · '+brl(prox.custoUpgrade)+'</button>';
+    else h += '<div class="limit" style="color:var(--good);margin-top:8px">Você está no topo. 🏛️</div>';
+    h += '</div></section>';
+
+    h += '<section><div class="sechead">📍 Localidade</div>';
+    h += CIDADES.map(function(c){
+      var atual = c.id===S.cidadeId;
+      var right = atual ? '' : '<button class="btn ghost" style="flex:none" data-cidade="'+c.id+'"'+(S.dinheiro<c.custoMudanca?" disabled":"")+'>'+(c.custoMudanca===0?"Ir":brlCurto(c.custoMudanca))+'</button>';
+      return '<div class="card"'+(atual?' style="border-color:var(--brass-dim);background:rgba(227,174,65,.06)"':"")+'><div class="casehead">'
+        + '<div><div class="mini-title">'+esc(c.nome)+(atual?' <span class="cur" style="font-size:11px">(atual)</span>':"")+'</div><div class="mini-desc">'+esc(c.descricao)+'</div></div>'+right+'</div></div>';
+    }).join("");
+    h += '</section>';
+    return h;
+  }
+
+  // ---------- Submundo ----------
+  function tabSubmundo(){
+    if(S.preso>0) return '<div class="empty" style="margin-top:18px">Atrás das grades não há negócios. Cumpra a pena.</div>';
+    if(!S.crime) return '<div class="empty" style="margin-top:18px">Ninguém do submundo apareceu hoje. Ufa. 😅</div>';
+    var c=S.crime;
+    return '<section><div class="crime">'
+      + '<div class="crime-art">'+svgCrime()+'</div>'
+      + '<div class="ct">💀 '+esc(c.titulo)+'</div>'
+      + '<div class="cd">'+esc(c.descricao)+'</div>'
+      + '<div class="box"><div><div class="k">Ganho</div><div class="p" style="color:var(--good)">'+brl(c.ganho)+'</div></div>'
+      + '<div><div class="k">Se for pego</div><div class="p" style="color:var(--bad)">-'+brlCurto(c.multa)+' · '+c.penaDias+'d preso</div></div></div>'
+      + '<div class="warnline">Reputação alta atrai olhares; técnica ajuda a não deixar rastro. Ao ser pego: multa, cadeia e reputação despencando.</div>'
+      + '<div class="actions"><button class="btn danger" data-act="crime-sim">Topar (2⚡)</button>'
+      + '<button class="btn danger-ghost" data-act="crime-nao">Recusar</button></div>'
+      + '</div></section>';
+  }
+
+  // ---------- Registro ----------
+  function tabRegistro(){
+    if(S.feed.length===0) return '<div class="empty" style="margin-top:18px">Sem registros ainda.</div>';
+    return '<section><ul class="feed">'+S.feed.map(function(f){
+      return '<li class="fe-'+f.tipo+'"><span class="d">D'+f.dia+' · </span>'+esc(f.texto)+'</li>';
+    }).join("")+'</ul></section>';
+  }
+
+  // ---------- Modais ----------
+  function renderModal(){
+    var old = document.getElementById("overlay"); if(old) old.remove();
+    if(!UI.modal) return;
+    var box = document.createElement("div");
+    box.id="overlay"; box.className="overlay";
+    if(UI.modal.tipo==="negociar") box.innerHTML = modalNegociar();
+    else if(UI.modal.tipo==="protocolar") box.innerHTML = modalProtocolar();
+    document.body.appendChild(box);
+  }
+  function modalNegociar(){
+    var o = S.ofertas.filter(function(x){return x.id===UI.modal.id;})[0]; if(!o){ UI.modal=null; return ""; }
+    var faixa = UI.modal.faixa || "justo";
+    var hon = honorarioDe(o, faixa), aceite = chanceAceite(S, o, faixa);
+    var faixasHtml = FAIXAS.map(function(f){
+      return '<button class="faixa'+(faixa===f.id?" sel":"")+'" data-faixa="'+f.id+'"><div class="fn">'+f.nome+'</div><div class="fh">'+f.hint+'</div><div class="fv tnum">'+brl(honorarioDe(o,f.id))+'</div></button>';
+    }).join("");
+    return '<div class="modal"><div style="display:flex;gap:12px;align-items:center;margin-bottom:8px"><div class="thumb" style="width:52px;height:52px;flex:none">'+svgClient(o.id+"|"+o.cliente)+'</div><div style="min-width:0"><h3 style="margin:0">Negociar honorário</h3><div class="msub">'+esc(o.cliente)+' · '+esc(o.titulo)+'</div></div></div>'
+      + '<div class="faixas">'+faixasHtml+'</div>'
+      + '<div class="summary"><div class="r"><span>Honorário</span><b class="tnum">'+brl(hon)+'</b></div>'
+      + '<div class="r"><span>Entrada (se fechar)</span><b class="tnum">'+(o.aceitaEntrada?brl(Math.round(hon*0.25)):"recusada 💸")+'</b></div>'
+      + '<div class="prob"><div class="r"><span>Chance do cliente aceitar</span><b class="tnum">'+Math.round(aceite*100)+'%</b></div>'+probBar(aceite)+'</div></div>'
+      + '<div class="modal-actions"><button class="btn ghost" style="flex:1" data-act="fechar-modal">Cancelar</button>'
+      + '<button class="btn gold" data-confirmar-negociar="'+o.id+'"'+(S.energia<1?" disabled":"")+'>Propor (1⚡)</button></div></div>';
+  }
+  function modalProtocolar(){
+    var c = S.ativos.filter(function(x){return x.id===UI.modal.id;})[0]; if(!c){ UI.modal=null; return ""; }
+    var sel = UI.modal.sel || [];
+    var teseHtml = c.teses.map(function(t){
+      var on = sel.indexOf(t.id)>=0;
+      return '<button class="'+(on?"sel":"")+'" data-tese="'+t.id+'"><span class="checkbox">✓</span><span>'+esc(t.texto)+'</span></button>';
+    }).join("");
+    return '<div class="modal"><div style="display:flex;gap:12px;align-items:center;margin-bottom:8px"><div class="thumb" style="width:52px;height:52px;flex:none">'+svgClient(c.id+"|"+c.cliente)+'</div><div style="min-width:0"><h3 style="margin:0">Montar a tese</h3><div class="msub">'+esc(c.titulo)+' · '+esc(c.cliente)+'</div></div></div>'
+      + '<p class="resumo" style="margin-top:8px">'+esc(c.resumo)+'</p>'
+      + '<div style="font-size:12px;font-weight:700;color:var(--muted);margin-top:12px">Escolha as teses que você vai sustentar:</div>'
+      + '<div class="thesis">'+teseHtml+'</div>'
+      + '<div class="summary"><div class="r"><span>Teses selecionadas</span><b class="tnum">'+sel.length+'</b></div>'
+      + '<div class="mini-desc" style="margin-top:7px">Você <b>não</b> verá a chance antes de protocolar — confie na sua leitura do caso. Teses coerentes vencem; teses equivocadas afundam o processo. Técnica e reputação também pesam.</div></div>'
+      + '<div class="modal-actions"><button class="btn ghost" style="flex:1" data-act="fechar-modal">Voltar</button>'
+      + '<button class="btn gold" data-confirmar-protocolar="'+c.id+'"'+((S.energia<2||sel.length===0)?" disabled":"")+'>Protocolar (2⚡)</button></div></div>';
+  }
+
+  function renderGameOver(){
+    var old=document.getElementById("gameover"); if(old) old.remove();
+    if(!S.encerrado) return;
+    var d=document.createElement("div"); d.id="gameover"; d.className="gameover";
+    d.innerHTML = '<div class="box"><div class="sk">💀</div><h2>Fim de jogo</h2>'
+      + '<p>As dívidas afundaram o escritório. Você chegou ao dia '+S.dia+' com '+S.vitorias+' vitórias e '+S.derrotas+' derrotas.</p>'
+      + '<button class="btn gold" style="width:100%" data-act="reiniciar">Recomeçar</button></div>';
+    document.body.appendChild(d);
+  }
+
+  // ================================================================
+  // EVENTOS (delegação)
+  // ================================================================
+  document.addEventListener("click", function(ev){
+    var t = ev.target.closest("[data-act],[data-tab],[data-analisar],[data-recusar],[data-negociar],[data-work],[data-treinar],[data-cidade],[data-faixa],[data-tese],[data-confirmar-negociar],[data-confirmar-protocolar]");
+    if(!t) return;
+    var a;
+    if(t.dataset.tab){ UI.aba=t.dataset.tab; render(); return; }
+    if((a=t.dataset.analisar)){ actAnalisar(a); return; }
+    if((a=t.dataset.recusar)){ actRecusar(a); return; }
+    if((a=t.dataset.negociar)){ UI.modal={tipo:"negociar", id:a, faixa:"justo"}; render(); return; }
+    if((a=t.dataset.work)){ UI.modal={tipo:"protocolar", id:a, sel:[]}; render(); return; }
+    if((a=t.dataset.treinar)){ actTreinar(a); return; }
+    if((a=t.dataset.cidade)){ actMudarCidade(a); return; }
+    if((a=t.dataset.faixa)){ UI.modal.faixa=a; render(); return; }
+    if((a=t.dataset.tese)){ var s=UI.modal.sel; var i=s.indexOf(a); if(i>=0)s.splice(i,1); else s.push(a); render(); return; }
+    if((a=t.dataset.confirmarNegociar)){ actAceitar(a, UI.modal.faixa||"justo"); return; }
+    if((a=t.dataset.confirmarProtocolar)){ actProtocolar(a, UI.modal.sel||[]); return; }
+    switch(t.dataset.act){
+      case "reiniciar": actReiniciar(); break;
+      case "encerrar": actEncerrarDia(); break;
+      case "contratar": actContratar(); break;
+      case "demitir": actDemitir(); break;
+      case "upgrade": actUpgrade(); break;
+      case "crime-sim": actCrime(true); break;
+      case "crime-nao": actCrime(false); break;
+      case "fechar-modal": UI.modal=null; render(); break;
+    }
+  });
+  // Fecha modal ao tocar no fundo
+  document.addEventListener("click", function(ev){
+    if(ev.target.id==="overlay"){ UI.modal=null; render(); }
+  });
+
+  // ================================================================
+  // BOOT
+  // ================================================================
+  app = document.getElementById("app");
+  S = carregar() || estadoInicial();
+  salvar();
+  render();
+})();
+</script>
+
+</body>
+</html>
