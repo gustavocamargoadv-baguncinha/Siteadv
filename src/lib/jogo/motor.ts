@@ -19,7 +19,7 @@ import {
 } from "./conteudo";
 
 export const CHAVE_SALVE = "jogo-advogado-v1";
-const VERSAO = 1;
+const VERSAO = 2;
 
 // ------------------------------ RNG / utilidades ------------------------------
 
@@ -40,6 +40,14 @@ export function clamp(v: number, min = 0, max = 100): number {
 function escolher<T>(arr: T[]): T {
   return arr[Math.floor(rand() * arr.length)];
 }
+function embaralhar<T>(arr: T[]): T[] {
+  const a = arr.slice();
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(rand() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
 function id(): string {
   return Math.random().toString(36).slice(2, 10);
 }
@@ -54,12 +62,12 @@ export function estadoInicial(): Estado {
   const base: Estado = {
     versao: VERSAO,
     dia: 1,
-    dinheiro: 2500,
-    reputacao: 10,
+    dinheiro: 2000,
+    reputacao: 8,
     carisma: 15,
-    tecnica: 20,
-    energia: 5,
-    energiaMax: 5,
+    tecnica: 18,
+    energia: 4,
+    energiaMax: 4,
     nivel: 1,
     xp: 0,
     escritorioNivel: 0,
@@ -68,6 +76,8 @@ export function estadoInicial(): Estado {
     ofertas: [],
     ativos: [],
     crime: null,
+    ultimosTitulos: [],
+    ultimoCrime: "",
     preso: 0,
     feed: [],
     vitorias: 0,
@@ -75,7 +85,7 @@ export function estadoInicial(): Estado {
     encerrado: false,
   };
   base.ofertas = gerarOfertas(base, 3);
-  base.crime = chance(0.4) ? gerarCrime() : null;
+  base.crime = chance(0.4) ? gerarCrime(base) : null;
   return registrar(base, "Você abriu seu escritório. Boa sorte, doutor(a)! ⚖️", "neutro");
 }
 
@@ -115,6 +125,19 @@ function registrar(e: Estado, texto: string, tipo: TipoFeed): Estado {
 
 // ------------------------------ Geração de casos ------------------------------
 
+function indiceCidade(e: Estado): number {
+  const i = CIDADES.findIndex((c) => c.id === e.cidadeId);
+  return i < 0 ? 0 : i;
+}
+
+/** Faixa de "tier" de casos liberada pela evolução (escritório + cidade). */
+function faixaTier(e: Estado): { min: number; max: number } {
+  const nm = e.escritorioNivel + indiceCidade(e); // 0 a 7
+  const max = nm >= 4 ? 3 : nm >= 2 ? 2 : 1;
+  const min = max === 3 ? 2 : 1; // vai aposentando as causas mais miúdas
+  return { min, max };
+}
+
 function multiplicadorQualidade(e: Estado): number {
   const esc = ESCRITORIOS[e.escritorioNivel].qualidade;
   const cid = CIDADES.find((c) => c.id === e.cidadeId)?.qualidade ?? 1;
@@ -133,26 +156,58 @@ function ofertaDeArquetipo(a: Arquetipo, buxa: boolean, mult: number): CasoOfert
     buxa,
     sinal: a.sinal,
     aceitaEntrada: !buxa || chance(0.15),
-    teses: a.teses.map((t) => ({ id: id(), texto: t.texto, correta: t.correta })),
+    // Embaralha as teses para que a ordem não entregue quais são as certas.
+    teses: embaralhar(a.teses.map((t) => ({ id: id(), texto: t.texto, correta: t.correta }))),
     analisado: false,
   };
 }
 
 export function gerarOfertas(e: Estado, n: number): CasoOferta[] {
   const mult = multiplicadorQualidade(e);
+  const { min, max } = faixaTier(e);
+  const reais = ARQUETIPOS.filter((a) => a.tier >= min && a.tier <= max);
+  const evitar = new Set(e.ultimosTitulos);
+  const usados = new Set<string>();
   const lista: CasoOferta[] = [];
   for (let i = 0; i < n; i++) {
     // ~28% de chance de ser um caso "buxa".
     const buxa = chance(0.28);
-    const arq = buxa ? escolher(ARQUETIPOS_BUXA) : escolher(ARQUETIPOS);
+    let arq: Arquetipo;
+    if (buxa) {
+      const bxPool = ARQUETIPOS_BUXA.filter((a) => a.tier <= max && !usados.has(a.titulo));
+      arq = escolher(bxPool.length ? bxPool : ARQUETIPOS_BUXA);
+    } else {
+      // Evita repetir casos da rodada anterior e dentro da mesma rodada.
+      let cand = reais.filter((a) => !usados.has(a.titulo) && !evitar.has(a.titulo));
+      if (cand.length === 0) cand = reais.filter((a) => !usados.has(a.titulo));
+      if (cand.length === 0) cand = reais;
+      arq = escolher(cand);
+    }
+    usados.add(arq.titulo);
     lista.push(ofertaDeArquetipo(arq, buxa, mult));
   }
+  // Guarda os títulos desta rodada para a próxima não repetir.
+  e.ultimosTitulos = lista.map((o) => o.titulo);
   return lista;
 }
 
-export function gerarCrime(): OportunidadeCrime {
-  const c = escolher(CRIMES);
-  return { ...c, id: id(), ganho: jitter(c.ganho, 0.2) };
+export function gerarCrime(e: Estado): OportunidadeCrime {
+  const { max } = faixaTier(e);
+  let pool = CRIMES.filter((c) => c.tier <= max && c.titulo !== e.ultimoCrime);
+  if (pool.length === 0) pool = CRIMES.filter((c) => c.tier <= max);
+  if (pool.length === 0) pool = CRIMES.slice();
+  const c = escolher(pool);
+  e.ultimoCrime = c.titulo;
+  return {
+    id: id(),
+    titulo: c.titulo,
+    descricao: c.descricao,
+    ganho: jitter(c.ganho, 0.2),
+    chanceBase: c.chanceBase,
+    penaDias: c.penaDias,
+    multa: c.multa,
+    perdaReputacao: c.perdaReputacao,
+  };
 }
 
 // ------------------------------ Probabilidades ------------------------------
@@ -311,7 +366,7 @@ export function reduzir(e: Estado, acao: Acao): Estado {
         return ns;
       }
 
-      const entrada = oferta.aceitaEntrada ? Math.round(honorario * 0.3) : 0;
+      const entrada = oferta.aceitaEntrada ? Math.round(honorario * 0.25) : 0;
       const ativo: CasoAtivo = {
         ...oferta,
         honorario,
@@ -471,7 +526,7 @@ function encerrarDia(e: Estado): Estado {
   // Novos casos e talvez uma proposta do submundo (só quando livre).
   if (ns.preso <= 0) {
     ns.ofertas = gerarOfertas(ns, 3);
-    ns.crime = chance(0.35) ? gerarCrime() : null;
+    ns.crime = chance(0.35) ? gerarCrime(ns) : null;
   } else {
     ns.ofertas = [];
     ns.crime = null;

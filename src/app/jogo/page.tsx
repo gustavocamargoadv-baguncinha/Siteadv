@@ -6,7 +6,7 @@ import {
   RotateCcw, Search, Skull, Sparkles, TrendingUp, Trophy, Users,
 } from "lucide-react";
 import {
-  brl, brlCurto, chanceAceite, chanceVitoria, estadoInicial, honorarioDe,
+  brl, brlCurto, chanceAceite, estadoInicial, honorarioDe,
   leituraTecnica, reduzir, carregar, salvar, type Acao,
 } from "@/lib/jogo/motor";
 import {
@@ -476,7 +476,7 @@ function ModalNegociar({ estado, oferta, onFechar, onConfirmar }: {
 
       <div className="mt-3 rounded-xl bg-slate-50 p-3 text-sm">
         <div className="flex justify-between"><span className="text-slate-500">Honorário</span><b className="text-slate-900">{brl(honorario)}</b></div>
-        <div className="flex justify-between"><span className="text-slate-500">Entrada (se fechar)</span><b className="text-slate-900">{oferta.aceitaEntrada ? brl(Math.round(honorario * 0.3)) : "recusada 💸"}</b></div>
+        <div className="flex justify-between"><span className="text-slate-500">Entrada (se fechar)</span><b className="text-slate-900">{oferta.aceitaEntrada ? brl(Math.round(honorario * 0.25)) : "recusada 💸"}</b></div>
         <div className="mt-1.5">
           <div className="flex justify-between text-xs"><span className="text-slate-500">Chance do cliente aceitar</span><b className="text-slate-900">{Math.round(aceite * 100)}%</b></div>
           <div className="mt-1 h-2 overflow-hidden rounded-full bg-slate-200">
@@ -501,7 +501,6 @@ function ModalProtocolar({ estado, caso, onFechar, onConfirmar }: {
   estado: Estado; caso: CasoAtivo; onFechar: () => void; onConfirmar: (ids: string[]) => void;
 }) {
   const [sel, setSel] = useState<string[]>([]);
-  const chance = chanceVitoria(estado, caso, sel);
   const alternar = (id: string) => setSel((s) => (s.includes(id) ? s.filter((x) => x !== id) : [...s, id]));
   return (
     <Overlay onFechar={onFechar}>
@@ -522,12 +521,14 @@ function ModalProtocolar({ estado, caso, onFechar, onConfirmar }: {
         ))}
       </div>
 
-      <div className="mt-3 rounded-xl bg-slate-50 p-3">
-        <div className="flex justify-between text-xs"><span className="text-slate-500">Chance de ganhar o caso</span><b className="text-slate-900">{Math.round(chance * 100)}%</b></div>
-        <div className="mt-1 h-2 overflow-hidden rounded-full bg-slate-200">
-          <div className={`h-full rounded-full ${chance > 0.6 ? "bg-emerald-500" : chance > 0.35 ? "bg-amber-500" : "bg-red-500"}`} style={{ width: `${chance * 100}%` }} />
+      <div className="mt-3 rounded-xl bg-amber-50 p-3">
+        <div className="flex justify-between text-xs">
+          <span className="text-slate-600">Teses selecionadas</span>
+          <b className="text-slate-900">{sel.length}</b>
         </div>
-        <p className="mt-1.5 text-[11px] text-slate-400">Teses coerentes elevam a chance; teses equivocadas derrubam. Técnica e reputação também pesam.</p>
+        <p className="mt-1.5 text-[11px] leading-relaxed text-slate-500">
+          Você <b>não</b> verá a chance antes de protocolar — confie na sua leitura do caso. Teses coerentes vencem; teses equivocadas afundam o processo. Técnica e reputação também pesam.
+        </p>
       </div>
 
       <div className="mt-4 flex gap-2">

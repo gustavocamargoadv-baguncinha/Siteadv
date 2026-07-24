@@ -91,6 +91,10 @@ export interface Estado {
   ofertas: CasoOferta[];
   ativos: CasoAtivo[];
   crime: OportunidadeCrime | null;
+  /** Títulos dos casos da rodada anterior — evita repetição imediata. */
+  ultimosTitulos: string[];
+  /** Título do último crime ofertado — evita repetir seguido. */
+  ultimoCrime: string;
   /** Dias restantes de prisão (0 = livre). */
   preso: number;
   feed: ItemFeed[];
