@@ -320,4 +320,68 @@ export const DEMO_SEED: Record<TableName, Record<string, unknown>[]> = {
     { id: "l-0007", tipo: "despesa", categoria: "Estrutura", descricao: "Aluguel do escritório", valor: 4500, vencimento: d(8) },
     { id: "l-0008", tipo: "despesa", categoria: "Assinaturas", descricao: "Monitoramento processual (API tribunais)", valor: 249, vencimento: d(8) },
   ],
+
+  // Caixa de pautas — exemplos do que o monitoramento traz das fontes oficiais.
+  pautas: [
+    {
+      id: "pt-0001",
+      fonte: "stf",
+      externo_id: "demo-stf-1",
+      titulo: "STF conclui julgamento sobre marco temporal da prescrição em crimes continuados",
+      resumo: "Plenário fixa tese sobre o termo inicial da contagem da prescrição nos crimes praticados em continuidade delitiva.",
+      url: "https://portal.stf.jus.br/",
+      data_fonte: d(-1),
+      tema: "prescrição",
+      status: "nova",
+    },
+    {
+      id: "pt-0002",
+      fonte: "stj",
+      externo_id: "demo-stj-1",
+      titulo: "Sexta Turma do STJ reafirma nulidade de busca domiciliar sem justa causa",
+      resumo: "Colegiado anula provas obtidas em entrada forçada na residência sem fundadas razões, reforçando o Tema 280.",
+      url: "https://www.stj.jus.br/",
+      data_fonte: d(-2),
+      tema: "processo penal",
+      status: "nova",
+    },
+    {
+      id: "pt-0003",
+      fonte: "camara",
+      externo_id: "demo-camara-1",
+      titulo: "PL amplia hipóteses de substituição da pena privativa de liberdade",
+      resumo: "Projeto em tramitação na Câmara altera o art. 44 do Código Penal para ampliar as penas restritivas de direitos.",
+      url: "https://www.camara.leg.br/",
+      data_fonte: d(-3),
+      tema: "pena",
+      status: "nova",
+    },
+    {
+      id: "pt-0004",
+      fonte: "senado",
+      externo_id: "demo-senado-1",
+      titulo: "Senado analisa mudança na execução penal sobre remição pela leitura",
+      resumo: "Matéria propõe critérios uniformes para remição de pena pela leitura e pelo estudo.",
+      url: "https://www25.senado.leg.br/",
+      data_fonte: d(-5),
+      tema: "execução penal",
+      status: "usada",
+    },
+  ],
+
+  posts: [
+    {
+      id: "ps-0001",
+      titulo: "Busca domiciliar sem justa causa: o que muda com a nova decisão do STJ",
+      slug: "busca-domiciliar-sem-justa-causa-stj",
+      resumo: "A Sexta Turma reafirmou que a entrada na residência sem fundadas razões contamina as provas. Entenda os efeitos práticos para a defesa.",
+      conteudo:
+        "A Sexta Turma do Superior Tribunal de Justiça voltou a enfrentar um tema central para a defesa criminal: os limites da busca domiciliar.\n\n## O que foi decidido\n\nO colegiado reafirmou que a entrada forçada em domicílio exige **fundadas razões** — mera denúncia anônima ou \"atitude suspeita\" não bastam. Sem esse lastro, as provas obtidas são nulas.\n\n## Por que isso importa\n\nNa prática, abre-se caminho para o reconhecimento da ilicitude da prova e, por consequência, da absolvição em casos de flagrante decorrente de diligência irregular.\n\n*Este texto tem caráter informativo e não constitui aconselhamento jurídico.*",
+      autor: "Gustavo Roberto de Camargo",
+      fonte_url: "https://www.stj.jus.br/",
+      status: "publicado",
+      publicado_em: dh(-2, 9, 30),
+      pauta_id: "pt-0002",
+    },
+  ],
 };

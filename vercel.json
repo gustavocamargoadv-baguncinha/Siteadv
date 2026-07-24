@@ -1,0 +1,8 @@
+{
+  "crons": [
+    {
+      "path": "/api/pautas/coletar",
+      "schedule": "0 9 * * *"
+    }
+  ]
+}

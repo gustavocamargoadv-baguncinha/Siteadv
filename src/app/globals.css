@@ -5,3 +5,29 @@
 html {
   -webkit-tap-highlight-color: transparent;
 }
+
+/* Corpo dos posts do blog (HTML gerado a partir do Markdown da redação). */
+.prose-blog {
+  @apply text-[15px] leading-relaxed text-slate-700;
+}
+.prose-blog h2 {
+  @apply mt-8 mb-2 text-xl font-bold tracking-tight text-slate-900;
+}
+.prose-blog h3 {
+  @apply mt-6 mb-2 text-lg font-semibold text-slate-900;
+}
+.prose-blog p {
+  @apply my-4;
+}
+.prose-blog ul {
+  @apply my-4 list-disc space-y-1 pl-6;
+}
+.prose-blog a {
+  @apply font-medium text-brand-700 underline underline-offset-2;
+}
+.prose-blog strong {
+  @apply font-semibold text-slate-900;
+}
+.prose-blog em {
+  @apply italic;
+}

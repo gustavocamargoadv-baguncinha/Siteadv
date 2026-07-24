@@ -162,6 +162,51 @@ export interface Lancamento {
   created_at?: string;
 }
 
+// ---------------------------------------------------------------------------
+// Blog jurídico ("Radar Penal") — parte pública do sistema em /blog.
+// ---------------------------------------------------------------------------
+
+// Origem de uma pauta captada pelo monitoramento.
+export type FontePauta = "stf" | "stj" | "camara" | "senado";
+
+// Situação de uma pauta na caixa de entrada da redação.
+export type StatusPauta = "nova" | "arquivada" | "usada";
+
+// Uma "pauta" é uma sugestão de assunto captada automaticamente das fontes
+// oficiais (julgados dos tribunais superiores, projetos de lei penais). O
+// advogado revisa a caixa de pautas e decide o que vira post — nada é
+// publicado sozinho.
+export interface Pauta {
+  id: string;
+  fonte: FontePauta;
+  externo_id: string; // id/URL na origem — usado para não duplicar
+  titulo: string;
+  resumo?: string;
+  url: string; // link para a fonte oficial
+  data_fonte?: string; // ISO date — quando saiu na origem
+  tema?: string; // termo penal que casou (tráfico, dosimetria, HC…)
+  status: StatusPauta;
+  created_at?: string;
+}
+
+export type StatusPost = "rascunho" | "publicado";
+
+// Um post do blog. Escrito e revisado por uma pessoa; só aparece em /blog
+// quando status = "publicado".
+export interface Post {
+  id: string;
+  titulo: string;
+  slug: string; // parte do endereço: /blog/{slug}
+  resumo?: string; // chamada que aparece na listagem e nos buscadores
+  conteudo: string; // corpo do texto (Markdown simples)
+  autor?: string;
+  fonte_url?: string; // link para a decisão/PL de origem, quando houver
+  status: StatusPost;
+  publicado_em?: string; // ISO datetime
+  pauta_id?: string; // pauta que originou o post, quando aplicável
+  created_at?: string;
+}
+
 export type TableName =
   | "membros"
   | "clientes"
@@ -172,7 +217,9 @@ export type TableName =
   | "tarefas"
   | "documentos"
   | "contratos_honorarios"
-  | "lancamentos";
+  | "lancamentos"
+  | "pautas"
+  | "posts";
 
 export const TABLES: TableName[] = [
   "membros",
@@ -185,4 +232,6 @@ export const TABLES: TableName[] = [
   "documentos",
   "contratos_honorarios",
   "lancamentos",
+  "pautas",
+  "posts",
 ];

@@ -15,6 +15,7 @@ Sistema completo de gestão para o escritório, feito para funcionar no computad
 | **Equipe** | Membros, papéis (admin, advogado, estagiário, secretaria) e carga de trabalho |
 | **Portal do Cliente** | O que cada cliente enxerga ao acessar com o próprio login |
 | **Tribunais** | Monitoramento automático de movimentações via Escavador ou Judit (opcional) |
+| **Blog / Redação** | Blog jurídico público (`/blog`) + caixa de pautas alimentada por monitoramento de STF, STJ, Câmara e Senado (assuntos penais) |
 
 ## Como rodar
 
@@ -60,13 +61,30 @@ Integração pronta para **Escavador** e **Judit.io** (serviços pagos):
 
 As novas movimentações entram sozinhas na linha do tempo do processo, marcadas como *via tribunal*.
 
+## Blog jurídico "Radar Penal" e monitoramento de pautas
+
+Parte pública do sistema, em **`/blog`** (a única área aberta a visitantes — o resto continua atrás do login). Pensada como um blog informativo de direito penal, no espírito do ConJur.
+
+**Como o conteúdo chega até a redação:** um monitoramento diário garimpa as fontes oficiais e filtra o que é de interesse penal, montando uma **caixa de pautas** em *Blog / Redação*. Nada é publicado sozinho — o advogado revisa, escreve e publica.
+
+- Fontes: **STF** e **STJ** (feeds de notícias) e **Câmara** e **Senado** (APIs de dados abertos, projetos de lei penais);
+- O agendador roda por `vercel.json` (cron diário) chamando `GET /api/pautas/coletar`;
+- Proteja o endpoint definindo `CRON_SECRET` (a Vercel envia esse valor no cabeçalho `Authorization`);
+- Se os feeds de RSS do STF/STJ mudarem de endereço, ajuste `STF_RSS_URL` / `STJ_RSS_URL` sem reprogramar;
+- Cada fonte é independente e tolerante a falha: se uma cair, as outras seguem.
+
+No banco: tabelas `pautas` e `posts` (migração `supabase/migrations/0003_blog.sql`). A RLS libera **leitura pública** só dos posts *publicados*; rascunhos e a caixa de pautas ficam restritos à equipe.
+
+> **Nota ética:** o formato é informativo/jornalístico, compatível com o Provimento 205/2021 da OAB (publicidade da advocacia). O rodapé do blog já traz o aviso de que o conteúdo não constitui aconselhamento jurídico.
+
 ## Arquitetura
 
 - **Next.js 15 (App Router) + TypeScript + Tailwind** — interface responsiva (desktop e mobile);
 - **PWA** — manifesto + service worker: instala no celular e abre offline;
 - **Camada de dados intercambiável** (`src/lib/store.ts`) — mesmo código roda com `localStorage` (demo) ou Supabase (produção); a escolha é automática pela presença das variáveis de ambiente;
 - **Supabase** — Postgres com row-level security por papel, autenticação e armazenamento de arquivos;
-- **Integração de tribunais** (`src/lib/tribunais.ts`) — abstração de provedor + webhook de ingestão.
+- **Integração de tribunais** (`src/lib/tribunais.ts`) — abstração de provedor + webhook de ingestão;
+- **Monitoramento de pautas** (`src/lib/fontes.ts`) — coletores por fonte (STF/STJ/Câmara/Senado) + filtro penal, expostos em `/api/pautas/coletar`.
 
 ## Roadmap sugerido
 
