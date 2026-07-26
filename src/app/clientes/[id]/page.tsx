@@ -2,24 +2,69 @@
 
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
-import { ArrowLeft, Mail, MapPin, Phone } from "lucide-react";
+import { useState } from "react";
+import { ArrowLeft, Mail, MapPin, Pencil, Phone } from "lucide-react";
 import { useTable } from "@/lib/hooks";
 import type { Cliente, ContratoHonorarios, Documento, Lancamento, Processo } from "@/lib/types";
 import { AREAS, brl, dataBR, formatCNJ, statusLancamento, TIPOS_HONORARIOS } from "@/lib/format";
-import { Badge, Card, EmptyState, PageHeader } from "@/components/ui";
+import { Badge, BotaoPrimario, Card, EmptyState, Field, Input, PageHeader, Select, Textarea } from "@/components/ui";
+import { Modal } from "@/components/Modal";
 import { GerarDocumentos } from "@/components/GerarDocumentos";
 
 export default function ClienteDetalhe() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
 
-  const { rows: clientes } = useTable<Cliente>("clientes");
+  const { rows: clientes, update: updateCliente } = useTable<Cliente>("clientes");
   const { rows: processos } = useTable<Processo>("processos");
   const { rows: contratos } = useTable<ContratoHonorarios>("contratos_honorarios");
   const { rows: lancamentos } = useTable<Lancamento>("lancamentos");
   const { rows: documentos } = useTable<Documento>("documentos");
 
+  const [editando, setEditando] = useState(false);
+  const [form, setForm] = useState({
+    tipo: "pf", nome: "", cpf_cnpj: "", rg: "", nacionalidade: "", estado_civil: "", profissao: "",
+    email: "", telefone: "", endereco: "", notas: "",
+  });
+
   const cli = clientes.find((c) => c.id === id);
+
+  function abrirEdicao() {
+    if (!cli) return;
+    setForm({
+      tipo: cli.tipo,
+      nome: cli.nome,
+      cpf_cnpj: cli.cpf_cnpj ?? "",
+      rg: cli.rg ?? "",
+      nacionalidade: cli.nacionalidade ?? "",
+      estado_civil: cli.estado_civil ?? "",
+      profissao: cli.profissao ?? "",
+      email: cli.email ?? "",
+      telefone: cli.telefone ?? "",
+      endereco: cli.endereco ?? "",
+      notas: cli.notas ?? "",
+    });
+    setEditando(true);
+  }
+
+  async function salvarEdicao(e: React.FormEvent) {
+    e.preventDefault();
+    if (!cli || !form.nome.trim()) return;
+    await updateCliente(cli.id, {
+      tipo: form.tipo as Cliente["tipo"],
+      nome: form.nome.trim(),
+      cpf_cnpj: form.cpf_cnpj || undefined,
+      rg: form.rg || undefined,
+      nacionalidade: form.nacionalidade || undefined,
+      estado_civil: form.estado_civil || undefined,
+      profissao: form.profissao || undefined,
+      email: form.email || undefined,
+      telefone: form.telefone || undefined,
+      endereco: form.endereco || undefined,
+      notas: form.notas || undefined,
+    });
+    setEditando(false);
+  }
 
   if (!cli) {
     return (
@@ -49,7 +94,18 @@ export default function ClienteDetalhe() {
         <ArrowLeft size={16} /> Voltar
       </button>
 
-      <PageHeader titulo={cli.nome} sub={cli.tipo === "pf" ? `CPF ${cli.cpf_cnpj ?? "—"}` : `CNPJ ${cli.cpf_cnpj ?? "—"}`} />
+      <PageHeader
+        titulo={cli.nome}
+        sub={cli.tipo === "pf" ? `CPF ${cli.cpf_cnpj ?? "—"}` : `CNPJ ${cli.cpf_cnpj ?? "—"}`}
+        acao={
+          <button
+            onClick={abrirEdicao}
+            className="inline-flex items-center gap-1.5 rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-700 transition hover:border-brand-400 hover:text-brand-700"
+          >
+            <Pencil size={15} /> Editar
+          </button>
+        }
+      />
 
       <Card className="space-y-2 p-4 text-sm text-slate-700">
         {cli.telefone && <p className="flex items-center gap-2"><Phone size={15} className="text-slate-400" /> {cli.telefone}</p>}
@@ -165,6 +221,56 @@ export default function ClienteDetalhe() {
           </ul>
         </Card>
       )}
+
+      <Modal aberto={editando} titulo={`Editar — ${cli.nome}`} onFechar={() => setEditando(false)}>
+        <form onSubmit={salvarEdicao} className="space-y-3">
+          <div className="grid grid-cols-2 gap-3">
+            <Field rotulo="Tipo">
+              <Select value={form.tipo} onChange={(e) => setForm({ ...form, tipo: e.target.value })}>
+                <option value="pf">Pessoa física</option>
+                <option value="pj">Pessoa jurídica</option>
+              </Select>
+            </Field>
+            <Field rotulo={form.tipo === "pf" ? "CPF" : "CNPJ"}>
+              <Input value={form.cpf_cnpj} onChange={(e) => setForm({ ...form, cpf_cnpj: e.target.value })} />
+            </Field>
+          </div>
+          <Field rotulo="Nome completo" obrigatorio>
+            <Input required value={form.nome} onChange={(e) => setForm({ ...form, nome: e.target.value })} />
+          </Field>
+          {form.tipo === "pf" && (
+            <div className="grid grid-cols-2 gap-3">
+              <Field rotulo="RG">
+                <Input value={form.rg} onChange={(e) => setForm({ ...form, rg: e.target.value })} placeholder="00.000.000-0 SSP/SP" />
+              </Field>
+              <Field rotulo="Nacionalidade">
+                <Input value={form.nacionalidade} onChange={(e) => setForm({ ...form, nacionalidade: e.target.value })} placeholder="brasileiro / brasileira" />
+              </Field>
+              <Field rotulo="Estado civil">
+                <Input value={form.estado_civil} onChange={(e) => setForm({ ...form, estado_civil: e.target.value })} placeholder="solteiro / casada…" />
+              </Field>
+              <Field rotulo="Profissão">
+                <Input value={form.profissao} onChange={(e) => setForm({ ...form, profissao: e.target.value })} />
+              </Field>
+            </div>
+          )}
+          <div className="grid grid-cols-2 gap-3">
+            <Field rotulo="Telefone">
+              <Input value={form.telefone} onChange={(e) => setForm({ ...form, telefone: e.target.value })} placeholder="(11) 9…" />
+            </Field>
+            <Field rotulo="E-mail">
+              <Input type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} />
+            </Field>
+          </div>
+          <Field rotulo="Endereço">
+            <Input value={form.endereco} onChange={(e) => setForm({ ...form, endereco: e.target.value })} />
+          </Field>
+          <Field rotulo="Notas">
+            <Textarea value={form.notas} onChange={(e) => setForm({ ...form, notas: e.target.value })} placeholder="Ex.: réu preso, contato pela família…" />
+          </Field>
+          <div className="flex justify-end"><BotaoPrimario type="submit">Salvar alterações</BotaoPrimario></div>
+        </form>
+      </Modal>
     </div>
   );
 }
