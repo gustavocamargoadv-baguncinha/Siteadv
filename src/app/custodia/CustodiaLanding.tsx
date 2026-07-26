@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { Analytics } from "@/components/Analytics";
 
 /* -------------------------------------------------------------------------
    Landing page de captação — Audiência de Custódia em Itapetininga e região.
@@ -190,6 +191,7 @@ export function CustodiaLanding() {
   return (
     <div className="min-h-dvh scroll-smooth bg-[#0a1120] text-slate-100 antialiased">
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
+      <Analytics />
 
       {/* Barra superior */}
       <header className="sticky top-0 z-40 border-b border-white/10 bg-[#0a1120]/90 backdrop-blur">

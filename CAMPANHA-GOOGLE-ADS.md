@@ -220,10 +220,22 @@ Para saber quantos contatos o anúncio gerou (e não só cliques):
 
 1. **Ligações:** ative *Conversões de chamada* no Google Ads — ele mede as
    ligações feitas pela extensão de chamada automaticamente.
-2. **Cliques no WhatsApp:** isso exige colar um pequeno código de acompanhamento
-   (Google Tag) na página e marcar o clique do botão como conversão. **Eu faço
-   essa parte** — é só você criar a conversão no Google Ads e me passar o
-   *ID de conversão* e o *rótulo*; eu adiciono no site e testo.
+2. **Cliques no WhatsApp:** o código de acompanhamento **já está na página**
+   (fica desligado até você configurar). Para ligar:
+   1. No Google Ads: **Metas → Conversões → Nova conversão → Site**, crie uma
+      conversão de ação personalizada (ex.: "Clique no WhatsApp"). O Google vai
+      te dar duas informações: o **ID de conversão** (algo como `AW-123456789`)
+      e o **rótulo** (uma sequência de letras/números).
+   2. Na **Vercel** (projeto `defesa-em-custodia`) → **Settings → Environment
+      Variables**, adicione:
+      | Nome | Valor |
+      |---|---|
+      | `NEXT_PUBLIC_GADS_ID` | o ID de conversão (ex.: `AW-123456789`) |
+      | `NEXT_PUBLIC_GADS_WHATSAPP_LABEL` | o rótulo da conversão de WhatsApp |
+      | `NEXT_PUBLIC_GADS_CALL_LABEL` | (opcional) rótulo da conversão de ligação |
+   3. Faça **Redeploy**. Pronto: cada clique nos botões de WhatsApp (e de
+      ligação, se configurar) passa a contar como conversão.
+   > Me chame que eu confiro se está registrando certinho.
 
 ---
 
