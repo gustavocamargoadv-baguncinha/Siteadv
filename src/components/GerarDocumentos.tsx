@@ -5,7 +5,7 @@ import { FileSignature, FileText, HandCoins } from "lucide-react";
 import { useTable, byId } from "@/lib/hooks";
 import type { Cliente, ContratoHonorarios, Lancamento, Processo } from "@/lib/types";
 import { brl, formatCNJ } from "@/lib/format";
-import { abrirDocumento, contratoHTML, hipossuficienciaHTML, procuracaoHTML, type PessoaDoc } from "@/lib/modelos";
+import { abrirDocumento, contratoHTML, hipossuficienciaHTML, procuracaoHTML, PODERES_ESPECIAIS, type PessoaDoc } from "@/lib/modelos";
 import { BotaoPrimario, Card, Field, Input, Select, Textarea } from "@/components/ui";
 import { Modal } from "@/components/Modal";
 
@@ -48,7 +48,7 @@ export function GerarDocumentos({ cliente }: { cliente: Cliente }) {
   const [modal, setModal] = useState<TipoDoc>(null);
   const [q, setQ] = useState<Qualificacao>(qualificacaoDoCliente(cliente));
   const [salvarCadastro, setSalvarCadastro] = useState(true);
-  const [corregedoria, setCorregedoria] = useState(false);
+  const [poderesSel, setPoderesSel] = useState<string[]>([]);
 
   // Campos específicos do contrato
   const [defendidoId, setDefendidoId] = useState(cliente.id);
@@ -93,6 +93,7 @@ export function GerarDocumentos({ cliente }: { cliente: Cliente }) {
   function abrirModal(tipo: Exclude<TipoDoc, null>) {
     setQ(qualificacaoDoCliente(cliente));
     setSalvarCadastro(true);
+    setPoderesSel([]);
     if (tipo === "contrato") {
       setDefendidoId(cliente.id);
       setDefendidoNomeLivre("");
@@ -133,10 +134,15 @@ export function GerarDocumentos({ cliente }: { cliente: Cliente }) {
     };
   }
 
+  function togglePoder(id: string) {
+    setPoderesSel((atual) => (atual.includes(id) ? atual.filter((x) => x !== id) : [...atual, id]));
+  }
+
   async function gerarProcuracao(e: React.FormEvent) {
     e.preventDefault();
     await persistirCadastro();
-    abrirDocumento(procuracaoHTML(pessoa(), { corregedoria }));
+    const poderesExtras = PODERES_ESPECIAIS.filter((x) => poderesSel.includes(x.id)).map((x) => x.frase);
+    abrirDocumento(procuracaoHTML(pessoa(), { poderesExtras }));
     setModal(null);
   }
 
@@ -258,10 +264,25 @@ export function GerarDocumentos({ cliente }: { cliente: Cliente }) {
             Dr. Gustavo. Confira a qualificação abaixo.
           </p>
           <CamposQualificacao />
-          <label className="flex items-center gap-2 text-sm text-slate-700">
-            <input type="checkbox" checked={corregedoria} onChange={(e) => setCorregedoria(e.target.checked)} className="h-4 w-4 accent-brand-600" />
-            Incluir poderes para atuar em processo da corregedoria de presídios
-          </label>
+          <div className="rounded-lg border border-slate-200 p-3">
+            <p className="mb-2 text-xs font-semibold text-slate-700">Poderes especiais (marque os que quiser acrescentar)</p>
+            <p className="mb-2.5 text-[11px] text-slate-400">
+              Confessar, desistir, transigir, firmar acordos e substabelecer já constam do texto. Marque abaixo os poderes extras conforme o caso.
+            </p>
+            <div className="grid grid-cols-1 gap-1.5 sm:grid-cols-2">
+              {PODERES_ESPECIAIS.map((pd) => (
+                <label key={pd.id} className="flex items-center gap-2 text-sm text-slate-700">
+                  <input
+                    type="checkbox"
+                    checked={poderesSel.includes(pd.id)}
+                    onChange={() => togglePoder(pd.id)}
+                    className="h-4 w-4 accent-brand-600"
+                  />
+                  {pd.label}
+                </label>
+              ))}
+            </div>
+          </div>
           <div className="flex justify-end"><BotaoPrimario type="submit">Gerar procuração</BotaoPrimario></div>
         </form>
       </Modal>

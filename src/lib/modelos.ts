@@ -52,40 +52,58 @@ function esc(s: string | undefined): string {
     .replace(/>/g, "&gt;");
 }
 
-function pagina(titulo: string, corpo: string, opcoes?: { serifa?: boolean }): string {
+function pagina(titulo: string, corpo: string, opcoes?: { serifa?: boolean; compacto?: boolean }): string {
   const fonte = opcoes?.serifa
     ? "'Book Antiqua', 'Palatino Linotype', Georgia, serif"
     : "Arial, Helvetica, sans-serif";
+  // Layout compacto: usado na procuração para caber sempre em uma folha.
+  const c = opcoes?.compacto;
+  const s = {
+    margem: c ? "15mm 18mm 12mm 18mm" : "22mm 20mm 26mm 20mm",
+    fonte: c ? "11.5pt" : "12.5pt",
+    entrelinha: c ? "1.42" : "1.75",
+    logo: c ? "220px" : "300px",
+    hrBaixo: c ? "16px" : "28px",
+    h1Fonte: c ? "13.5pt" : "15pt",
+    h1Margem: c ? "8px 0 12px" : "26px 0 30px",
+    pBaixo: c ? "8px" : "14px",
+    dataMargem: c ? "20px 0 26px" : "44px 0 60px",
+    blocoAss: c ? "34px" : "56px",
+    rodapeTopo: c ? "16px" : "40px",
+  };
   return `<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
 <meta charset="utf-8">
 <title>${esc(titulo)}</title>
 <style>
-  @page { size: A4; margin: 22mm 20mm 26mm 20mm; }
+  @page { size: A4; margin: ${s.margem}; }
   * { box-sizing: border-box; }
+  html, body { height: 100%; }
   body {
     font-family: ${fonte};
-    font-size: 12.5pt; line-height: 1.75; color: #111;
+    font-size: ${s.fonte}; line-height: ${s.entrelinha}; color: #111;
     max-width: 175mm; margin: 0 auto; padding: 16px;
+    min-height: 100vh; display: flex; flex-direction: column;
   }
+  main.corpo { flex: 1 0 auto; }
   header.timbre { text-align: center; margin-bottom: 4px; }
-  header.timbre img { width: 300px; max-width: 70%; height: auto; }
-  hr.linha { border: none; border-top: 1.6px solid #b0904f; margin: 4px 0 28px; }
-  h1 { text-align: center; font-size: 15pt; letter-spacing: .5px; margin: 26px 0 30px; }
-  p { text-align: justify; margin: 0 0 14px; }
+  header.timbre img { width: ${s.logo}; max-width: 70%; height: auto; }
+  hr.linha { border: none; border-top: 1.6px solid #b0904f; margin: 4px 0 ${s.hrBaixo}; }
+  h1 { text-align: center; font-size: ${s.h1Fonte}; letter-spacing: .5px; margin: ${s.h1Margem}; }
+  p { text-align: justify; margin: 0 0 ${s.pBaixo}; }
   .recuo { text-indent: 3em; }
-  .data { text-align: center; margin: 44px 0 60px; }
+  .data { text-align: center; margin: ${s.dataMargem}; }
   .assinatura { text-align: center; margin-top: 24px; }
   .assinatura .linha-ass { display: inline-block; border-top: 1px solid #111; min-width: 320px; padding-top: 4px; }
-  .bloco-ass { margin-top: 56px; }
+  .bloco-ass { margin-top: ${s.blocoAss}; }
   footer.rodape {
-    margin-top: 60px; text-align: center; font-size: 9.5pt; color: #333; line-height: 1.5;
+    flex-shrink: 0; margin-top: ${s.rodapeTopo}; padding-top: 8px;
+    border-top: 1px solid #d8d8d8; text-align: center; font-size: 9pt; color: #444; line-height: 1.5;
   }
   @media print {
     body { padding: 0; }
     .no-print { display: none !important; }
-    footer.rodape { position: fixed; bottom: 0; left: 0; right: 0; }
   }
   .no-print {
     position: fixed; top: 12px; right: 12px; z-index: 10;
@@ -99,7 +117,7 @@ function pagina(titulo: string, corpo: string, opcoes?: { serifa?: boolean }): s
 <button class="no-print" onclick="window.print()">🖨️ Imprimir / Salvar PDF</button>
 <header class="timbre">${LOGO_IMG}</header>
 <hr class="linha">
-${corpo}
+<main class="corpo">${corpo}</main>
 <footer class="rodape">
   ${esc(ESCRITORIO.rodape1)}<br>
   ${esc(ESCRITORIO.rodape2)}
@@ -122,8 +140,23 @@ function qualificacao(p: PessoaDoc, opts?: { comProfissao?: boolean }): string {
 // ---------------------------------------------------------------------------
 // Procuração "ad judicia et extra"
 // ---------------------------------------------------------------------------
-export function procuracaoHTML(p: PessoaDoc, opcoes?: { corregedoria?: boolean }): string {
-  const poderesExtra = opcoes?.corregedoria ? ", atuar em processo da corregedoria de presídios" : "";
+
+// Poderes especiais opcionais (marcáveis um a um na geração). Os poderes de
+// confessar, desistir, transigir, firmar compromissos e substabelecer já
+// constam do texto-base — aqui ficam os que se acrescentam conforme o caso.
+export const PODERES_ESPECIAIS: { id: string; label: string; frase: string }[] = [
+  { id: "receber_dar", label: "Dar e receber", frase: "receber e dar quitação" },
+  { id: "citacao", label: "Receber citação", frase: "receber citação" },
+  { id: "reconhecer", label: "Reconhecer a procedência do pedido", frase: "reconhecer a procedência do pedido" },
+  { id: "renunciar", label: "Renunciar ao direito", frase: "renunciar ao direito sobre que se funda a ação" },
+  { id: "desistir_acao", label: "Desistir da ação", frase: "desistir da ação" },
+  { id: "levantar", label: "Levantar valores / alvará", frase: "levantar valores e assinar alvarás" },
+  { id: "corregedoria", label: "Corregedoria de presídios", frase: "atuar em processo da corregedoria de presídios" },
+  { id: "vep", label: "Execução penal (VEP)", frase: "representar perante a Vara de Execuções Penais" },
+];
+
+export function procuracaoHTML(p: PessoaDoc, opcoes?: { poderesExtras?: string[] }): string {
+  const extras = opcoes?.poderesExtras?.length ? ", " + opcoes.poderesExtras.join(", ") : "";
   const corpo = `
 <h1>PROCURAÇÃO “AD JUDICIA ET EXTRA”</h1>
 <p><b>${esc(p.nome.toUpperCase())},</b> ${qualificacao(p)}, pelo presente instrumento de procuração,
@@ -134,14 +167,14 @@ ${esc(ESCRITORIO.enderecoCurto)}, a quem confere amplos poderes para foro em ger
 Municipais, em qualquer Juízo, Instância ou Tribunal, ou inquérito, podendo propor contra quem de
 direito as ações competentes e defendê-lo nas contrárias, seguindo umas e outras, até final decisão,
 usando recursos legais e acompanhando-os, conferindo-lhe, ainda, poderes especiais para confessar,
-desistir, transigir, firmar compromissos ou acordos${poderesExtra}, agindo em conjunto ou
+desistir, transigir, firmar compromissos ou acordos${extras}, agindo em conjunto ou
 separadamente, podendo ainda substabelecer esta em outrem, com ou sem reserva de iguais poderes,
 dando por tudo bom, firme e valioso, podendo para tanto, usar os poderes impressos que ficam assim,
 expressamente ratificados.</p>
 <p class="data">${esc(ESCRITORIO.cidade)}, ${dataPorExtensoHoje()}.</p>
 <div class="assinatura"><span class="linha-ass">${esc(p.nome)}</span></div>
 `;
-  return pagina(`Procuração — ${p.nome}`, corpo);
+  return pagina(`Procuração — ${p.nome}`, corpo, { compacto: true });
 }
 
 // ---------------------------------------------------------------------------
