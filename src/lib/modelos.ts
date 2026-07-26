@@ -79,14 +79,11 @@ function pagina(titulo: string, corpo: string, opcoes?: { serifa?: boolean; comp
 <style>
   @page { size: A4; margin: ${s.margem}; }
   * { box-sizing: border-box; }
-  html, body { height: 100%; }
   body {
     font-family: ${fonte};
     font-size: ${s.fonte}; line-height: ${s.entrelinha}; color: #111;
     max-width: 175mm; margin: 0 auto; padding: 16px;
-    min-height: 100vh; display: flex; flex-direction: column;
   }
-  main.corpo { flex: 1 0 auto; }
   header.timbre { text-align: center; margin-bottom: 4px; }
   header.timbre img { width: ${s.logo}; max-width: 70%; height: auto; }
   hr.linha { border: none; border-top: 1.6px solid #b0904f; margin: 4px 0 ${s.hrBaixo}; }
@@ -98,12 +95,14 @@ function pagina(titulo: string, corpo: string, opcoes?: { serifa?: boolean; comp
   .assinatura .linha-ass { display: inline-block; border-top: 1px solid #111; min-width: 320px; padding-top: 4px; }
   .bloco-ass { margin-top: ${s.blocoAss}; }
   footer.rodape {
-    flex-shrink: 0; margin-top: ${s.rodapeTopo}; padding-top: 8px;
+    margin-top: ${s.rodapeTopo}; padding-top: 8px;
     border-top: 1px solid #d8d8d8; text-align: center; font-size: 9pt; color: #444; line-height: 1.5;
   }
   @media print {
-    body { padding: 0; }
+    body { padding: 0 0 14mm 0; }
     .no-print { display: none !important; }
+    /* rodapé fixado no pé da folha impressa, sem esticar a página */
+    footer.rodape { position: fixed; bottom: 0; left: 0; right: 0; margin: 0; padding: 5px 0; background: #fff; }
   }
   .no-print {
     position: fixed; top: 12px; right: 12px; z-index: 10;
