@@ -218,6 +218,54 @@ begin
   end loop;
 end $$;
 
+-- ============================================================================
+-- BLOG "Radar Penal" — pautas (monitoramento) + posts (blog público)
+-- Não apaga nada: usa "create table if not exists". A diferença de segurança:
+-- os POSTS PUBLICADOS têm leitura pública (o blog é aberto a visitantes).
+-- ============================================================================
+
+create table if not exists pautas (
+  id text primary key default gen_random_uuid()::text,
+  fonte text not null check (fonte in ('stf', 'stj', 'camara', 'senado')),
+  externo_id text not null,
+  titulo text not null,
+  resumo text,
+  url text not null,
+  data_fonte date,
+  tema text,
+  status text not null default 'nova' check (status in ('nova', 'arquivada', 'usada')),
+  created_at timestamptz not null default now(),
+  unique (fonte, externo_id)
+);
+create index if not exists idx_pautas_status on pautas (status, created_at desc);
+
+create table if not exists posts (
+  id text primary key default gen_random_uuid()::text,
+  titulo text not null,
+  slug text not null unique,
+  resumo text,
+  conteudo text not null default '',
+  autor text,
+  fonte_url text,
+  status text not null default 'rascunho' check (status in ('rascunho', 'publicado')),
+  publicado_em timestamptz,
+  pauta_id text references pautas (id) on delete set null,
+  created_at timestamptz not null default now()
+);
+create index if not exists idx_posts_publicados on posts (status, publicado_em desc);
+
+-- pautas: só a equipe logada.
+alter table pautas enable row level security;
+drop policy if exists pautas_equipe on pautas;
+create policy pautas_equipe on pautas for all to authenticated using (true) with check (true);
+
+-- posts: leitura PÚBLICA dos publicados; a equipe logada faz tudo (inclui rascunhos).
+alter table posts enable row level security;
+drop policy if exists posts_publicos on posts;
+create policy posts_publicos on posts for select using (status = 'publicado');
+drop policy if exists posts_equipe on posts;
+create policy posts_equipe on posts for all to authenticated using (true) with check (true);
+
 -- ---------------------------------------------------------------------------
 -- Pronto. Se ainda não fez: Storage → bucket privado "documentos".
 -- Seu login já foi criado em Authentication (mantém funcionando).
