@@ -43,7 +43,12 @@ export default function FinanceiroPage() {
           if (filtro === "areceber") return !l.pago_em;
           return !!l.pago_em; // recebidos
         })
-        .sort((a, b) => a.vencimento.localeCompare(b.vencimento)),
+        // recebidos: ordem cronológica pela data de recebimento; demais, pelo vencimento
+        .sort((a, b) =>
+          filtro === "recebidos"
+            ? (a.pago_em ?? "").localeCompare(b.pago_em ?? "")
+            : a.vencimento.localeCompare(b.vencimento)
+        ),
     [receitas, filtro]
   );
 

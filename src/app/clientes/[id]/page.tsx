@@ -88,6 +88,15 @@ export default function ClienteDetalhe() {
     .reduce((s, l) => s + l.valor, 0);
   const saldoContrato = totalContratado - totalRecebido;
 
+  // Em qual parcela o cliente está: conta os recebíveis pagos × total, em ordem
+  // de vencimento, e aponta a próxima em aberto.
+  const recebiveis = financeiro
+    .filter((l) => l.tipo === "receita")
+    .sort((a, b) => a.vencimento.localeCompare(b.vencimento));
+  const parcelasTotal = recebiveis.length;
+  const parcelasPagas = recebiveis.filter((l) => l.pago_em).length;
+  const proximaParcela = recebiveis.find((l) => !l.pago_em);
+
   return (
     <div className="space-y-4">
       <button onClick={() => router.back()} className="inline-flex items-center gap-1 text-sm text-slate-600 hover:text-slate-900">
@@ -129,6 +138,26 @@ export default function ClienteDetalhe() {
             <p className={`mt-0.5 text-lg font-bold ${saldoContrato > 0 ? "text-amber-700" : "text-slate-900"}`}>{brl(Math.max(0, saldoContrato))}</p>
           </div>
         </div>
+      )}
+
+      {parcelasTotal > 0 && (
+        <Card className="p-4">
+          <div className="flex items-center justify-between gap-2">
+            <h2 className="text-sm font-bold text-slate-900">Parcelas</h2>
+            <span className="text-sm font-semibold text-slate-700">{parcelasPagas} de {parcelasTotal} pagas</span>
+          </div>
+          <div className="mt-2 h-2 w-full overflow-hidden rounded-full bg-slate-100">
+            <div
+              className="h-full rounded-full bg-emerald-500 transition-all"
+              style={{ width: `${Math.round((parcelasPagas / parcelasTotal) * 100)}%` }}
+            />
+          </div>
+          <p className="mt-2 text-xs text-slate-600">
+            {proximaParcela
+              ? `Está na parcela ${parcelasPagas + 1} de ${parcelasTotal} — próxima: ${brl(proximaParcela.valor)}, vence ${dataBR(proximaParcela.vencimento)}.`
+              : "✓ Todas as parcelas quitadas."}
+          </p>
+        </Card>
       )}
 
       <GerarDocumentos key={cli.id} cliente={cli} />
