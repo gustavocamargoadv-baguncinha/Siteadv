@@ -1,19 +1,27 @@
 // Service worker do PWA: cache básico para abrir rápido e suportar oscilações
 // de rede. Os dados do modo demo já vivem no localStorage, então o app segue
 // utilizável offline depois da primeira visita.
-const CACHE = "camargo-adv-v1";
+const CACHE = "camargo-adv-v2";
 const PRECACHE = ["/", "/manifest.webmanifest", "/icons/icon-192.png", "/icons/icon-512.png"];
 
 self.addEventListener("install", (event) => {
   event.waitUntil(caches.open(CACHE).then((c) => c.addAll(PRECACHE)));
-  self.skipWaiting();
+  // Sem skipWaiting automático: a nova versão fica "esperando" até o usuário
+  // tocar em "Atualizar" (o app envia a mensagem SKIP_WAITING abaixo).
+});
+
+// Ativa a nova versão quando o app pede (botão "Atualizar").
+self.addEventListener("message", (event) => {
+  if (event.data && event.data.type === "SKIP_WAITING") self.skipWaiting();
 });
 
 self.addEventListener("activate", (event) => {
   event.waitUntil(
-    caches.keys().then((keys) => Promise.all(keys.filter((k) => k !== CACHE).map((k) => caches.delete(k))))
+    caches
+      .keys()
+      .then((keys) => Promise.all(keys.filter((k) => k !== CACHE).map((k) => caches.delete(k))))
+      .then(() => self.clients.claim())
   );
-  self.clients.claim();
 });
 
 self.addEventListener("fetch", (event) => {
