@@ -9,6 +9,7 @@ import type { Pauta, Post } from "@/lib/types";
 // Espelho do que /api/pautas/coletar devolve (sem importar o módulo server).
 type Candidata = Omit<Pauta, "id" | "status" | "created_at">;
 import { getStore } from "@/lib/store";
+import { getSupabase, supabaseConfigurado } from "@/lib/supabase";
 import { PageHeader, Card, Field, Input, Textarea, BotaoPrimario, Badge, EmptyState } from "@/components/ui";
 import { gerarSlug, markdownParaHtml, ROTULO_FONTE, COR_FONTE } from "@/lib/blog";
 import { dataBR } from "@/lib/format";
@@ -81,7 +82,14 @@ function AbaPautas({ onEscrever }: { onEscrever: (p: Post) => void }) {
     setBuscando(true);
     setAviso(null);
     try {
-      const res = await fetch("/api/pautas/coletar", { method: "POST" });
+      // Envia o token do usuário logado para o servidor autorizar a coleta
+      // (o endpoint é protegido pelo CRON_SECRET em produção).
+      const headers: Record<string, string> = {};
+      if (supabaseConfigurado) {
+        const { data } = await getSupabase().auth.getSession();
+        if (data.session?.access_token) headers.Authorization = `Bearer ${data.session.access_token}`;
+      }
+      const res = await fetch("/api/pautas/coletar", { method: "POST", headers });
       const data = await res.json();
       if (data.persisted) {
         // Supabase: o servidor já gravou; só recarregamos a lista.

@@ -14,13 +14,33 @@ export const maxDuration = 60;
 //  • Sem Supabase no servidor (modo demo): apenas devolve as candidatas para o
 //    app salvar localmente.
 //
-// Protegido opcionalmente por CRON_SECRET (cabeçalho Authorization: Bearer …),
-// para o agendador da Vercel poder chamar com segurança.
+// Confere se o token é de um usuário logado do escritório (Supabase Auth).
+// Usado para o botão "Buscar novas pautas" da Redação: a equipe logada pode
+// disparar a coleta manualmente, sem conhecer o CRON_SECRET.
+async function usuarioLogado(token: string): Promise<boolean> {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const anon = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  if (!url || !anon) return false;
+  try {
+    const res = await fetch(`${url}/auth/v1/user`, {
+      headers: { apikey: anon, Authorization: `Bearer ${token}` },
+    });
+    return res.ok;
+  } catch {
+    return false;
+  }
+}
+
+// Autorização: liberado para (a) o agendador da Vercel, que envia o CRON_SECRET,
+// e (b) um membro logado da equipe, que envia o próprio token do Supabase. Sem
+// CRON_SECRET configurado (modo demo), fica aberto.
 async function coletar(req: NextRequest) {
   const cronSecret = process.env.CRON_SECRET;
   if (cronSecret) {
-    const auth = req.headers.get("authorization");
-    if (auth !== `Bearer ${cronSecret}`) {
+    const auth = req.headers.get("authorization") ?? "";
+    const ehCron = auth === `Bearer ${cronSecret}`;
+    const ehEquipe = auth.startsWith("Bearer ") && (await usuarioLogado(auth.slice(7)));
+    if (!ehCron && !ehEquipe) {
       return NextResponse.json({ erro: "não autorizado" }, { status: 401 });
     }
   }
