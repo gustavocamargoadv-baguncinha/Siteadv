@@ -4,7 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { ExternalLink, Inbox, Newspaper, RefreshCw, Trash2, Archive, PenLine, Eye } from "lucide-react";
 import { useTable } from "@/lib/hooks";
-import type { Pauta, Post } from "@/lib/types";
+import type { Pauta, Post, FontePauta } from "@/lib/types";
 
 // Espelho do que /api/pautas/coletar devolve (sem importar o módulo server).
 type Candidata = Omit<Pauta, "id" | "status" | "created_at">;
@@ -66,6 +66,21 @@ function BotaoAba({ ativa, onClick, icone, children }: { ativa: boolean; onClick
   );
 }
 
+// Chip de filtro por fonte, com contador.
+function ChipFiltro({ ativo, onClick, n, children }: { ativo: boolean; onClick: () => void; n: number; children: React.ReactNode }) {
+  return (
+    <button
+      onClick={onClick}
+      className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold transition ${
+        ativo ? "bg-slate-900 text-white" : "bg-white text-slate-600 ring-1 ring-slate-200 hover:bg-slate-50"
+      }`}
+    >
+      {children}
+      <span className={`rounded-full px-1.5 text-[10px] ${ativo ? "bg-white/20" : "bg-slate-100 text-slate-500"}`}>{n}</span>
+    </button>
+  );
+}
+
 // ---------------------------------------------------------------------------
 // Caixa de pautas
 // ---------------------------------------------------------------------------
@@ -74,9 +89,14 @@ function AbaPautas({ onEscrever }: { onEscrever: (p: Post) => void }) {
   const posts = useTable<Post>("posts");
   const [buscando, setBuscando] = useState(false);
   const [aviso, setAviso] = useState<string | null>(null);
+  const [filtro, setFiltro] = useState<FontePauta | "todas">("todas");
 
   const novas = rows.filter((p) => p.status === "nova");
   const arquivadas = rows.filter((p) => p.status !== "nova");
+
+  // Contagem por fonte, para os botões de filtro.
+  const contagem = (f: FontePauta) => novas.filter((p) => p.fonte === f).length;
+  const novasFiltradas = filtro === "todas" ? novas : novas.filter((p) => p.fonte === filtro);
 
   async function buscar() {
     setBuscando(true);
@@ -151,11 +171,26 @@ function AbaPautas({ onEscrever }: { onEscrever: (p: Post) => void }) {
       </div>
       {aviso && <p className="mb-4 rounded-lg bg-brand-50 p-3 text-xs text-brand-800">{aviso}</p>}
 
+      {novas.length > 0 && (
+        <div className="mb-4 flex flex-wrap gap-2">
+          <ChipFiltro ativo={filtro === "todas"} onClick={() => setFiltro("todas")} n={novas.length}>
+            Todas
+          </ChipFiltro>
+          {(["stf", "stj", "camara", "senado"] as FontePauta[]).map((f) => (
+            <ChipFiltro key={f} ativo={filtro === f} onClick={() => setFiltro(f)} n={contagem(f)}>
+              {ROTULO_FONTE[f]}
+            </ChipFiltro>
+          ))}
+        </div>
+      )}
+
       {novas.length === 0 ? (
         <EmptyState>Nenhuma pauta na fila. Clique em “Buscar novas pautas”.</EmptyState>
+      ) : novasFiltradas.length === 0 ? (
+        <EmptyState>Nenhuma pauta desta fonte na fila.</EmptyState>
       ) : (
         <div className="space-y-3">
-          {novas.map((p) => (
+          {novasFiltradas.map((p) => (
             <Card key={p.id} className="p-4">
               <div className="flex flex-wrap items-center gap-2">
                 <Badge cor={COR_FONTE[p.fonte]}>{ROTULO_FONTE[p.fonte]}</Badge>
