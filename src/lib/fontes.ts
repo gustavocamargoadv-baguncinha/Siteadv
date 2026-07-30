@@ -112,10 +112,10 @@ async function coletarRSS(fonte: FontePauta, url: string): Promise<PautaCandidat
   });
 }
 
-const STF_RSS = process.env.STF_RSS_URL ?? "https://portal.stf.jus.br/rss/noticias.asp";
-const STJ_RSS =
-  process.env.STJ_RSS_URL ??
-  "https://www.stj.jus.br/sites/portalp/Paginas/Comunicacao/Noticias/rss.aspx";
+// URLs de notícias oficiais (confirmadas via páginas de "Feed RSS" do STF/STJ).
+// Podem ser trocadas por STF_RSS_URL / STJ_RSS_URL sem redeploy.
+const STF_RSS = process.env.STF_RSS_URL ?? "https://www.stf.jus.br/portal/RSS/rss.asp";
+const STJ_RSS = process.env.STJ_RSS_URL ?? "https://res.stj.jus.br/hrestp-c-portalp/RSS.xml";
 
 export async function coletarSTF(): Promise<PautaCandidata[]> {
   return coletarRSS("stf", STF_RSS);
