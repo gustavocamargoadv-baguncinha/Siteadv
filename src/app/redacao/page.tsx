@@ -114,7 +114,7 @@ function AbaPautas({ onEscrever }: { onEscrever: (p: Post) => void }) {
       if (data.persisted) {
         // Supabase: o servidor já gravou; só recarregamos a lista.
         await refresh();
-        setAviso(`${data.inseridas ?? 0} nova(s) pauta(s). Fontes: STF ${data.porFonte?.stf ?? 0}, STJ ${data.porFonte?.stj ?? 0}, Câmara ${data.porFonte?.camara ?? 0}, Senado ${data.porFonte?.senado ?? 0}.`);
+        setAviso(`${data.inseridas ?? 0} nova(s) pauta(s). Fontes: STF ${data.porFonte?.stf ?? 0}, STJ ${data.porFonte?.stj ?? 0}, Câmara ${data.porFonte?.camara ?? 0}, Senado ${data.porFonte?.senado ?? 0}, Blogs ${data.porFonte?.blogs ?? 0}.`);
       } else {
         // Modo demo: gravamos localmente o que ainda não existe.
         const existentes = new Set(rows.map((p) => `${p.fonte}::${p.externo_id}`));
@@ -176,7 +176,7 @@ function AbaPautas({ onEscrever }: { onEscrever: (p: Post) => void }) {
           <ChipFiltro ativo={filtro === "todas"} onClick={() => setFiltro("todas")} n={novas.length}>
             Todas
           </ChipFiltro>
-          {(["stf", "stj", "camara", "senado"] as FontePauta[]).map((f) => (
+          {(["stf", "stj", "camara", "senado", "blogs"] as FontePauta[]).map((f) => (
             <ChipFiltro key={f} ativo={filtro === f} onClick={() => setFiltro(f)} n={contagem(f)}>
               {ROTULO_FONTE[f]}
             </ChipFiltro>

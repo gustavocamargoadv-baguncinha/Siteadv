@@ -33,6 +33,7 @@ const CORES_BADGE: Record<string, string> = {
   azul: "bg-blue-100 text-blue-800",
   cinza: "bg-slate-100 text-slate-700",
   roxo: "bg-violet-100 text-violet-800",
+  rosa: "bg-rose-100 text-rose-800",
 };
 
 export function Badge({ cor = "cinza", children }: { cor?: keyof typeof CORES_BADGE; children: ReactNode }) {

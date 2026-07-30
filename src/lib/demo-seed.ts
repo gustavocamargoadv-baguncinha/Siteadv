@@ -357,6 +357,17 @@ export const DEMO_SEED: Record<TableName, Record<string, unknown>[]> = {
       status: "nova",
     },
     {
+      id: "pt-0005",
+      fonte: "blogs",
+      externo_id: "demo-blog-1",
+      titulo: "ConJur: STF discute limites da busca pessoal por 'fundada suspeita'",
+      resumo: "Análise da imprensa jurídica sobre o que caracteriza a fundada suspeita que autoriza a revista pessoal — tema quente para a defesa.",
+      url: "https://www.conjur.com.br/",
+      data_fonte: d(-1),
+      tema: "processo penal",
+      status: "nova",
+    },
+    {
       id: "pt-0004",
       fonte: "senado",
       externo_id: "demo-senado-1",

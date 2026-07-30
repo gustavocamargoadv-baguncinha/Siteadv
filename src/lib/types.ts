@@ -167,7 +167,7 @@ export interface Lancamento {
 // ---------------------------------------------------------------------------
 
 // Origem de uma pauta captada pelo monitoramento.
-export type FontePauta = "stf" | "stj" | "camara" | "senado";
+export type FontePauta = "stf" | "stj" | "camara" | "senado" | "blogs";
 
 // Situação de uma pauta na caixa de entrada da redação.
 export type StatusPauta = "nova" | "arquivada" | "usada";

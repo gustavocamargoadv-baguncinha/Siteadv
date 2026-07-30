@@ -126,6 +126,68 @@ export async function coletarSTJ(): Promise<PautaCandidata[]> {
 }
 
 // --------------------------------------------------------------------------
+// Blogs jurídicos consolidados — vira pauta o que for de matéria criminal.
+// "Copia não, inspira": aqui a gente vê o que a imprensa jurídica já destacou
+// (inclusive decisões do STF/STJ mastigadas) para pautar o próprio texto.
+//
+// A lista pode ser trocada sem redeploy pela variável BLOGS_RSS_URLS, no
+// formato "Nome|https://.../feed/,Outro Nome|https://.../rss.xml".
+// --------------------------------------------------------------------------
+interface BlogFonte {
+  nome: string;
+  url: string;
+}
+
+const BLOGS_PADRAO: BlogFonte[] = [
+  { nome: "ConJur", url: "https://www.conjur.com.br/rss.xml" },
+  { nome: "Evinis Talon", url: "https://evinistalon.com/feed/" },
+  { nome: "Mindjus", url: "https://mindjuscriminal.com.br/feed/" },
+  { nome: "Síntese Criminal", url: "https://sintesecriminal.com/feed/" },
+];
+
+function blogsConfigurados(): BlogFonte[] {
+  const env = process.env.BLOGS_RSS_URLS;
+  if (!env) return BLOGS_PADRAO;
+  const lista = env
+    .split(",")
+    .map((par) => par.trim())
+    .filter(Boolean)
+    .map((par) => {
+      const [nome, url] = par.split("|").map((s) => s.trim());
+      return url ? { nome: nome || url, url } : null;
+    })
+    .filter((b): b is BlogFonte => b !== null);
+  return lista.length ? lista : BLOGS_PADRAO;
+}
+
+export async function coletarBlogs(): Promise<PautaCandidata[]> {
+  const blogs = blogsConfigurados();
+  const resultados = await Promise.allSettled(
+    blogs.map(async (blog) => {
+      const xml = await buscarTexto(blog.url);
+      return parseRSS(xml).flatMap<PautaCandidata>((it) => {
+        const tema = ehPenal(it.titulo, it.resumo);
+        if (!tema) return [];
+        return [
+          {
+            fonte: "blogs" as const,
+            externo_id: it.url,
+            // prefixo com o nome do blog para o advogado saber a origem na hora
+            titulo: `${blog.nome}: ${it.titulo}`,
+            resumo: it.resumo?.slice(0, 400) || undefined,
+            url: it.url,
+            data_fonte: it.data,
+            tema,
+          },
+        ];
+      });
+    })
+  );
+  // Um blog fora do ar não derruba os outros.
+  return resultados.flatMap((r) => (r.status === "fulfilled" ? r.value : []));
+}
+
+// --------------------------------------------------------------------------
 // Câmara dos Deputados — proposições recentes com tema penal
 // --------------------------------------------------------------------------
 interface ProposicaoCamara {
@@ -217,10 +279,11 @@ export async function coletarTodas(): Promise<ResultadoColeta> {
     ["stj", coletarSTJ],
     ["camara", coletarCamara],
     ["senado", coletarSenado],
+    ["blogs", coletarBlogs],
   ];
 
   const candidatas: PautaCandidata[] = [];
-  const porFonte = { stf: 0, stj: 0, camara: 0, senado: 0 } as Record<FontePauta, number>;
+  const porFonte = { stf: 0, stj: 0, camara: 0, senado: 0, blogs: 0 } as Record<FontePauta, number>;
   const erros: { fonte: FontePauta; erro: string }[] = [];
 
   const resultados = await Promise.allSettled(fontes.map(([, fn]) => fn()));

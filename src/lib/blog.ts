@@ -18,13 +18,15 @@ export const ROTULO_FONTE: Record<FontePauta, string> = {
   stj: "STJ",
   camara: "Câmara dos Deputados",
   senado: "Senado Federal",
+  blogs: "Blogs consolidados",
 };
 
-export const COR_FONTE: Record<FontePauta, "azul" | "roxo" | "verde" | "ambar"> = {
+export const COR_FONTE: Record<FontePauta, "azul" | "roxo" | "verde" | "ambar" | "rosa"> = {
   stf: "azul",
   stj: "roxo",
   camara: "verde",
   senado: "ambar",
+  blogs: "rosa",
 };
 
 // Renderizador de Markdown mínimo → HTML. Cobre o que a redação usa: títulos,

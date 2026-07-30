@@ -226,7 +226,7 @@ end $$;
 
 create table if not exists pautas (
   id text primary key default gen_random_uuid()::text,
-  fonte text not null check (fonte in ('stf', 'stj', 'camara', 'senado')),
+  fonte text not null check (fonte in ('stf', 'stj', 'camara', 'senado', 'blogs')),
   externo_id text not null,
   titulo text not null,
   resumo text,
