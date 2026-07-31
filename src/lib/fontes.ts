@@ -60,9 +60,14 @@ function limpar(html: string): string {
     .trim();
 }
 
+// User-Agent de navegador: alguns portais oficiais (.jus.br/.leg.br) barram
+// requisições sem "cara de navegador".
+const UA =
+  "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0 Safari/537.36";
+
 async function buscarJSON(url: string): Promise<unknown> {
   const res = await fetch(url, {
-    headers: { Accept: "application/json" },
+    headers: { Accept: "application/json", "User-Agent": UA },
     // não guarda cache do provedor: sempre queremos o mais novo
     cache: "no-store",
   });
@@ -71,7 +76,7 @@ async function buscarJSON(url: string): Promise<unknown> {
 }
 
 async function buscarTexto(url: string): Promise<string> {
-  const res = await fetch(url, { cache: "no-store" });
+  const res = await fetch(url, { headers: { "User-Agent": UA }, cache: "no-store" });
   if (!res.ok) throw new Error(`${url} respondeu ${res.status}`);
   return res.text();
 }
@@ -87,7 +92,13 @@ function parseRSS(xml: string): { titulo: string; url: string; resumo: string; d
     const url = limpar(bloco.match(/<link>([\s\S]*?)<\/link>/i)?.[1] ?? "");
     const resumo = limpar(bloco.match(/<description>([\s\S]*?)<\/description>/i)?.[1] ?? "");
     const pub = bloco.match(/<pubDate>([\s\S]*?)<\/pubDate>/i)?.[1];
-    const data = pub ? new Date(pub.trim()).toISOString().slice(0, 10) : undefined;
+    // Datas podem vir em formato não-padrão (ex.: STJ usa "Qui, jul 30 2026").
+    // Nesse caso apenas ignoramos a data — nunca deixamos a conversão estourar.
+    let data: string | undefined;
+    if (pub) {
+      const d = new Date(pub.trim());
+      if (!isNaN(d.getTime())) data = d.toISOString().slice(0, 10);
+    }
     if (titulo && url) itens.push({ titulo, url, resumo, data });
   }
   return itens;
@@ -112,9 +123,10 @@ async function coletarRSS(fonte: FontePauta, url: string): Promise<PautaCandidat
   });
 }
 
-// URLs de notícias oficiais (confirmadas via páginas de "Feed RSS" do STF/STJ).
-// Podem ser trocadas por STF_RSS_URL / STJ_RSS_URL sem redeploy.
-const STF_RSS = process.env.STF_RSS_URL ?? "https://www.stf.jus.br/portal/RSS/rss.asp";
+// STJ: feed CONFIRMADO (RSS 2.0 válido). STF: o RSS do portal antigo saiu do ar
+// (404) e o novo portal ainda não tem um feed confirmado — quando acharmos a URL
+// certa, basta definir STF_RSS_URL no ambiente, sem redeploy.
+const STF_RSS = process.env.STF_RSS_URL ?? "https://portal.stf.jus.br/rss/";
 const STJ_RSS = process.env.STJ_RSS_URL ?? "https://res.stj.jus.br/hrestp-c-portalp/RSS.xml";
 
 export async function coletarSTF(): Promise<PautaCandidata[]> {
@@ -227,38 +239,37 @@ export async function coletarCamara(): Promise<PautaCandidata[]> {
 }
 
 // --------------------------------------------------------------------------
-// Senado Federal — matérias com tema penal
+// Senado Federal — matérias com tema penal.
+// A API de dados abertos responde em XML (mesmo pedindo JSON), então lemos o
+// XML direto: cada matéria vem num bloco <Materia> com Codigo, Descrição,
+// Ementa, Data e a URL de detalhe.
 // --------------------------------------------------------------------------
+function tag(bloco: string, nome: string): string {
+  const m = bloco.match(new RegExp(`<${nome}>([\\s\\S]*?)</${nome}>`, "i"));
+  return m ? limpar(m[1]) : "";
+}
+
 export async function coletarSenado(): Promise<PautaCandidata[]> {
   const url =
     "https://legis.senado.leg.br/dadosabertos/materia/pesquisa/lista?palavraChave=penal";
-  const json = (await buscarJSON(url)) as {
-    PesquisaBasicaMateria?: { Materias?: { Materia?: unknown } };
-  };
-  const bruto = json.PesquisaBasicaMateria?.Materias?.Materia;
-  const lista: Record<string, unknown>[] = Array.isArray(bruto)
-    ? (bruto as Record<string, unknown>[])
-    : bruto
-    ? [bruto as Record<string, unknown>]
-    : [];
+  const xml = await buscarTexto(url);
+  const blocos = xml.match(/<Materia>[\s\S]*?<\/Materia>/gi) ?? [];
 
-  return lista.flatMap<PautaCandidata>((m) => {
-    const ident = (m.IdentificacaoMateria ?? {}) as Record<string, string>;
-    const dados = (m.DadosBasicosMateria ?? {}) as Record<string, string>;
-    const codigo = ident.CodigoMateria;
+  return blocos.flatMap<PautaCandidata>((b) => {
+    const codigo = tag(b, "Codigo");
     if (!codigo) return [];
-    const sigla = `${ident.SiglaSubtipoMateria ?? ""} ${ident.NumeroMateria ?? ""}/${ident.AnoMateria ?? ""}`.trim();
-    const ementa = limpar(dados.EmentaMateria ?? "");
-    const tema = ehPenal(sigla, ementa);
+    const ident = tag(b, "DescricaoIdentificacao") || `${tag(b, "Sigla")} ${tag(b, "Numero")}/${tag(b, "Ano")}`.trim();
+    const ementa = tag(b, "Ementa");
+    const tema = ehPenal(ident, ementa);
     if (!tema) return [];
     return [
       {
         fonte: "senado",
-        externo_id: String(codigo),
-        titulo: `${sigla} — ${ementa.slice(0, 120)}`,
+        externo_id: codigo,
+        titulo: `${ident} — ${ementa.slice(0, 120)}`,
         resumo: ementa.slice(0, 400) || undefined,
         url: `https://www25.senado.leg.br/web/atividade/materias/-/materia/${codigo}`,
-        data_fonte: (dados.DataApresentacao ?? "").slice(0, 10) || undefined,
+        data_fonte: tag(b, "Data").slice(0, 10) || undefined,
         tema,
       },
     ];
