@@ -3,6 +3,8 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft, ExternalLink } from "lucide-react";
 import { BlogShell, EspacoAnuncio } from "@/components/BlogShell";
+import { AutorBio } from "@/components/AutorBio";
+import { CompartilharBotao } from "@/components/CompartilharBotao";
 import { obterPostPublicado, listarSlugsPublicados } from "@/lib/posts-server";
 import { markdownParaHtml } from "@/lib/blog";
 import { dataHoraBR } from "@/lib/format";
@@ -71,28 +73,48 @@ export default async function PostPage({ params }: { params: Promise<{ slug: str
       </Link>
 
       <article>
-        <h1 className="text-2xl font-bold leading-tight tracking-tight sm:text-3xl">{post.titulo}</h1>
-        {post.publicado_em && (
-          <p className="mt-2 text-xs text-slate-400">
-            {dataHoraBR(post.publicado_em)}
-            {post.autor ? ` · ${post.autor}` : ""}
-          </p>
-        )}
+        {/* selo de identidade */}
+        <p className="text-xs font-bold uppercase tracking-widest text-brand-600">Direito Penal</p>
+        <h1 className="mt-1 text-2xl font-bold leading-tight tracking-tight sm:text-3xl">{post.titulo}</h1>
+        {/* filete dourado que dá identidade */}
+        <div className="mt-3 h-1 w-16 rounded-full bg-brand-500" />
+
+        <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
+          {post.publicado_em && (
+            <p className="text-xs text-slate-400">
+              {dataHoraBR(post.publicado_em)}
+              {post.autor ? ` · ${post.autor}` : ""}
+            </p>
+          )}
+          <CompartilharBotao titulo={post.titulo} resumo={post.resumo} url={`${baseUrl()}/blog/${post.slug}`} />
+        </div>
 
         <EspacoAnuncio />
 
         <div className="prose-blog" dangerouslySetInnerHTML={{ __html: markdownParaHtml(post.conteudo) }} />
 
-        {post.fonte_url && (
-          <a
-            href={post.fonte_url}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="mt-8 inline-flex items-center gap-1.5 rounded-lg border border-slate-300 px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
-          >
-            <ExternalLink size={15} /> Ver a fonte oficial
-          </a>
-        )}
+        <div className="mt-8 flex flex-wrap items-center gap-2">
+          {post.fonte_url && (
+            <a
+              href={post.fonte_url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1.5 rounded-lg border border-slate-300 px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+            >
+              <ExternalLink size={15} /> Ver a fonte oficial
+            </a>
+          )}
+          <CompartilharBotao
+            titulo={post.titulo}
+            resumo={post.resumo}
+            url={`${baseUrl()}/blog/${post.slug}`}
+            rotulo="Compartilhar este artigo"
+            className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-600 px-3 py-2 text-sm font-semibold text-white hover:bg-emerald-700"
+            iconSize={15}
+          />
+        </div>
+
+        <AutorBio />
 
         <EspacoAnuncio />
       </article>

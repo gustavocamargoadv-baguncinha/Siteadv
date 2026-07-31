@@ -8,22 +8,24 @@ import { Scale } from "lucide-react";
 export function BlogShell({ children }: { children: React.ReactNode }) {
   return (
     <div className="min-h-dvh bg-white text-slate-900">
-      <header className="border-b border-slate-200">
+      {/* faixa dourada de identidade */}
+      <div className="h-1.5 w-full bg-brand-500" />
+      <header className="border-b border-slate-200 bg-slate-950 text-white">
         <div className="mx-auto flex max-w-3xl items-center justify-between px-4 py-4">
           <Link href="/blog" className="flex items-center gap-2">
             <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-brand-600 text-white">
               <Scale size={18} />
             </span>
             <span className="leading-tight">
-              <span className="block text-base font-bold tracking-tight">Radar Penal</span>
-              <span className="block text-[11px] uppercase tracking-wide text-slate-500">
+              <span className="block text-base font-bold tracking-tight text-white">Radar Penal</span>
+              <span className="block text-[11px] uppercase tracking-wide text-brand-300">
                 Notícias e julgados de direito penal
               </span>
             </span>
           </Link>
           <a
             href="https://wa.me/"
-            className="hidden rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50 sm:inline-block"
+            className="hidden rounded-lg border border-white/25 px-3 py-1.5 text-xs font-semibold text-white hover:bg-white/10 sm:inline-block"
           >
             Falar com o escritório
           </a>

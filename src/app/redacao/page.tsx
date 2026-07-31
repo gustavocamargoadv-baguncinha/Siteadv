@@ -10,6 +10,7 @@ import type { Pauta, Post, FontePauta } from "@/lib/types";
 type Candidata = Omit<Pauta, "id" | "status" | "created_at">;
 import { getStore } from "@/lib/store";
 import { getSupabase, supabaseConfigurado } from "@/lib/supabase";
+import { CompartilharBotao } from "@/components/CompartilharBotao";
 import { PageHeader, Card, Field, Input, Textarea, BotaoPrimario, Badge, EmptyState } from "@/components/ui";
 import { gerarSlug, markdownParaHtml, ROTULO_FONTE, COR_FONTE } from "@/lib/blog";
 import { dataBR } from "@/lib/format";
@@ -206,6 +207,12 @@ function AbaPautas({ onEscrever }: { onEscrever: (p: Post) => void }) {
                 <a href={p.url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50">
                   <ExternalLink size={14} /> Fonte
                 </a>
+                <CompartilharBotao
+                  titulo={p.titulo}
+                  resumo={p.resumo}
+                  url={p.url}
+                  className="inline-flex items-center gap-1.5 rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50"
+                />
                 <button onClick={() => update(p.id, { status: "arquivada" })} className="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold text-slate-500 hover:bg-slate-100">
                   <Archive size={14} /> Arquivar
                 </button>
