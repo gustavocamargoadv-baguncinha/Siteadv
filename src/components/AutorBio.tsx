@@ -20,7 +20,7 @@ export function AutorBio() {
           <img
             src="/gustavo-autor.jpg"
             alt="Gustavo Roberto de Camargo"
-            className="h-full w-full object-cover"
+            className="h-full w-full object-cover [object-position:50%_20%]"
             onError={() => setSemFoto(true)}
           />
         )}
