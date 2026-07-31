@@ -4,13 +4,12 @@ import Script from "next/script";
 import { useEffect } from "react";
 
 // Rastreamento de conversões do Google Ads para a landing.
-// Fica INERTE até você definir as variáveis na Vercel:
-//   NEXT_PUBLIC_GADS_ID            -> ex.: AW-123456789
-//   NEXT_PUBLIC_GADS_WHATSAPP_LABEL-> o "rótulo" da conversão de WhatsApp
-//   NEXT_PUBLIC_GADS_CALL_LABEL    -> (opcional) rótulo da conversão de ligação
-// Sem NEXT_PUBLIC_GADS_ID definido, nada é carregado (não afeta o site).
-const GADS_ID = process.env.NEXT_PUBLIC_GADS_ID;
-const WHATS_LABEL = process.env.NEXT_PUBLIC_GADS_WHATSAPP_LABEL;
+// Os valores da conta são públicos (aparecem no código de qualquer site com
+// Google Ads), por isso ficam embutidos como padrão — funciona sem precisar
+// configurar nada na Vercel. Ainda assim, dá para sobrescrever por variável
+// de ambiente (NEXT_PUBLIC_GADS_*) se um dia precisar trocar.
+const GADS_ID = process.env.NEXT_PUBLIC_GADS_ID || "AW-10813110141";
+const WHATS_LABEL = process.env.NEXT_PUBLIC_GADS_WHATSAPP_LABEL || "YlrbCJiTpdkcEP3ui6Qo";
 const CALL_LABEL = process.env.NEXT_PUBLIC_GADS_CALL_LABEL;
 
 type Gtag = (...args: unknown[]) => void;
