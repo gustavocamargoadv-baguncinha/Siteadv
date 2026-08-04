@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { FileSignature, FileText, HandCoins } from "lucide-react";
 import { useTable, byId } from "@/lib/hooks";
 import type { Cliente, ContratoHonorarios, Lancamento, Processo } from "@/lib/types";
-import { brl, formatCNJ } from "@/lib/format";
+import { brl, dataBR, formatCNJ } from "@/lib/format";
 import { abrirDocumento, contratoHTML, hipossuficienciaHTML, procuracaoHTML, PODERES_ESPECIAIS, type PessoaDoc } from "@/lib/modelos";
 import { BotaoPrimario, Card, Field, Input, Select, Textarea } from "@/components/ui";
 import { Modal } from "@/components/Modal";
@@ -62,6 +62,7 @@ export function GerarDocumentos({ cliente }: { cliente: Cliente }) {
   const [objetoEditado, setObjetoEditado] = useState(false);
   const [lancarFinanceiro, setLancarFinanceiro] = useState(true);
   const [primeiraPaga, setPrimeiraPaga] = useState(false);
+  const [pagaEm, setPagaEm] = useState("");
 
   const cliMap = byId(clientes);
 
@@ -106,6 +107,7 @@ export function GerarDocumentos({ cliente }: { cliente: Cliente }) {
       setObjetoEditado(false);
       setLancarFinanceiro(true);
       setPrimeiraPaga(false);
+      setPagaEm(new Date().toISOString().slice(0, 10));
     }
     setModal(tipo);
   }
@@ -161,6 +163,8 @@ export function GerarDocumentos({ cliente }: { cliente: Cliente }) {
 
     const hoje = new Date().toISOString().slice(0, 10);
     const diaVenc = new Date(`${vencimento}T12:00:00`).getDate();
+    // data em que a 1ª parcela foi paga (informada ou hoje)
+    const dataPaga = primeiraPaga ? (pagaEm || hoje) : hoje;
 
     await persistirCadastro();
     abrirDocumento(
@@ -172,6 +176,7 @@ export function GerarDocumentos({ cliente }: { cliente: Cliente }) {
         primeiroVencimento: vencimento,
         diaVencimento: diaVenc,
         primeiraPaga,
+        pagaEm: primeiraPaga ? dataPaga : undefined,
       })
     );
 
@@ -190,7 +195,7 @@ export function GerarDocumentos({ cliente }: { cliente: Cliente }) {
         const ultima = i === n - 1;
         const valorDesta = ultima ? Math.round((valorTotal - valorParcela * (n - 1)) * 100) / 100 : valorParcela;
         // Quando a 1ª parcela já foi paga antes da assinatura, ela entra como
-        // recebida (pago_em = hoje) e as demais vencem no mesmo dia dos meses seguintes.
+        // recebida na data informada; as demais vencem no mesmo dia dos meses seguintes.
         const primeiraJaPaga = primeiraPaga && i === 0;
         await addLancamento({
           tipo: "receita",
@@ -199,8 +204,8 @@ export function GerarDocumentos({ cliente }: { cliente: Cliente }) {
           processo_id: procId,
           descricao: `Parcela ${i + 1}/${n} — honorários (defesa de ${defendidoNome})`,
           valor: valorDesta,
-          vencimento: primeiraJaPaga ? hoje : somaMeses(vencimento, i),
-          ...(primeiraJaPaga ? { pago_em: hoje } : {}),
+          vencimento: primeiraJaPaga ? dataPaga : somaMeses(vencimento, i),
+          ...(primeiraJaPaga ? { pago_em: dataPaga } : {}),
         });
       }
     }
@@ -371,11 +376,16 @@ export function GerarDocumentos({ cliente }: { cliente: Cliente }) {
             Primeira parcela já paga antes da assinatura
           </label>
           {primeiraPaga && (
-            <p className="rounded-lg bg-amber-50 p-2.5 text-xs text-amber-800">
-              O contrato registrará que a 1ª parcela já foi quitada e as demais vencem
-              todo dia <b>{vencimento ? new Date(`${vencimento}T12:00:00`).getDate() : "—"}</b>.
-              No Financeiro, a 1ª parcela já entra como recebida.
-            </p>
+            <div className="space-y-2 rounded-lg bg-amber-50 p-2.5">
+              <Field rotulo="Data em que a 1ª parcela foi paga">
+                <Input type="date" value={pagaEm} onChange={(e) => setPagaEm(e.target.value)} />
+              </Field>
+              <p className="text-xs text-amber-800">
+                O contrato dirá que a 1ª parcela foi <b>quitada em {pagaEm ? dataBR(pagaEm) : "—"}</b> e as demais
+                vencem todo dia <b>{vencimento ? new Date(`${vencimento}T12:00:00`).getDate() : "—"}</b>.
+                No Financeiro, ela entra como recebida nessa data.
+              </p>
+            </div>
           )}
 
           <label className="flex items-center gap-2 text-sm text-slate-700">

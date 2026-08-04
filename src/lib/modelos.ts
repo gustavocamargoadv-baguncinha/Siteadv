@@ -204,6 +204,7 @@ export interface DadosContrato {
   primeiroVencimento: string; // ISO date
   diaVencimento?: number; // dia fixo do mês combinado (1-31); usado quando a 1ª já foi paga
   primeiraPaga?: boolean; // primeira parcela já quitada antes da assinatura
+  pagaEm?: string; // ISO date em que a 1ª parcela foi paga (se diferente de hoje)
 }
 
 export function contratoHTML(d: DadosContrato): string {
@@ -212,15 +213,18 @@ export function contratoHTML(d: DadosContrato): string {
   // Dia do vencimento combinado: usa o informado ou deduz da data do 1º vencimento.
   const dia = d.diaVencimento ?? new Date(`${d.primeiroVencimento}T12:00:00`).getDate();
 
+  // "na presente data" quando não há data específica; senão, a data informada.
+  const quitacao = d.pagaEm ? `já quitada em ${dataBR(d.pagaEm)}` : "já quitada na presente data";
+
   let pagamento: string;
   if (d.parcelas === 1) {
     pagamento = d.primeiraPaga
-      ? `a importância de <b>${brl(d.valorTotal)} (${valorPorExtenso(d.valorTotal)})</b>, já quitada na presente data.`
+      ? `a importância de <b>${brl(d.valorTotal)} (${valorPorExtenso(d.valorTotal)})</b>, ${quitacao}.`
       : `a importância de <b>${brl(d.valorTotal)} (${valorPorExtenso(d.valorTotal)})</b>, com vencimento em ${venc}.`;
   } else if (d.primeiraPaga) {
     pagamento = `a importância equivalente a <b>${brl(d.valorTotal)} (${valorPorExtenso(d.valorTotal)})</b>, a serem
 pagos em ${d.parcelas} (${valorPorExtenso(d.parcelas).replace(/ reais?$/i, "")}) parcelas iguais de ${brl(valorParcela)}
-(${valorPorExtenso(valorParcela)}), com vencimento para todo dia ${dia}, sendo a primeira parcela já quitada na presente data.`;
+(${valorPorExtenso(valorParcela)}), com vencimento para todo dia ${dia}, sendo a primeira parcela ${quitacao}.`;
   } else {
     pagamento = `a importância equivalente a <b>${brl(d.valorTotal)} (${valorPorExtenso(d.valorTotal)})</b> em
 ${d.parcelas} parcelas iguais de ${brl(valorParcela)} (${valorPorExtenso(valorParcela)}), com a primeira
