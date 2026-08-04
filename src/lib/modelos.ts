@@ -84,6 +84,10 @@ function pagina(titulo: string, corpo: string, opcoes?: { serifa?: boolean; comp
     font-size: ${s.fonte}; line-height: ${s.entrelinha}; color: #111;
     max-width: 175mm; margin: 0 auto; padding: 16px;
   }
+  table.doc { width: 100%; border-collapse: collapse; }
+  table.doc > tbody > tr > td, table.doc > tfoot > tr > td { padding: 0; }
+  /* espaço reservado (repetido em cada página na impressão) para o rodapé fixo não cobrir o texto */
+  .rodape-espaco { height: 0; }
   header.timbre { text-align: center; margin-bottom: 4px; }
   header.timbre img { width: ${s.logo}; max-width: 70%; height: auto; }
   hr.linha { border: none; border-top: 1.6px solid #b0904f; margin: 4px 0 ${s.hrBaixo}; }
@@ -99,10 +103,14 @@ function pagina(titulo: string, corpo: string, opcoes?: { serifa?: boolean; comp
     border-top: 1px solid #d8d8d8; text-align: center; font-size: 9pt; color: #444; line-height: 1.5;
   }
   @media print {
-    body { padding: 0 0 14mm 0; }
+    body { padding: 0; }
     .no-print { display: none !important; }
-    /* rodapé fixado no pé da folha impressa, sem esticar a página */
-    footer.rodape { position: fixed; bottom: 0; left: 0; right: 0; margin: 0; padding: 5px 0; background: #fff; }
+    /* o tfoot reserva este espaço em TODA página; o rodapé fixo ocupa ele sem cobrir o texto */
+    .rodape-espaco { height: 20mm; }
+    footer.rodape {
+      position: fixed; bottom: 0; left: 0; right: 0; margin: 0;
+      padding: 5px 0 3mm; background: #fff; border-top: 1px solid #d8d8d8;
+    }
   }
   .no-print {
     position: fixed; top: 12px; right: 12px; z-index: 10;
@@ -114,9 +122,14 @@ function pagina(titulo: string, corpo: string, opcoes?: { serifa?: boolean; comp
 </head>
 <body>
 <button class="no-print" onclick="window.print()">🖨️ Imprimir / Salvar PDF</button>
-<header class="timbre">${LOGO_IMG}</header>
-<hr class="linha">
-<main class="corpo">${corpo}</main>
+<table class="doc">
+  <tbody><tr><td>
+    <header class="timbre">${LOGO_IMG}</header>
+    <hr class="linha">
+    <main class="corpo">${corpo}</main>
+  </td></tr></tbody>
+  <tfoot><tr><td><div class="rodape-espaco"></div></td></tr></tfoot>
+</table>
 <footer class="rodape">
   ${esc(ESCRITORIO.rodape1)}<br>
   ${esc(ESCRITORIO.rodape2)}
