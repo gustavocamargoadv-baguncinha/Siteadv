@@ -397,4 +397,84 @@ export const CASOS_WHATSAPP: CasoWhatsapp[] = [
       { id: "impcw-l-214-1", valor: 250, data: "2026-07-06", descricao: "Honorários — parcela final parcial (defesa de Wendell); saldo de R$ 300 a receber" },
     ],
   },
+  {
+    idx: 215,
+    match: ["romer"],
+    enriquecer: { nota: "Contato/pagador de terceiro. Réu: Romer/Alex (execução penal). Contrato R$ 1.800 (4x400). Conferir nome completo." },
+    processos: [
+      {
+        id: "impcw-p-215",
+        numero_cnj: "0002889-30.2025.8.26.0428",
+        area: "execucao_penal",
+        objeto: "Execução penal (réu preso na P2) — recurso de agravo em execução (R.A.). Juiz converteu duas penas de regime aberto em fechado; busca-se reverter.",
+        parte_contraria: "Ministério Público",
+        situacao: "aguardando_tramite",
+      },
+    ],
+    andamentos: [
+      { processo: "impcw-p-215", data: "2026-06-29", descricao: "Procuração colhida; solicitado boletim informativo e atestado de pena." },
+      { processo: "impcw-p-215", data: "2026-07-03", descricao: "Protocolado o recurso de agravo em execução (R.A.)." },
+    ],
+    pagamentos: [
+      { id: "impcw-l-215-1", valor: 400, data: "2026-06-27", descricao: "Honorários — 1ª parcela (execução penal — Romer/Alex)" },
+    ],
+  },
+  {
+    idx: 216,
+    match: ["anderson campo", "anderson campos"],
+    enriquecer: { nota: "Pagador — defesa do Sérgio da Silva (CPF 100.008.538-44). Contrato 8x400 (dia 20)." },
+    processos: [
+      {
+        id: "impcw-p-216",
+        area: "criminal",
+        objeto: "Defesa do réu Sérgio da Silva — revisão criminal (preso, transferido para Iperó). Revisão negada no TJ; impetrado HC no STJ.",
+        parte_contraria: "Ministério Público",
+        situacao: "aguardando_tramite",
+      },
+    ],
+    andamentos: [
+      { processo: "impcw-p-216", data: "2026-03-31", descricao: "Revisão criminal julgada e negada pelo Tribunal de Justiça." },
+      { processo: "impcw-p-216", data: "2026-04-14", descricao: "Impetrado Habeas Corpus no STJ — distribuído a ministro; aguardando decisão." },
+    ],
+    pagamentos: [
+      { id: "impcw-l-216-1", valor: 400, data: "2026-07-20", descricao: "Honorários — parcela (defesa de Sérgio da Silva)" },
+    ],
+  },
+  {
+    idx: 217,
+    match: ["cesar morei", "cesar moreira"],
+    enriquecer: { nota: "Réu: César Moreira (2 casos). 1º caso: apelação ganha (pena reduzida a 1a8m, regime aberto). 2º caso: Maria da Penha. Há saldo de honorários a receber — conferir." },
+    processos: [
+      {
+        id: "impcw-p-217",
+        numero_cnj: "1500040-60.2025.8.26.0444",
+        area: "criminal",
+        objeto: "Defesa do réu César Moreira — 2º caso (Lei Maria da Penha / agressão). Responde em liberdade; audiência de instrução realizada em 23/06/2026.",
+        parte_contraria: "Ministério Público",
+        situacao: "aguardando_tramite",
+      },
+    ],
+    andamentos: [
+      { processo: "impcw-p-217", data: "2026-05-28", descricao: "1º caso: apelação provida — pena reduzida de 6a8m para 1a8m em regime aberto." },
+      { processo: "impcw-p-217", data: "2026-06-23", descricao: "Realizada a audiência de instrução do 2º caso (Maria da Penha)." },
+    ],
+  },
+  {
+    idx: 218,
+    match: ["edvan lemes", "edvan"],
+    enriquecer: { nota: "Réu: Edvan. Contrato R$ 2.520 (6x420). ANPP recusado pelo promotor; busca-se revisão da audiência + acordo cível com a vítima." },
+    processos: [
+      {
+        id: "impcw-p-218",
+        numero_cnj: "1503014-47.2024.8.26.0269",
+        area: "criminal",
+        objeto: "Defesa do réu Edvan — recusa de ANPP (acordo de não persecução penal) pelo Ministério Público. Firmado acordo cível com a vítima e pedida a revisão da audiência.",
+        parte_contraria: "Ministério Público",
+        situacao: "aguardando_tramite",
+      },
+    ],
+    andamentos: [
+      { processo: "impcw-p-218", data: "2025-07-25", descricao: "Acordo cível com a vítima assinado e juntado; peticionada a revisão da audiência de ANPP." },
+    ],
+  },
 ];
