@@ -597,4 +597,125 @@ export const CASOS_WHATSAPP: CasoWhatsapp[] = [
       { processo: "impcw-p-223-silvano", data: "2025-12-02", descricao: "Alvará de soltura expedido no 2º processo do Silvano." },
     ],
   },
+  {
+    idx: 224,
+    match: ["daiane da silv", "daiane da silva", "daiane"],
+    enriquecer: {
+      nome: "Daiane da Silva Gomes",
+      endereco: "Rua Afrânio Peixoto, nº 255",
+      nota: "Pagadora/esposa: Daiane da Silva Gomes. Réu: Bruno Batista Rodrigues (marido), preso no CDP de Sorocaba. Contrato R$ 4.500 (10x450, vencimento dia 20), assinado por ZapSign em 13/01/2026. Defesa sustenta álibi (internação em clínica em set/2024). Parcelas de jan a abr/2026 já constam na planilha.",
+    },
+    processos: [
+      {
+        id: "impcw-p-224",
+        numero_cnj: "1505517-12.2024.8.26.0602",
+        area: "criminal",
+        objeto: "Defesa do réu Bruno Batista Rodrigues — acusação grave (período de set/2024). Defesa sustenta que o réu estava internado em clínica. Impetrado HC por excesso de prazo (pedido de liberdade).",
+        parte_contraria: "Ministério Público",
+        comarca: "Sorocaba",
+        situacao: "aguardando_tramite",
+      },
+      {
+        id: "impcw-p-224b",
+        numero_cnj: "1500043-19.2025.8.26.0378",
+        area: "criminal",
+        objeto: "Novo processo identificado contra o réu Bruno (jul/2026) — estão procurando o réu e uma tal Natália. Depoimento na delegacia foi desfavorável. Avaliar defesa.",
+        parte_contraria: "Ministério Público",
+        situacao: "precisa_agir",
+      },
+    ],
+    andamentos: [
+      { processo: "impcw-p-224", data: "2026-01-13", descricao: "Contrato assinado; juíza designou audiência para 11/05/2026 às 14:15." },
+      { processo: "impcw-p-224", data: "2026-05-05", descricao: "Audiência adiada pelo juízo; impetrado Habeas Corpus por excesso de prazo (pedido de liberdade)." },
+      { processo: "impcw-p-224b", data: "2026-07-06", descricao: "Identificado novo processo (1500043-19.2025.8.26.0378) contra o réu." },
+    ],
+    pagamentos: [
+      { id: "impcw-l-224-1", valor: 300, data: "2025-12-09", descricao: "Honorários — atendimento inicial no presídio (Bruno — CDP Sorocaba)" },
+    ],
+  },
+  {
+    idx: 225,
+    match: ["daniele barbos", "danielle", "daniele"],
+    enriquecer: {
+      nota: "Pagadora: Danielle. Réu: Diego Barboza Fernandes (\"Tainan\"), CPF 438.580.268-83, preso em Iperó. 1º caso (R$ 3.000, 8x375) resultou na liberdade do réu — restou saldo pendente de ~R$ 1.875. Novo caso: honorários R$ 3.200 (8x400), contrato separado. ATENÇÃO: pagamentos irregulares/em atraso — cobrar. A parcela de R$ 1.500 de 23/04/2026 já consta na planilha.",
+    },
+    processos: [
+      {
+        id: "impcw-p-225",
+        numero_cnj: "0000208-76.2026.8.26.0582",
+        area: "criminal",
+        objeto: "Defesa do réu Diego Barboza Fernandes — novo caso. Audiência realizada; processo concluso para sentença. Também há questão de restituição de veículo apreendido (evitar pagamento de pátio).",
+        parte_contraria: "Ministério Público",
+        situacao: "aguardando_tramite",
+      },
+    ],
+    andamentos: [
+      { processo: "impcw-p-225", data: "2026-04-27", descricao: "Audiência de instrução realizada; processo segue concluso para sentença." },
+      { processo: "impcw-p-225", data: "2026-06-30", descricao: "Obtida ordem para restituição do veículo apreendido sem necessidade de pagamento de pátio." },
+    ],
+  },
+  {
+    idx: 226,
+    match: ["ana clara barb", "ana clara"],
+    enriquecer: {
+      nome: "Ana Clara Barbosa Pereira",
+      nota: "Vários casos: (1) ação de guarda da criança em favor da avó paterna — guarda provisória revertida favoravelmente; (2) saldo de caso anterior (~R$ 1.400); (3) irmão da cliente preso (audiência de custódia em fev/2026). Pagamentos de R$ 750/mês (R$ 450 da guarda + R$ 300 do outro caso) já constam na planilha.",
+    },
+    processos: [
+      {
+        id: "impcw-p-226-guarda",
+        area: "civel",
+        objeto: "Ação de guarda da criança em favor da avó paterna. Guarda provisória revertida favoravelmente; audiência de conciliação (17/06/2026) dispensada. Aguardando guarda definitiva.",
+        situacao: "aguardando_tramite",
+      },
+      {
+        id: "impcw-p-226-irmao",
+        area: "criminal",
+        objeto: "Defesa do irmão da cliente — preso; audiência de custódia realizada em fev/2026.",
+        parte_contraria: "Ministério Público",
+        situacao: "aguardando_tramite",
+      },
+    ],
+    andamentos: [
+      { processo: "impcw-p-226-irmao", data: "2026-02-04", descricao: "Irmão da cliente preso; audiência de custódia." },
+      { processo: "impcw-p-226-guarda", data: "2026-06-03", descricao: "Revertida a guarda provisória favoravelmente; audiência de conciliação dispensada." },
+    ],
+  },
+  {
+    idx: 227,
+    match: ["mateus adriano", "mateus"],
+    enriquecer: {
+      nota: "Casal Mateus e Keila. Pedido de recurso para revisar o valor da pensão alimentícia ao salário mínimo. ATENÇÃO: verificar possível cadastro duplicado \"KEILA STEPH\" na planilha (mesmo casal) e consolidar.",
+    },
+    processos: [
+      {
+        id: "impcw-p-227",
+        area: "civel",
+        objeto: "Recurso para revisão do valor da pensão alimentícia (reduzir ao salário mínimo) — Mateus e Keila.",
+        situacao: "aguardando_tramite",
+      },
+    ],
+    andamentos: [
+      { processo: "impcw-p-227", data: "2026-04-23", descricao: "Peticionado o recurso para revisão do valor da pensão." },
+    ],
+  },
+  {
+    idx: 228,
+    match: ["esposa do flavio", "flavio", "esposa do marido"],
+    enriquecer: {
+      nome: "Esposa do Flávio (P2)",
+      nota: "Réu: Flávio (matrícula 718-392), preso na P2. Serviços de diligência no presídio — levar esboço de apelação (a apelação é conduzida por outro escritório, \"Barbosa e Veiga\") e passar recados à família. Não é contrato de defesa completa. ATENÇÃO: comprovante de 23/04/2026 (foto) sem valor informado na conversa — lançar manualmente no financeiro.",
+    },
+    processos: [
+      {
+        id: "impcw-p-228",
+        area: "criminal",
+        objeto: "Diligências e atendimento no presídio para o réu Flávio (levar documentos e recados). Não é defesa completa — apelação conduzida por outro escritório.",
+        situacao: "aguardando_cliente",
+      },
+    ],
+    andamentos: [
+      { processo: "impcw-p-228", data: "2026-04-23", descricao: "Atendimento no presídio (P2) — levado o esboço da apelação e passado recado à família." },
+    ],
+  },
 ];
