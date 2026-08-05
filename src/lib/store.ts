@@ -514,11 +514,12 @@ function somaMesesData(iso: string, meses: number): string {
   return `${alvo.getFullYear()}-${String(alvo.getMonth() + 1).padStart(2, "0")}-${String(alvo.getDate()).padStart(2, "0")}`;
 }
 
-/** Gera as parcelas AINDA A VENCER de cada contrato (ZapSign), lançando-as no
- *  Financeiro como recebimentos futuros. Desconta o que o cliente já pagou (não
- *  duplica), segue a cadência mensal a partir do dia da assinatura e só cria as
- *  parcelas com vencimento a partir do mês atual. Pode rodar de novo: as parcelas
- *  a vencer geradas antes (id "impzp-venc-") são substituídas. */
+/** Gera as parcelas em aberto de cada contrato (ZapSign), lançando-as no
+ *  Financeiro. Desconta o que o cliente já pagou (não duplica) e segue a cadência
+ *  mensal a partir do dia da assinatura. Gera tanto as parcelas a vencer quanto as
+ *  já vencidas e não pagas — estas entram como "em atraso", para o cliente
+ *  inadimplente aparecer na Cobrança. Pode rodar de novo: as parcelas geradas
+ *  antes (id "impzp-venc-") são substituídas. */
 export async function gerarParcelasVincendas(): Promise<ResultadoVincendas> {
   const s = getStore();
   const lancs = await s.list<Lancamento>("lancamentos");
@@ -537,7 +538,12 @@ export async function gerarParcelasVincendas(): Promise<ResultadoVincendas> {
     }
   }
 
-  const cutoff = new Date().toISOString().slice(0, 10); // só parcelas de hoje pra frente
+  const cutoff = new Date().toISOString().slice(0, 10); // hoje (usado nos contratos manuais)
+  // materializa como "em atraso" apenas as parcelas vencidas nos últimos 4 meses —
+  // é o sinal acionável e de maior confiança (quem pagava e parou). Atraso mais
+  // antigo costuma ser matéria encerrada ou pagamento feito fora do extrato (dinheiro),
+  // e viraria falso-positivo; fica de fora para não poluir a Cobrança.
+  const pisoAtraso = somaMesesData(cutoff, -4);
 
   let contratos = 0;
   let parcelasGeradas = 0;
@@ -552,7 +558,14 @@ export async function gerarParcelasVincendas(): Promise<ResultadoVincendas> {
     let gerouAlguma = false;
     for (let k = pagas + 1; k <= ct.parcelas; k++) {
       const venc = somaMesesData(ct.assinatura, k - 1);
-      if (venc < cutoff) continue; // parcela no passado — assume-se resolvida (saldo fica na ficha do cliente)
+      // Parcela já vencida só vira "em atraso" quando o pagamento é confiável de
+      // reconciliar — ou seja, o contrato está vinculado a um cliente com
+      // histórico (match_id) e o atraso não é antigo demais (> 12 meses). Sem
+      // vínculo, não inventa atraso: mantém apenas as parcelas a vencer, evitando
+      // falso-positivo de quem pagou por outro registro.
+      if (venc < cutoff && (!ct.match_id || venc < pisoAtraso)) continue;
+      // gera tanto as parcelas a vencer quanto as já vencidas e não pagas:
+      // as vencidas entram como "em atraso" para o cliente aparecer na Cobrança.
       const ultima = k === ct.parcelas;
       const valor = ultima ? Math.round((ct.valor - parcela * (ct.parcelas - 1)) * 100) / 100 : parcela;
       await s.insert<Lancamento>("lancamentos", {
