@@ -596,6 +596,11 @@ export const CASOS_WHATSAPP: CasoWhatsapp[] = [
       { processo: "impcw-p-223-leandro", data: "2026-07-20", descricao: "Apelação interposta; aguardando subir ao Tribunal e marcação do julgamento." },
       { processo: "impcw-p-223-silvano", data: "2025-12-02", descricao: "Alvará de soltura expedido no 2º processo do Silvano." },
     ],
+    pagamentos: [
+      { id: "impcw-l-223-1", valor: 100, data: "2024-11-21", descricao: "Honorários — parcela (casos Leandro/Silvano — Letícia)" },
+      { id: "impcw-l-223-2", valor: 400, data: "2025-12-15", descricao: "Honorários — parcela (casos Leandro/Silvano — Letícia)" },
+      { id: "impcw-l-223-3", valor: 330, data: "2026-06-06", descricao: "Honorários — parcela (casos Leandro/Silvano — Letícia)" },
+    ],
   },
   {
     idx: 224,
@@ -716,6 +721,114 @@ export const CASOS_WHATSAPP: CasoWhatsapp[] = [
     ],
     andamentos: [
       { processo: "impcw-p-228", data: "2026-04-23", descricao: "Atendimento no presídio (P2) — levado o esboço da apelação e passado recado à família." },
+    ],
+  },
+  {
+    idx: 229,
+    match: ["jose pedro iva", "jose pedro", "jose pedro ivanchuk"],
+    enriquecer: {
+      nome: "José Pedro Ivanchuk",
+      nota: "Cliente como assistente de acusação contra o réu Christian. Contrato de R$ 3.000 (10x300, jul/2025 a abr/2026) — QUITADO. Parcelas de 2026 já constam na planilha. Consultou sobre eventual ação de danos morais (novo processo).",
+    },
+    processos: [
+      {
+        id: "impcw-p-229",
+        area: "criminal",
+        objeto: "Assistência de acusação em ação penal contra o réu Christian. Audiência de instrução realizada em 24/06/2026 (por vídeo). Aguardando sentença.",
+        parte_contraria: "Christian (réu)",
+        comarca: "Itapetininga",
+        situacao: "aguardando_tramite",
+      },
+    ],
+    andamentos: [
+      { processo: "impcw-p-229", data: "2026-06-24", descricao: "Audiência de instrução realizada (por vídeo). Aguardando sentença." },
+    ],
+  },
+  {
+    idx: 230,
+    match: ["maria de fatim", "maria de fatima"],
+    enriquecer: {
+      nota: "Avó pagadora (Dona Maria). Neto: Ryan, preso — pedido de progressão/saída. Obtida a soltura em 05/12/2025. Mensalidades de R$ 350 (as parcelas de 2026 constam na planilha).",
+    },
+    processos: [
+      {
+        id: "impcw-p-230",
+        area: "execucao_penal",
+        objeto: "Execução penal do neto Ryan — pedido de progressão/soltura. Concedida a soltura em 05/12/2025.",
+        parte_contraria: "Ministério Público",
+        situacao: "encerrado",
+      },
+    ],
+    andamentos: [
+      { processo: "impcw-p-230", data: "2025-12-03", descricao: "Juiz proferiu a decisão favorável." },
+      { processo: "impcw-p-230", data: "2025-12-05", descricao: "Ryan solto." },
+    ],
+  },
+  {
+    idx: 231,
+    match: ["ka namorada do igor", "igor ferreira"],
+    enriquecer: {
+      nome: "Ka (namorada do Igor)",
+      nota: "Contato/pagadora: Ka (namorada). Réu: Igor Ferreira da Silva (RG 49.142.439-5, nascido em 13/12/1992), preso no CDP de Sorocaba (tráfico). Contrato R$ 3.600 (9x400). ENCERRADO: em 05/05/2026 os pais do Igor contrataram outro advogado; o réu foi condenado (7 anos e 9 meses). Contato encerrou o relacionamento.",
+    },
+    processos: [
+      {
+        id: "impcw-p-231",
+        area: "criminal",
+        objeto: "Defesa do réu Igor Ferreira da Silva — tráfico de drogas. Tese central de nulidade da abordagem policial. HC negado no TJSP; preparado HC para o STJ. Réu condenado (7a9m). Defesa depois assumida por outro advogado.",
+        parte_contraria: "Ministério Público",
+        situacao: "encerrado",
+      },
+    ],
+    andamentos: [
+      { processo: "impcw-p-231", data: "2026-02-19", descricao: "HC negado no TJSP; iniciado HC para o STJ." },
+      { processo: "impcw-p-231", data: "2026-05-05", descricao: "Pais do réu contrataram outro advogado; caso encerrado no escritório. Réu condenado a 7 anos e 9 meses." },
+    ],
+    pagamentos: [
+      { id: "impcw-l-231-1", valor: 300, data: "2025-12-12", descricao: "Honorários — parcela (defesa de Igor Ferreira)" },
+      { id: "impcw-l-231-2", valor: 400, data: "2026-03-02", descricao: "Honorários — parcela (defesa de Igor Ferreira)" },
+    ],
+  },
+  {
+    idx: 232,
+    match: ["janaina"],
+    enriquecer: {
+      nome: "Janaína",
+      nota: "Ação de guarda da criança Enzo (retirado de abrigo). Guarda provisória concedida — Enzo entregue à família em 01/12/2025. Buscando a guarda definitiva. Contrato de 5 parcelas — QUITADO em 05/03/2026 (valores não informados na conversa). Irmã: Vanessa. Verificar possível vínculo com \"VANESSA APA\" na planilha.",
+    },
+    processos: [
+      {
+        id: "impcw-p-232",
+        area: "civel",
+        objeto: "Ação de guarda da criança Enzo (retirado de abrigo). Guarda provisória concedida em 01/12/2025; buscando a guarda definitiva.",
+        situacao: "aguardando_tramite",
+      },
+    ],
+    andamentos: [
+      { processo: "impcw-p-232", data: "2025-11-18", descricao: "Entrevista no departamento técnico (relatório social)." },
+      { processo: "impcw-p-232", data: "2025-12-01", descricao: "Guarda provisória concedida; Enzo entregue à família. Determinada creche via Secretaria da Educação." },
+    ],
+  },
+  {
+    idx: 233,
+    match: ["renata fernand", "renata"],
+    enriquecer: {
+      nota: "Mãe/pagadora: Renata. Réu: Pablo, preso em Iperó. Processo complexo com vários réus (veio do juízo das garantias de Sorocaba para a 2ª Vara de Itapetininga). HC no TJSP. Pagamentos de R$ 450/mês já constam na planilha.",
+    },
+    processos: [
+      {
+        id: "impcw-p-233",
+        area: "criminal",
+        objeto: "Defesa do réu Pablo — ação penal com vários réus (2ª Vara de Itapetininga). Impetrado HC no TJSP. Audiência de instrução realizada em 06/04/2026. Aguardando sentença.",
+        parte_contraria: "Ministério Público",
+        comarca: "Itapetininga",
+        situacao: "aguardando_tramite",
+      },
+    ],
+    andamentos: [
+      { processo: "impcw-p-233", data: "2025-10-13", descricao: "Processo principal distribuído à 2ª Vara de Itapetininga (vindo do juízo das garantias de Sorocaba). HC com o relator no TJSP." },
+      { processo: "impcw-p-233", data: "2026-01-29", descricao: "Data da audiência de instrução designada." },
+      { processo: "impcw-p-233", data: "2026-04-06", descricao: "Audiência de instrução realizada. Aguardando sentença." },
     ],
   },
 ];
