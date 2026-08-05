@@ -7,15 +7,18 @@ import {
   atualizarMovimentacoesDataJud,
   gerarParcelasVincendas,
   importarAudienciasEsaj,
+  importarCasosWhatsapp,
   importarContratosZapsign,
   importarDados2026,
   resetarDadosDemo,
   type ResultadoAudiencias,
+  type ResultadoCasos,
   type ResultadoContratos,
   type ResultadoDataJud,
   type ResultadoImportacao,
   type ResultadoVincendas,
 } from "@/lib/store";
+import { CASOS_WHATSAPP } from "@/lib/import-casos";
 import { CLIENTES_2026, LANCAMENTOS_2026 } from "@/lib/import-2026";
 import { CONTRATOS_ZAPSIGN } from "@/lib/import-contratos";
 import { AUDIENCIAS_ESAJ } from "@/lib/import-audiencias";
@@ -139,6 +142,54 @@ function ImportarContratos() {
         <div className="rounded-lg bg-emerald-50 p-3 text-sm text-emerald-800">
           ✓ {resultado.clientesEnriquecidos} clientes completados, {resultado.clientesNovos} novos, {resultado.processosNovos} processos e{" "}
           {resultado.contratosNovos} contratos registrados. <a href="/processos" className="font-semibold underline">Ver processos →</a>
+        </div>
+      )}
+    </Card>
+  );
+}
+
+function ImportarCasos() {
+  const [rodando, setRodando] = useState(false);
+  const [resultado, setResultado] = useState<ResultadoCasos | null>(null);
+
+  async function importar() {
+    if (!confirm("Importar os casos das conversas? Complementa clientes que já existem (sem duplicar), cria processos, andamentos, audiências e os pagamentos que faltavam, e remove o João Luiz e o 'Gustavo Rob' (você).")) return;
+    setRodando(true);
+    try {
+      setResultado(await importarCasosWhatsapp());
+    } finally {
+      setRodando(false);
+    }
+  }
+
+  return (
+    <Card className="space-y-3 p-4">
+      <h2 className="flex items-center gap-2 text-sm font-bold text-slate-900">
+        <Database size={16} /> Importar casos das conversas
+      </h2>
+      <p className="text-sm text-slate-600">
+        Traz os <b>{CASOS_WHATSAPP.length} casos</b> reconstruídos das conversas (Valdeci, Vagner, Kauã, Leonardo, David, Alison, Wagner):
+        <b> complementa</b> o cliente que já existe (casando por CPF/nome, <b>sem duplicar</b>), cria o processo, os andamentos, as
+        audiências/vídeos e os pagamentos que faltavam. Também <b>remove</b> os não-clientes (João Luiz de O e "Gustavo Rob").
+      </p>
+      <p className="rounded-lg bg-amber-50 p-2.5 text-xs text-amber-900">
+        Pode rodar mais de uma vez sem duplicar. Alguns comprovantes vinham só como foto (sem valor escrito) — esses <b>não</b>
+        foram lançados; confira Roselina e Wagner e lance manualmente se faltar.
+      </p>
+      <div>
+        <button
+          onClick={importar}
+          disabled={rodando}
+          className="rounded-lg bg-brand-600 px-3.5 py-2 text-sm font-semibold text-white transition hover:bg-brand-700 disabled:opacity-60"
+        >
+          {rodando ? "Importando…" : "Importar casos das conversas"}
+        </button>
+      </div>
+      {resultado && (
+        <div className="rounded-lg bg-emerald-50 p-3 text-sm text-emerald-800">
+          ✓ {resultado.clientesComplementados} clientes complementados, {resultado.clientesNovos} novos, {resultado.processosNovos} processos,{" "}
+          {resultado.andamentosNovos} andamentos, {resultado.eventosNovos} audiências e {resultado.pagamentosNovos} pagamentos.{" "}
+          {resultado.removidos} não-clientes removidos. <a href="/processos" className="font-semibold underline">Ver processos →</a>
         </div>
       )}
     </Card>
@@ -339,6 +390,7 @@ export default function ConfiguracoesPage() {
         <GoogleAgenda />
         <ImportarPlanilha />
         <ImportarContratos />
+        <ImportarCasos />
         <GerarVincendas />
         <ImportarAudiencias />
         <AtualizarDataJud />

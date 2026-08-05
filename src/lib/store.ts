@@ -8,6 +8,7 @@ import { CLIENTES_2026, LANCAMENTOS_2026 } from "./import-2026";
 import { CONTRATOS_ZAPSIGN } from "./import-contratos";
 import { CONTRATOS_MANUAIS } from "./import-contratos-extra";
 import { AUDIENCIAS_ESAJ } from "./import-audiencias";
+import { CASOS_WHATSAPP, REMOVER_CLIENTES } from "./import-casos";
 import { getSupabase, supabaseConfigurado } from "./supabase";
 import type { Andamento, Cliente, ContratoHonorarios, EventoAgenda, Lancamento, Processo, TableName } from "./types";
 
@@ -613,4 +614,137 @@ export async function gerarParcelasVincendas(): Promise<ResultadoVincendas> {
   }
 
   return { contratos, parcelasGeradas };
+}
+
+export interface ResultadoCasos {
+  clientesNovos: number;
+  clientesComplementados: number;
+  processosNovos: number;
+  andamentosNovos: number;
+  eventosNovos: number;
+  pagamentosNovos: number;
+  removidos: number;
+}
+
+function normalizaNome(s: string): string {
+  return (s ?? "").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").trim();
+}
+
+/** Importa os casos reconstruídos das conversas de WhatsApp. Idempotente: casa
+ *  cada caso com o cliente já existente (por CPF ou nome) e complementa processo,
+ *  andamentos, eventos e pagamentos que faltavam; também remove os não-clientes. */
+export async function importarCasosWhatsapp(): Promise<ResultadoCasos> {
+  const s = getStore();
+  const clientes = await s.list<Cliente>("clientes");
+  const processos = await s.list<Processo>("processos");
+  const processosById = new Map(processos.map((p) => [p.id, p]));
+  const processosExist = new Set(processos.map((p) => p.id));
+  const andamentosExist = new Set((await s.list<Andamento>("andamentos")).map((a) => a.id));
+  const eventosExist = new Set((await s.list<EventoAgenda>("eventos_agenda")).map((e) => e.id));
+  const lancExist = new Set((await s.list<Lancamento>("lancamentos")).map((l) => l.id));
+
+  const r: ResultadoCasos = {
+    clientesNovos: 0, clientesComplementados: 0, processosNovos: 0,
+    andamentosNovos: 0, eventosNovos: 0, pagamentosNovos: 0, removidos: 0,
+  };
+  const digs = (x?: string) => (x ?? "").replace(/\D/g, "");
+
+  // 1) limpeza — remove não-clientes e seus lançamentos
+  const todosLancs = await s.list<Lancamento>("lancamentos");
+  for (const id of REMOVER_CLIENTES) {
+    for (const l of todosLancs.filter((x) => x.cliente_id === id)) await s.remove("lancamentos", l.id);
+    if (clientes.find((c) => c.id === id)) { await s.remove("clientes", id); r.removidos++; }
+  }
+
+  const porCpf = new Map(clientes.filter((c) => c.cpf_cnpj).map((c) => [digs(c.cpf_cnpj), c]));
+
+  for (const caso of CASOS_WHATSAPP) {
+    // resolve o cliente já cadastrado (CPF primeiro, senão por nome)
+    let alvo: Cliente | undefined;
+    if (caso.cpf) alvo = porCpf.get(digs(caso.cpf));
+    if (!alvo) {
+      const alvos = caso.match.map(normalizaNome);
+      alvo = clientes.find((c) => {
+        const n = normalizaNome(c.nome);
+        return alvos.some((m) => n.startsWith(m) || m.startsWith(n) || n.includes(m));
+      });
+    }
+
+    let clienteId: string;
+    if (alvo) {
+      const patch: Partial<Cliente> = {};
+      const e = caso.enriquecer;
+      if (e?.nome && e.nome.length > alvo.nome.length) patch.nome = e.nome;
+      if (e?.cpf_cnpj && !alvo.cpf_cnpj) patch.cpf_cnpj = e.cpf_cnpj;
+      if (e?.rg && !alvo.rg) patch.rg = e.rg;
+      if (e?.endereco && !alvo.endereco) patch.endereco = e.endereco;
+      if (e?.nota) {
+        const base = (alvo.notas ?? "").split("[caso]")[0].trim();
+        patch.notas = `${base ? base + " " : ""}[caso] ${e.nota}`.trim();
+      }
+      if (Object.keys(patch).length) { await s.update<Cliente>("clientes", alvo.id, patch); r.clientesComplementados++; }
+      clienteId = alvo.id;
+    } else {
+      clienteId = `impcw-c-${caso.idx}`;
+      if (!clientes.find((c) => c.id === clienteId)) {
+        await s.insert<Cliente>("clientes", {
+          id: clienteId, tipo: "pf",
+          nome: caso.enriquecer?.nome ?? caso.match[0],
+          cpf_cnpj: caso.enriquecer?.cpf_cnpj, rg: caso.enriquecer?.rg, endereco: caso.enriquecer?.endereco,
+          notas: caso.enriquecer?.nota ? `[caso] ${caso.enriquecer.nota}` : undefined,
+        } as Partial<Cliente>);
+        r.clientesNovos++;
+      }
+    }
+
+    // processos (cria novo, ou atualiza situação/CNJ se já existir)
+    for (const p of caso.processos) {
+      if (processosExist.has(p.id)) {
+        const atual = processosById.get(p.id);
+        const patch: Partial<Processo> = {};
+        if (p.situacao) (patch as Record<string, unknown>).situacao = p.situacao;
+        if (p.numero_cnj && atual && !atual.numero_cnj) patch.numero_cnj = p.numero_cnj;
+        if (Object.keys(patch).length) await s.update<Processo>("processos", p.id, patch);
+      } else {
+        const encerrado = p.situacao === "encerrado" || p.situacao === "encerrado_quitado";
+        await s.insert<Processo>("processos", {
+          id: p.id, numero_cnj: p.numero_cnj, cliente_id: clienteId,
+          area: (p.area ?? "criminal") as Processo["area"], tribunal: "TJSP", comarca: p.comarca,
+          objeto: p.objeto, parte_contraria: p.parte_contraria,
+          status: encerrado ? "encerrado" : "ativo", monitorado: false,
+          ...(p.situacao ? { situacao: p.situacao } : {}),
+        } as Partial<Processo>);
+        processosExist.add(p.id);
+        r.processosNovos++;
+      }
+    }
+
+    // andamentos
+    for (let i = 0; i < caso.andamentos.length; i++) {
+      const a = caso.andamentos[i];
+      const id = `impcw-a-${caso.idx}-${i + 1}`;
+      if (!andamentosExist.has(id)) {
+        await s.insert<Andamento>("andamentos", { id, processo_id: a.processo, data: a.data, origem: "manual", descricao: a.descricao } as Partial<Andamento>);
+        r.andamentosNovos++;
+      }
+    }
+
+    // eventos (audiências / vídeos)
+    for (const ev of caso.eventos ?? []) {
+      if (!eventosExist.has(ev.id)) {
+        await s.insert<EventoAgenda>("eventos_agenda", { id: ev.id, tipo: ev.tipo as EventoAgenda["tipo"], titulo: ev.titulo, processo_id: ev.processo, cliente_id: clienteId, inicio: ev.inicio, local: ev.local } as Partial<EventoAgenda>);
+        r.eventosNovos++;
+      }
+    }
+
+    // pagamentos que faltavam na planilha
+    for (const pg of caso.pagamentos ?? []) {
+      if (!lancExist.has(pg.id)) {
+        await s.insert<Lancamento>("lancamentos", { id: pg.id, tipo: "receita", categoria: "Honorários", cliente_id: clienteId, descricao: pg.descricao, valor: pg.valor, vencimento: pg.data, pago_em: pg.data } as Partial<Lancamento>);
+        r.pagamentosNovos++;
+      }
+    }
+  }
+
+  return r;
 }
