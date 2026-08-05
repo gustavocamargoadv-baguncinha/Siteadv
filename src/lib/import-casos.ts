@@ -573,7 +573,7 @@ export const CASOS_WHATSAPP: CasoWhatsapp[] = [
     match: ["leticia", "lee diniz", "leandro wallace"],
     enriquecer: {
       nome: "Letícia (Lee Diniz)",
-      nota: "Familiar/pagadora que cuida de vários casos: réu Leandro Wallace (média-alta) e réu Silvano (matrícula 1.400.579, baixa-média), além de sobrinhos presos em 2026. Relacionamento longo (desde 2024) com muitas parcelas — NÃO lancei os pagamentos aqui para não duplicar; conferir o financeiro na planilha e complementar manualmente.",
+      nota: "Familiar/pagadora que cuida de vários casos: réu Leandro Wallace (média-alta) e réu Silvano (matrícula 1.400.579, baixa-média), além de sobrinhos presos em 2026. A mãe do Leandro (Dona Marli = \"Marli Moraes C\" na planilha) também paga por esses casos — as parcelas de 2026 dela (jan, fev, abr e jun) já constam na planilha. Aqui lancei só os pagamentos antigos (2024/2025) que não estavam no sistema.",
     },
     processos: [
       {
@@ -602,7 +602,6 @@ export const CASOS_WHATSAPP: CasoWhatsapp[] = [
     pagamentos: [
       { id: "impcw-l-223-1", valor: 100, data: "2024-11-21", descricao: "Honorários — parcela (casos Leandro/Silvano — Letícia)" },
       { id: "impcw-l-223-2", valor: 400, data: "2025-12-15", descricao: "Honorários — parcela (casos Leandro/Silvano — Letícia)" },
-      { id: "impcw-l-223-3", valor: 330, data: "2026-06-06", descricao: "Honorários — parcela (casos Leandro/Silvano — Letícia)" },
     ],
   },
   {
@@ -931,5 +930,81 @@ export const CASOS_WHATSAPP: CasoWhatsapp[] = [
     pagamentos: [
       { id: "impcw-l-237-1", valor: 250, data: "2026-02-23", descricao: "Honorários — parcela (contrato 20x250 — Madlene/Davi)" },
     ],
+  },
+  {
+    idx: 238,
+    match: ["vitor 2 ligou", "vitor"],
+    enriquecer: {
+      nome: "Vitor",
+      nota: "Réu do próprio caso. Dois processos: (1) apelação em caso de Lei Maria da Penha (interposta 14/10/2025, aguardando julgamento no TJ); (2) execução penal com prestação de serviços à comunidade (360h), depois convertida para regime aberto (assinatura) em fev/2026. ATENÇÃO: pagamentos por comprovante-foto sem valor informado — lançar manualmente.",
+    },
+    processos: [
+      {
+        id: "impcw-p-238-apelacao",
+        area: "criminal",
+        objeto: "Defesa do réu Vitor — apelação em ação penal (Lei Maria da Penha). Interposta em 14/10/2025; aguardando julgamento no Tribunal.",
+        parte_contraria: "Ministério Público",
+        situacao: "aguardando_tramite",
+      },
+      {
+        id: "impcw-p-238-execucao",
+        numero_cnj: "0010650-95.2023.8.26.0521",
+        area: "execucao_penal",
+        objeto: "Execução penal do réu Vitor — prestação de serviços à comunidade (360h). Convertida para regime aberto (assinatura) em fev/2026.",
+        parte_contraria: "Ministério Público",
+        situacao: "aguardando_tramite",
+      },
+    ],
+    andamentos: [
+      { processo: "impcw-p-238-apelacao", data: "2025-10-14", descricao: "Apelação interposta (Lei Maria da Penha)." },
+      { processo: "impcw-p-238-execucao", data: "2026-02-06", descricao: "Serviço comunitário convertido para regime aberto (assinatura)." },
+    ],
+  },
+  {
+    idx: 239,
+    match: ["erika tomoto", "erica tomoto", "erika", "erica"],
+    cpf: "393.424.268-59",
+    enriquecer: {
+      nome: "Érica Tomoto",
+      cpf_cnpj: "393.424.268-59",
+      endereco: "Rua Salmão Abib, nº 50, Vila Santa Isabel",
+      nota: "Ré do próprio caso — apropriação indébita (inquérito). Busca e apreensão do carro (meio de sustento), celulares e joias; conduziu-se o pedido de restituição do veículo, DEFERIDO (carro liberado em jul/2026). Contrato de R$ 375/mês. Pagou de ago a dez/2025 (5 comprovantes de 375); EM ATRASO desde jan/2026 — negociar débito.",
+    },
+    processos: [
+      {
+        id: "impcw-p-239",
+        numero_cnj: "1509223-59.2025.8.26.0378",
+        area: "criminal",
+        objeto: "Defesa da ré Érica — apropriação indébita (inquérito). Apensos: 1508804-39.2025.8.26.0378 (busca e apreensão) e 0002196-02.2025.8.26.0378 (restituição do veículo, deferida).",
+        parte_contraria: "Ministério Público",
+        comarca: "Itapetininga",
+        situacao: "aguardando_tramite",
+      },
+    ],
+    andamentos: [
+      { processo: "impcw-p-239", data: "2026-07-09", descricao: "Suspensão do leilão e autorização judicial para devolução do veículo; delegacia comunicada para retirada." },
+      { processo: "impcw-p-239", data: "2026-07-20", descricao: "Solicitado pedido de isenção de taxas." },
+    ],
+    pagamentos: [
+      { id: "impcw-l-239-1", valor: 375, data: "2025-09-19", descricao: "Honorários — parcela (defesa de Érica — apropriação indébita)" },
+    ],
+  },
+  {
+    idx: 240,
+    match: ["marli moraes c", "marli moraes", "marli"],
+    enriquecer: {
+      nome: "Marli Moraes",
+      nota: "Dona Marli — mãe do réu Leandro Wallace (ver caso da Letícia). Também acompanha o réu Mayke. Paga honorários dos casos da família Leandro Wallace — parcelas de 2026 já constam na planilha (quitou uma parcela em 06/02/2026).",
+    },
+    processos: [
+      {
+        id: "impcw-p-240",
+        area: "criminal",
+        objeto: "Acompanhamento dos processos do réu Mayke e do réu Leandro Wallace (regime semiaberto). Conferir números dos processos.",
+        parte_contraria: "Ministério Público",
+        situacao: "aguardando_tramite",
+      },
+    ],
+    andamentos: [],
   },
 ];
