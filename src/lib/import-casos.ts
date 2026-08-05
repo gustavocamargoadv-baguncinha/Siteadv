@@ -477,4 +477,124 @@ export const CASOS_WHATSAPP: CasoWhatsapp[] = [
       { processo: "impcw-p-218", data: "2025-07-25", descricao: "Acordo cível com a vítima assinado e juntado; peticionada a revisão da audiência de ANPP." },
     ],
   },
+  {
+    idx: 219,
+    match: ["rayssa vitoria", "rayssa"],
+    enriquecer: {
+      nota: "Pagadora: Rayssa (esposa). Réu: Moisés Nunes da Rocha (RG 57.945.095-8, mãe Mirian Nunes Ferreira), preso na P2 de Itapetininga e depois transferido para Iperó. Serviços avulsos de atendimento/diligência no presídio (levar e trazer recados à família) — não é contrato de defesa completa.",
+    },
+    processos: [
+      {
+        id: "impcw-p-219",
+        area: "criminal",
+        objeto: "Atendimentos e diligências no presídio para o réu Moisés Nunes da Rocha (recados à família). Serviços avulsos — não é defesa completa.",
+        situacao: "aguardando_cliente",
+      },
+    ],
+    andamentos: [
+      { processo: "impcw-p-219", data: "2026-06-01", descricao: "Atendimento no presídio (P2 Itapetininga) — recado à família." },
+      { processo: "impcw-p-219", data: "2026-06-09", descricao: "Réu transferido para Iperó; combinado atendimento por vídeo." },
+    ],
+  },
+  {
+    idx: 220,
+    match: ["bruno de ol", "bruno"],
+    cpf: "438.328.508-21",
+    enriquecer: {
+      cpf_cnpj: "438.328.508-21",
+      rg: "43.310.321-8",
+      endereco: "Rua Waldomiro Vaz da Rocha, nº 203, Nova Itapetininga, Itapetininga-SP",
+      nota: "Réu do próprio caso. Contrato R$ 1.800 (4x450) para defesa + eventual recurso. Todo dia 01 o vencimento.",
+    },
+    processos: [
+      {
+        id: "impcw-p-220",
+        numero_cnj: "1500849-61.2023.8.26.0269",
+        area: "criminal",
+        objeto: "Defesa do réu Bruno — acusação de furto qualificado (defesa sustenta apropriação, bem mais branda). Busca-se acordo/absolvição; vítima (Clarice) não localizada para intimação.",
+        parte_contraria: "Ministério Público",
+        comarca: "Itapetininga",
+        situacao: "precisa_agir",
+      },
+    ],
+    andamentos: [
+      { processo: "impcw-p-220", data: "2026-06-08", descricao: "Procuração colhida e habilitação nos autos; petição juntada." },
+      { processo: "impcw-p-220", data: "2026-07-03", descricao: "Ministério Público se manifestou insistindo na intimação da vítima." },
+      { processo: "impcw-p-220", data: "2026-08-04", descricao: "MP pediu nova tentativa de intimação da vítima (Clarice) em endereço na Rua Waldomiro Vaz da Rocha; audiência pode ser remarcada." },
+    ],
+    eventos: [
+      { id: "impcw-e-220-1", tipo: "audiencia", titulo: "Audiência de instrução — Bruno (online) — pode ser remarcada (vítima não localizada)", inicio: "2026-08-06T00:00:00", local: "Online", processo: "impcw-p-220" },
+    ],
+    pagamentos: [
+      { id: "impcw-l-220-1", valor: 450, data: "2026-08-05", descricao: "Honorários — parcela (defesa de Bruno — furto/apropriação)" },
+    ],
+  },
+  {
+    idx: 221,
+    match: ["vanda toledo", "vanda"],
+    enriquecer: {
+      nome: "Vanda Toledo",
+      nota: "Pagadora: Vanda Toledo. Réu: Matheus — preso em flagrante; defesa na audiência de custódia obteve a liberdade. ATENÇÃO: há comprovante de pagamento de 17/06/2026 (foto) sem valor informado na conversa — lançar manualmente o valor no financeiro.",
+    },
+    processos: [
+      {
+        id: "impcw-p-221",
+        area: "criminal",
+        objeto: "Defesa do réu Matheus — prisão em flagrante. Na audiência de custódia o juiz acolheu a defesa e concedeu a liberdade (o MP havia pedido a prisão).",
+        parte_contraria: "Ministério Público",
+        situacao: "encerrado",
+      },
+    ],
+    andamentos: [
+      { processo: "impcw-p-221", data: "2026-06-17", descricao: "Audiência de custódia — defesa acolhida; concedida a liberdade e expedido alvará de soltura. Réu solto no mesmo dia." },
+    ],
+  },
+  {
+    idx: 222,
+    match: ["valdeci ant", "valdeci da van", "valdeci"],
+    enriquecer: {
+      nota: "Réu do próprio caso — Valdeci (motorista de van). Paga honorários em parcelas mensais (comprovantes na conversa; a parcela de 10/06/2026 = R$ 350 já consta na planilha). Conferir número do processo e demais valores/parcelas.",
+    },
+    processos: [
+      {
+        id: "impcw-p-222",
+        area: "criminal",
+        objeto: "Acompanhamento do processo do réu Valdeci. Conferir número do processo e objeto exato (não informado na conversa).",
+        situacao: "aguardando_tramite",
+      },
+    ],
+    andamentos: [],
+  },
+  {
+    idx: 223,
+    match: ["leticia", "lee diniz", "leandro wallace"],
+    enriquecer: {
+      nome: "Letícia (Lee Diniz)",
+      nota: "Familiar/pagadora que cuida de vários casos: réu Leandro Wallace (média-alta) e réu Silvano (matrícula 1.400.579, baixa-média), além de sobrinhos presos em 2026. Relacionamento longo (desde 2024) com muitas parcelas — NÃO lancei os pagamentos aqui para não duplicar; conferir o financeiro na planilha e complementar manualmente.",
+    },
+    processos: [
+      {
+        id: "impcw-p-223-leandro",
+        numero_cnj: "1501521-28.2026.8.26.0378",
+        area: "criminal",
+        objeto: "Defesa do réu Leandro Wallace — sentença condenatória proferida; interposta apelação. Caso relacionado: 1500935-88.2026.8.26.0378.",
+        parte_contraria: "Ministério Público",
+        situacao: "aguardando_tramite",
+      },
+      {
+        id: "impcw-p-223-silvano",
+        numero_cnj: "0006810-09.2025.8.26.0521",
+        area: "criminal",
+        objeto: "Defesa do réu Silvano (matrícula 1.400.579) — alvará de soltura expedido; acompanhamento de execução e pedido de aproximação familiar (transferência para Capela do Alto).",
+        parte_contraria: "Ministério Público",
+        situacao: "aguardando_tramite",
+      },
+    ],
+    andamentos: [
+      { processo: "impcw-p-223-leandro", data: "2026-06-18", descricao: "Realizada a audiência de instrução; o juiz não proferiu sentença no ato (nova audiência a designar)." },
+      { processo: "impcw-p-223-leandro", data: "2026-07-07", descricao: "Sentença condenatória juntada aos autos." },
+      { processo: "impcw-p-223-leandro", data: "2026-07-20", descricao: "Apelação interposta; aguardando subir ao Tribunal e marcação do julgamento." },
+      { processo: "impcw-p-223-silvano", data: "2025-12-02", descricao: "Alvará de soltura expedido no 2º processo do Silvano." },
+    ],
+  },
 ];
