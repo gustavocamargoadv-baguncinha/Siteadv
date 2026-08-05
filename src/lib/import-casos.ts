@@ -283,4 +283,118 @@ export const CASOS_WHATSAPP: CasoWhatsapp[] = [
       { id: "impcw-l-210-1", valor: 1600, data: "2026-07-17", descricao: "Honorários — à vista (defesa de Gislaine Ferreira Martins)" },
     ],
   },
+  {
+    idx: 211,
+    match: ["daiane cristina", "daiane cristina freitas"],
+    cpf: "299.423.448-37",
+    enriquecer: {
+      nome: "Daiane Cristina Freitas Oliveira da Cunha",
+      cpf_cnpj: "299.423.448-37",
+      rg: "42.131.587-8",
+      endereco: "Rua Doutor Manoel Guimarães, nº 319",
+      nota: "Pagadora — defesa do Antônio Marcos de Jesus Pereira. Contrato 12x375.",
+    },
+    processos: [
+      {
+        id: "impcw-p-211",
+        area: "criminal",
+        objeto: "Defesa do réu Antônio Marcos de Jesus Pereira — tráfico de drogas; preso em Iperó. HC para responder em liberdade.",
+        parte_contraria: "Ministério Público",
+        situacao: "aguardando_tramite",
+      },
+    ],
+    andamentos: [
+      { processo: "impcw-p-211", data: "2026-07-06", descricao: "Habeas Corpus impetrado (réu preso em Iperó)." },
+      { processo: "impcw-p-211", data: "2026-08-04", descricao: "Concedido o alvará de soltura do Antônio." },
+    ],
+    eventos: [
+      { id: "impcw-e-211-1", tipo: "audiencia", titulo: "Audiência de instrução — Antônio Marcos de Jesus Pereira", inicio: "2026-08-25T16:15:00", processo: "impcw-p-211" },
+    ],
+    pagamentos: [
+      { id: "impcw-l-211-1", valor: 375, data: "2026-07-01", descricao: "Honorários — 1ª parcela (defesa de Antônio Marcos de Jesus Pereira)" },
+    ],
+  },
+  {
+    idx: 212,
+    match: ["ana laura r"],
+    enriquecer: { nota: "Irmã/pagadora — defesa do Efrain. Contrato 6x400." },
+    processos: [
+      {
+        id: "impcw-p-212",
+        area: "criminal",
+        objeto: "Defesa do réu Efrain — prisão preventiva; transferido para a ADP de Iperó. HC no Tribunal (liminar negada) + pedido de liberdade ao juízo de origem.",
+        parte_contraria: "Ministério Público",
+        situacao: "aguardando_tramite",
+      },
+    ],
+    andamentos: [
+      { processo: "impcw-p-212", data: "2026-06-09", descricao: "Habeas Corpus impetrado (réu preso, preventiva)." },
+      { processo: "impcw-p-212", data: "2026-06-26", descricao: "Liminar negada; HC segue para julgamento. Feito pedido de liberdade ao juízo de origem." },
+      { processo: "impcw-p-212", data: "2026-07-27", descricao: "Decisão de liberdade proferida; aguardando expedição/chegada do alvará no presídio." },
+    ],
+    pagamentos: [
+      { id: "impcw-l-212-1", valor: 400, data: "2026-07-08", descricao: "Honorários — parcela (defesa de Efrain)" },
+    ],
+  },
+  {
+    idx: 213,
+    match: ["iracema feliza", "iracema"],
+    enriquecer: {
+      cpf_cnpj: "097.866.368-30",
+      endereco: "Rua Avises Ravacci, nº 94",
+      nota: "Contato: filho Edward. TRÊS frentes — (1) reclamação trabalhista (ex-empregada da Viação Estevam); (2) criminal (agressão sofrida por Iracema — agressora Renata); (3) cível/consumidor (compra de veículo, concessionária + banco). Conferir valores e separar melhor os processos.",
+    },
+    processos: [
+      {
+        id: "impcw-p-213t",
+        area: "trabalhista",
+        objeto: "Reclamação trabalhista de Iracema contra a Viação Estevam (verbas rescisórias/FGTS). Justiça gratuita requerida.",
+        situacao: "aguardando_tramite",
+      },
+      {
+        id: "impcw-p-213c",
+        area: "civel",
+        objeto: "Ação cível/consumidor sobre compra de veículo (concessionária + banco). Conferir dados e valores.",
+        situacao: "preciso_agir",
+      },
+    ],
+    andamentos: [
+      { processo: "impcw-p-213t", data: "2026-05-20", descricao: "Procuração e documentos colhidos; ajuizada reclamação trabalhista com pedido de justiça gratuita." },
+      { processo: "impcw-p-213c", data: "2026-07-01", descricao: "Enviado checklist de documentos para a ação sobre o veículo (concessionária/banco)." },
+    ],
+  },
+  {
+    idx: 214,
+    match: ["andrea farias", "andrea"],
+    cpf: "344.751.328-43",
+    enriquecer: {
+      cpf_cnpj: "344.751.328-43",
+      rg: "37.792.730-2",
+      nota: "Mãe/pagadora — defesa do Wendell Kemerson Farias de Souza (2 processos). Contrato R$ 4.000 (entrada 1.000 + 6x500).",
+    },
+    processos: [
+      {
+        id: "impzp-p-101", // processo já criado na importação de contratos (reaproveita)
+        area: "criminal",
+        objeto: "Defesa do réu Wendell — 1º processo (CDP de Sorocaba). Sentenciado a 9 anos (regime fechado); em apelação para redução da pena.",
+        parte_contraria: "Ministério Público",
+        situacao: "aguardando_tramite",
+      },
+      {
+        id: "impcw-p-214b",
+        area: "criminal",
+        objeto: "Defesa do réu Wendell — 2º processo (preventiva). Audiência de instrução realizada.",
+        parte_contraria: "Ministério Público",
+        situacao: "aguardando_tramite",
+      },
+    ],
+    andamentos: [
+      { processo: "impzp-p-101", data: "2026-03-26", descricao: "Realizada a audiência de instrução do 1º processo." },
+      { processo: "impcw-p-214b", data: "2026-05-21", descricao: "Realizada a audiência de instrução do 2º processo (juiz de Pilar do Sul)." },
+      { processo: "impzp-p-101", data: "2026-07-10", descricao: "Sentença: 9 anos em regime fechado. Interposta apelação buscando redução (fração de 2/5)." },
+    ],
+    pagamentos: [
+      { id: "impcw-l-214-1", valor: 250, data: "2026-07-06", descricao: "Honorários — parcela final parcial (defesa de Wendell); saldo de R$ 300 a receber" },
+    ],
+  },
 ];
