@@ -198,4 +198,89 @@ export const CASOS_WHATSAPP: CasoWhatsapp[] = [
       { processo: "impcw-p-207", data: "2026-07-24", descricao: "Todas as parcelas quitadas. Contrato encerrado." },
     ],
   },
+  {
+    idx: 208,
+    match: ["luana donizeti", "luana"],
+    enriquecer: {
+      nome: "Luana Donizeti Ferreira da Silva",
+      endereco: "Rua das Camélias, Vila Rosa, nº 17, Buri-SP",
+      nota: "Esposa/pagadora — defesa do Ronaldo Ferreira da Silva (CPF 517.353.048-08). Contrato 10x600 (dia 12).",
+    },
+    processos: [
+      {
+        id: "impcw-p-208",
+        numero_cnj: "1500420-97.2026.8.26.0622",
+        area: "criminal",
+        objeto: "Defesa do réu Ronaldo Ferreira da Silva — tráfico de drogas (réu primário), preso no CDP de Sorocaba. HC buscando responder em liberdade.",
+        parte_contraria: "Ministério Público",
+        comarca: "Buri",
+        situacao: "aguardando_tramite",
+      },
+    ],
+    andamentos: [
+      { processo: "impcw-p-208", data: "2026-06-15", descricao: "Procuração colhida; Habeas Corpus impetrado. Réu no CDP de Sorocaba." },
+      { processo: "impcw-p-208", data: "2026-07-07", descricao: "Processo remetido à comarca de Buri; aguardando intimação para defesa prévia e designação de audiência." },
+    ],
+    pagamentos: [
+      { id: "impcw-l-208-1", valor: 600, data: "2026-07-10", descricao: "Honorários — parcela (defesa de Ronaldo Ferreira da Silva)" },
+    ],
+  },
+  {
+    idx: 209,
+    match: ["rodrigo fer", "rodrigo"],
+    cpf: "389.192.418-64",
+    enriquecer: {
+      nome: "Rodrigo Fernandes de Souza",
+      cpf_cnpj: "389.192.418-64",
+      rg: "39.506.621-9",
+      endereco: "Rua Guimarães Rosa, nº 1070, Jardim América — CEP 85864-260",
+      nota: "Irmão/pagador — defesa do Danilo (CPF 359.467.278-69). Contrato 10x800 com HC.",
+    },
+    processos: [
+      {
+        id: "impcw-p-209",
+        numero_cnj: "1500941-34.2026.8.26.0269",
+        area: "criminal",
+        objeto: "Defesa do réu Danilo — prisão preventiva (Lei Maria da Penha). Preso na P2 de Itapetininga. HC nº 2117734-30.2026.8.26.0000.",
+        parte_contraria: "Ministério Público",
+        comarca: "Itapetininga",
+        situacao: "aguardando_tramite",
+      },
+    ],
+    andamentos: [
+      { processo: "impcw-p-209", data: "2026-05-11", descricao: "Habeas Corpus impetrado (nº 2117734-30.2026.8.26.0000)." },
+      { processo: "impcw-p-209", data: "2026-05-19", descricao: "Preventiva mantida; MP ofereceu denúncia. Requerida perícia de oxidação de digitais e arroladas testemunhas." },
+      { processo: "impcw-p-209", data: "2026-07-26", descricao: "Ordem concedida no HC — liberdade; alvará de soltura expedido." },
+    ],
+    eventos: [
+      { id: "impcw-e-209-1", tipo: "audiencia", titulo: "Audiência de instrução — Danilo", inicio: "2026-07-29T16:30:00", processo: "impcw-p-209" },
+    ],
+    pagamentos: [
+      { id: "impcw-l-209-1", valor: 800, data: "2026-07-17", descricao: "Honorários — 3ª parcela (defesa de Danilo)" },
+    ],
+  },
+  {
+    idx: 210,
+    match: ["etiene"],
+    enriquecer: {
+      nome: "Etiene (defesa de Gislaine)",
+      nota: "Pagadora (Etiene) — defesa de Gislaine Ferreira Martins, na Penitenciária Feminina de Votorantim (matrícula 637141). À vista R$ 1.600. Conferir/completar nome e CPF da contratante.",
+    },
+    processos: [
+      {
+        id: "impcw-p-210",
+        area: "execucao_penal",
+        objeto: "Defesa de Gislaine Ferreira Martins (Penitenciária Feminina de Votorantim) — redução de pena/regime (extensão do caso do Vagner) e tentativa de prisão domiciliar.",
+        parte_contraria: "Ministério Público",
+        comarca: "Votorantim",
+        situacao: "aguardando_tramite",
+      },
+    ],
+    andamentos: [
+      { processo: "impcw-p-210", data: "2026-07-22", descricao: "Procuração colhida no presídio; iniciado o trabalho de redução de pena/regime." },
+    ],
+    pagamentos: [
+      { id: "impcw-l-210-1", valor: 1600, data: "2026-07-17", descricao: "Honorários — à vista (defesa de Gislaine Ferreira Martins)" },
+    ],
+  },
 ];
