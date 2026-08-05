@@ -133,6 +133,9 @@ export const CASOS_WHATSAPP: CasoWhatsapp[] = [
       { processo: "impcw-p-204", data: "2026-04-17", descricao: "Enviada cópia da decisão do processo de execução (0010374-93.2025.8.26.0521)." },
       { processo: "impcw-p-204", data: "2026-07-16", descricao: "Peticionado pedido de liberdade/progressão; acompanhando manifestação sobre eventual regressão." },
     ],
+    pagamentos: [
+      { id: "impcw-l-204-1", valor: 400, data: "2026-01-28", descricao: "Honorários — parcela (execução do Leonardo — Roselina)" },
+    ],
   },
   {
     idx: 205,
@@ -829,6 +832,104 @@ export const CASOS_WHATSAPP: CasoWhatsapp[] = [
       { processo: "impcw-p-233", data: "2025-10-13", descricao: "Processo principal distribuído à 2ª Vara de Itapetininga (vindo do juízo das garantias de Sorocaba). HC com o relator no TJSP." },
       { processo: "impcw-p-233", data: "2026-01-29", descricao: "Data da audiência de instrução designada." },
       { processo: "impcw-p-233", data: "2026-04-06", descricao: "Audiência de instrução realizada. Aguardando sentença." },
+    ],
+  },
+  {
+    idx: 234,
+    match: ["wagner de o", "wagner"],
+    enriquecer: {
+      nota: "Complemento do cadastro Wagner de O. Contrato QUITADO (parcela final de R$ 400 em 20/02/2026, já na planilha). Processo do celular apreendido finalizado — aparelho retirado na delegacia de Pilar do Sul em 28/07/2026.",
+    },
+    processos: [
+      {
+        id: "impcw-p-234",
+        numero_cnj: "1500807-20.2025.8.26.0567",
+        area: "criminal",
+        objeto: "Caso do réu Wagner — resolvido favoravelmente (nome retirado dos sistemas). Restava a restituição do celular apreendido, retirado na delegacia de Pilar do Sul em 28/07/2026.",
+        parte_contraria: "Ministério Público",
+        situacao: "encerrado_quitado",
+      },
+    ],
+    andamentos: [
+      { processo: "impcw-p-234", data: "2026-07-28", descricao: "Celular apreendido retirado pelo cliente na delegacia de Pilar do Sul. Caso totalmente finalizado." },
+    ],
+  },
+  {
+    idx: 235,
+    match: ["bruno jose alves", "bruno correa", "bruno corrêa"],
+    enriquecer: {
+      nome: "Bruno José Alves Corrêa Cardoso",
+      cpf_cnpj: "383.737.338-09",
+      rg: "40.425.127-4",
+      endereco: "Rua Olímpio Augusto Ribeiro, nº 10, Vila Arruda",
+      nota: "Réu do próprio caso. Investigação por furto e estelionato (mesmo caso). Contrato R$ 3.150 (7x450, ou R$ 300/semana). Procuração colhida em 26/02/2026. Responde em liberdade. Há um Edson Bruno (matrícula 32732945) relacionado ao caso.",
+    },
+    processos: [
+      {
+        id: "impcw-p-235",
+        area: "criminal",
+        objeto: "Defesa do réu Bruno José Alves Corrêa Cardoso — investigação por furto e estelionato. Acompanhamento na fase de delegacia (interrogatório).",
+        parte_contraria: "Ministério Público",
+        comarca: "Sorocaba",
+        situacao: "precisa_agir",
+      },
+    ],
+    andamentos: [
+      { processo: "impcw-p-235", data: "2026-02-26", descricao: "Procuração colhida; acompanhamento na delegacia." },
+    ],
+    pagamentos: [
+      { id: "impcw-l-235-1", valor: 300, data: "2026-02-28", descricao: "Honorários — 1ª parcela (defesa de Bruno — furto/estelionato) — conferir valor" },
+    ],
+  },
+  {
+    idx: 236,
+    match: ["paula cristina", "paiva"],
+    enriquecer: {
+      nota: "Contato/pagadora (família Paiva). Réus: Dheivid (marido/irmão) e Paulo Osmar. Contrato R$ 3.600 (8x450). Dheivid absolvido/solto em processos (dez/2025); Paulo Osmar denunciado por tráfico — audiência a marcar. Pagamentos de R$ 500/mês já constam na planilha.",
+    },
+    processos: [
+      {
+        id: "impcw-p-236-dheivid",
+        area: "criminal",
+        objeto: "Defesa do réu Dheivid — dois processos: um com absolvição e outro (junto com o Paulo) em que obteve a soltura após a sentença (dez/2025). Promotoria recorreu em um deles.",
+        parte_contraria: "Ministério Público",
+        situacao: "aguardando_tramite",
+      },
+      {
+        id: "impcw-p-236-paulo",
+        area: "criminal",
+        objeto: "Defesa do réu Paulo Osmar — denúncia por tráfico aceita; audiência de instrução a ser marcada.",
+        parte_contraria: "Ministério Público",
+        situacao: "aguardando_tramite",
+      },
+    ],
+    andamentos: [
+      { processo: "impcw-p-236-dheivid", data: "2025-12-15", descricao: "Réus (marido e irmão) absolvidos/soltos; sentença proferida. Promotoria recorreu em um dos processos." },
+      { processo: "impcw-p-236-paulo", data: "2026-03-28", descricao: "Denúncia por tráfico aceita contra Paulo Osmar; aguardando marcação da audiência." },
+    ],
+  },
+  {
+    idx: 237,
+    match: ["madlene a ribe", "madlene"],
+    enriquecer: {
+      nota: "Cliente: Madlene. Réu: Davi (serviço comunitário cumprido integralmente em 02/03/2026; pleiteado indulto). Contrato novo de R$ 5.000 (20x250, formalizado por ZapSign em 23/02/2026, pensando em quitar com o INSS). Também trata de doação de imóvel (irmão renuncia parte em favor dela). A parcela de 05/02/2026 já consta na planilha.",
+    },
+    processos: [
+      {
+        id: "impcw-p-237",
+        area: "criminal",
+        objeto: "Defesa do réu Davi — pena de prestação de serviços à comunidade cumprida integralmente (02/03/2026). Pleiteada a concessão de indulto para encerrar.",
+        parte_contraria: "Ministério Público",
+        comarca: "Tatuí",
+        situacao: "aguardando_tramite",
+      },
+    ],
+    andamentos: [
+      { processo: "impcw-p-237", data: "2026-03-02", descricao: "Réu Davi concluiu integralmente a prestação de serviços à comunidade." },
+      { processo: "impcw-p-237", data: "2026-04-06", descricao: "Pleiteada a concessão de indulto para encerrar o cumprimento." },
+    ],
+    pagamentos: [
+      { id: "impcw-l-237-1", valor: 250, data: "2026-02-23", descricao: "Honorários — parcela (contrato 20x250 — Madlene/Davi)" },
     ],
   },
 ];
