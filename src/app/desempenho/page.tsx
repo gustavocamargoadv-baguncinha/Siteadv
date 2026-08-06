@@ -16,6 +16,7 @@ import {
   resumoAno,
   salvarMeta,
   topClientes,
+  totalAteMes,
   variacao,
 } from "@/lib/metricas";
 import { BarraCarteira, GraficoArea, ListaBarras, MedidorMeta } from "@/components/Charts";
@@ -29,12 +30,13 @@ export default function DesempenhoPage() {
   const hoje = hojeISO();
   const anos = useMemo(() => anosComDados(lancamentos), [lancamentos]);
   const anoCorrente = hoje.slice(0, 4);
-  const [ano, setAno] = useState(anoCorrente);
-
-  // se o ano corrente ainda não tem lançamento, cai no ano mais recente que tem
-  useEffect(() => {
-    if (anos.length && !anos.includes(ano)) setAno(anos[anos.length - 1]);
-  }, [anos, ano]);
+  // O ano exibido é DERIVADO (não um efeito): enquanto os lançamentos ainda estão
+  // carregando só existem os anos históricos, e um efeito "corrigiria" a seleção
+  // para o último ano fechado, abrindo a página no ano errado.
+  const [anoEscolhido, setAnoEscolhido] = useState<string | null>(null);
+  const ano =
+    anoEscolhido ?? (anos.includes(anoCorrente) ? anoCorrente : anos[anos.length - 1] ?? anoCorrente);
+  const setAno = setAnoEscolhido;
 
   const resumo = useMemo(() => resumoAno(lancamentos, ano, hoje), [lancamentos, ano, hoje]);
   const idxAnterior = anos.indexOf(ano) - 1;
@@ -46,7 +48,18 @@ export default function DesempenhoPage() {
 
   const ehAnoCorrente = ano === anoCorrente;
   const projecao = projecaoAno(resumo);
-  const varAno = resumoAnterior ? variacao(resumo.total, resumoAnterior.total) : null;
+  // Comparação sempre entre períodos equivalentes: no ano corrente, confronta o
+  // acumulado até o mês de hoje com os MESMOS meses do ano anterior — comparar
+  // 8 meses contra 12 acusaria "queda" mesmo num ano que vai fechar melhor.
+  const baseAnterior = resumoAnterior
+    ? ehAnoCorrente
+      ? totalAteMes(resumoAnterior, resumo.mesesDecorridos)
+      : resumoAnterior.total
+    : null;
+  const varAno = baseAnterior !== null ? variacao(resumo.total, baseAnterior) : null;
+  const rotuloComparacao = ehAnoCorrente
+    ? `vs jan–${MESES_CURTOS[resumo.mesesDecorridos - 1]} de ${anoAnterior}`
+    : `vs ${anoAnterior}`;
 
   // meta: o que estiver salvo, senão uma sugestão (20% acima do ano anterior)
   const sugestao = useMemo(() => metaSugerida(resumo, resumoAnterior?.total ?? null), [resumo, resumoAnterior]);
@@ -123,15 +136,16 @@ export default function DesempenhoPage() {
                 <span className={`inline-flex items-center gap-1 font-semibold ${varAno >= 0 ? "text-emerald-700" : "text-red-600"}`}>
                   {varAno >= 0 ? <TrendingUp size={13} /> : <TrendingDown size={13} />}
                   {varAno >= 0 ? "+" : ""}
-                  {varAno.toFixed(0)}% vs {anoAnterior}
+                  {varAno.toFixed(0)}% {rotuloComparacao}
                 </span>
               )}
               <span className="tabular-nums">{resumo.nRecebimentos} recebimentos</span>
               <span className="tabular-nums">média {brl(mediaMensal)}/mês</span>
+              {resumo.historico && <span className="text-slate-400">da planilha de {ano}</span>}
             </div>
           </div>
 
-          <div className="min-w-[190px] flex-1 sm:max-w-xs">
+          <div className={`min-w-[190px] flex-1 sm:max-w-xs ${ehAnoCorrente ? "" : "hidden"}`}>
             <div className="mb-1.5 flex items-center justify-between">
               <p className="text-xs font-medium uppercase tracking-wide text-slate-500">Meta do ano</p>
               {editando ? (
@@ -194,10 +208,10 @@ export default function DesempenhoPage() {
       </Card>
 
       <div className="grid gap-4 lg:grid-cols-2">
-        {/* Carteira ativa por fase */}
+        {/* Carteira ativa por fase — sempre a foto de HOJE, não do ano escolhido */}
         <Card className="p-4">
           <div className="mb-3 flex items-center justify-between">
-            <h2 className="text-sm font-bold text-slate-900">⚖️ Carteira ativa</h2>
+            <h2 className="text-sm font-bold text-slate-900">⚖️ Carteira ativa {!ehAnoCorrente && <span className="font-normal text-slate-400">(hoje)</span>}</h2>
             <Link href="/processos" className="text-xs font-semibold text-brand-700 hover:underline">
               processos
             </Link>
@@ -231,21 +245,21 @@ export default function DesempenhoPage() {
         </Card>
       </div>
 
-      {/* Comparação entre anos — só aparece quando há mais de um ano com dados */}
-      {anos.length > 1 ? (
+      {/* Comparação entre anos */}
+      {anos.length > 1 && (
         <Card className="p-4">
           <h2 className="mb-3 text-sm font-bold text-slate-900">📊 Evolução anual</h2>
           <ListaBarras
-            itens={anos.map((a) => ({ rotulo: a, valor: resumoAno(lancamentos, a, hoje).total }))}
+            itens={anos.map((a) => {
+              const r = resumoAno(lancamentos, a, hoje);
+              const emCurso = a === anoCorrente;
+              return { rotulo: emCurso ? `${a} (em curso)` : a, valor: r.total };
+            })}
           />
-        </Card>
-      ) : (
-        <Card className="p-4">
-          <h2 className="mb-1.5 text-sm font-bold text-slate-900">📊 Evolução anual</h2>
-          <p className="text-sm text-slate-600">
-            Só tenho {anos[0]} no sistema, então ainda não dá para comparar ano a ano. Me mande as planilhas dos anos
-            anteriores que eu importo — aí este bloco passa a mostrar a evolução e a meta ganha uma base real de
-            crescimento.
+          <p className="mt-3 text-xs text-slate-500">
+            {anoCorrente} ainda está correndo — no ritmo atual fecha em{" "}
+            <span className="font-semibold tabular-nums text-slate-700">{brl(projecaoAno(resumoAno(lancamentos, anoCorrente, hoje)))}</span>.
+            Anos fechados vieram das planilhas de controle, já sem os lançamentos que não são de cliente.
           </p>
         </Card>
       )}

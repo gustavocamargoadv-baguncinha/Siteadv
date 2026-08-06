@@ -5,6 +5,7 @@
 
 import type { Cliente, Lancamento, Processo } from "./types";
 import { FASES } from "./fases";
+import { HISTORICO_ANUAL } from "./historico";
 import type { SituacaoCaso } from "./types";
 
 export const MESES_CURTOS = ["jan", "fev", "mar", "abr", "mai", "jun", "jul", "ago", "set", "out", "nov", "dez"];
@@ -14,10 +15,12 @@ function recebidas(lancamentos: Lancamento[]): Lancamento[] {
   return lancamentos.filter((l) => l.tipo === "receita" && !!l.pago_em);
 }
 
-/** Anos que têm pelo menos um recebimento, do mais antigo para o mais novo. */
+/** Anos com dados: os que têm recebimento lançado + os anos fechados que vieram
+ *  das planilhas antigas (histórico agregado). Do mais antigo para o mais novo. */
 export function anosComDados(lancamentos: Lancamento[]): string[] {
   const anos = new Set<string>();
   for (const l of recebidas(lancamentos)) anos.add(l.pago_em!.slice(0, 4));
+  for (const h of HISTORICO_ANUAL) anos.add(h.ano);
   return [...anos].sort();
 }
 
@@ -28,9 +31,24 @@ export interface ResumoAno {
   nRecebimentos: number;
   /** Quantos meses já contam para o ritmo: no ano corrente, até o mês de hoje. */
   mesesDecorridos: number;
+  /** Veio do histórico agregado (planilha de ano fechado), não dos lançamentos. */
+  historico?: boolean;
 }
 
 export function resumoAno(lancamentos: Lancamento[], ano: string, hojeISO: string): ResumoAno {
+  // ano fechado que veio da planilha antiga: usa o agregado direto
+  const hist = HISTORICO_ANUAL.find((h) => h.ano === ano);
+  if (hist) {
+    return {
+      ano,
+      total: hist.total,
+      porMes: hist.porMes,
+      nRecebimentos: hist.nRecebimentos,
+      mesesDecorridos: 12,
+      historico: true,
+    };
+  }
+
   const porMes = new Array(12).fill(0);
   let total = 0;
   let n = 0;
@@ -58,6 +76,13 @@ export function projecaoAno(r: ResumoAno): number {
 export function variacao(atual: number, anterior: number): number | null {
   if (!anterior) return null;
   return ((atual - anterior) / anterior) * 100;
+}
+
+/** Soma dos N primeiros meses do ano. Serve para comparar períodos equivalentes:
+ *  confrontar 8 meses do ano corrente com os 12 do ano passado diria "queda"
+ *  mesmo num ano que vai fechar melhor. */
+export function totalAteMes(r: ResumoAno, meses: number): number {
+  return r.porMes.slice(0, Math.max(0, Math.min(12, meses))).reduce((s, v) => s + v, 0);
 }
 
 export interface FatiaCarteira {
@@ -117,6 +142,11 @@ export function topClientes(
   ano: string,
   limite = 6
 ): ClienteFaturamento[] {
+  // ano fechado: o ranking já vem pronto do histórico (sem id — não há ficha
+  // de cliente para esses anos, então o nome é o que temos)
+  const hist = HISTORICO_ANUAL.find((h) => h.ano === ano);
+  if (hist) return hist.topClientes.slice(0, limite).map((c) => ({ id: "", nome: c.nome, total: c.total }));
+
   const porCliente = new Map<string, number>();
   for (const l of recebidas(lancamentos)) {
     if (!l.pago_em!.startsWith(ano) || !l.cliente_id) continue;
