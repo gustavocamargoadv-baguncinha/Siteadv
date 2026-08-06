@@ -1,11 +1,13 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
-import { Star, Trash2, Video } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { ArrowRight, Star, Trash2, TrendingUp, Video } from "lucide-react";
 import { useTable, byId } from "@/lib/hooks";
 import type { Andamento, Cliente, EventoAgenda, Lancamento, Prazo, Processo, Tarefa } from "@/lib/types";
-import { brl, dataBR, dataHoraBR, diasAteISO, formatCNJ, rotuloDias, statusLancamento, urgenciaPrazo, TIPOS_EVENTO } from "@/lib/format";
+import { brl, dataBR, dataHoraBR, diasAteISO, formatCNJ, hojeISO, rotuloDias, statusLancamento, urgenciaPrazo, TIPOS_EVENTO } from "@/lib/format";
+import { MESES_CURTOS, lerMeta, metaSugerida, projecaoAno, resumoAno } from "@/lib/metricas";
+import { MedidorMeta, Sparkline } from "@/components/Charts";
 import { Badge, Card, EmptyState, StatCard } from "@/components/ui";
 
 const COR_URGENCIA = {
@@ -86,6 +88,18 @@ export default function Dashboard() {
     }
   }
 
+  // Faixa de desempenho: ritmo do ano e meta, resumidos (o detalhe fica em /desempenho)
+  const hojeStr = hojeISO();
+  const anoAtual = hojeStr.slice(0, 4);
+  const resumo = useMemo(() => resumoAno(lancamentos, anoAtual, hojeStr), [lancamentos, anoAtual, hojeStr]);
+  const projecao = projecaoAno(resumo);
+  const [meta, setMeta] = useState(0);
+  useEffect(() => {
+    setMeta(lerMeta(anoAtual) ?? metaSugerida(resumo, null));
+  }, [anoAtual, resumo]);
+  const mesesPlot = resumo.mesesDecorridos;
+  const melhorMes = resumo.porMes.indexOf(Math.max(...resumo.porMes));
+
   const hora = new Date().getHours();
   const saudacao = hora < 12 ? "Bom dia" : hora < 18 ? "Boa tarde" : "Boa noite";
   const hojeLongo = new Date().toLocaleDateString("pt-BR", { weekday: "long", day: "2-digit", month: "long" });
@@ -108,6 +122,37 @@ export default function Dashboard() {
         <StatCard rotulo="A receber" valor={brl(aReceber)} detalhe={atrasados.length ? `${atrasados.length} em atraso` : "nada em atraso"} destaque={atrasados.length > 0} />
         <StatCard rotulo="Anotações abertas" valor={String(abertas)} detalhe="no seu bloco" />
       </div>
+
+      {/* Faixa de desempenho — o ritmo do ano em um olhar */}
+      {resumo.total > 0 && (
+        <Link href="/desempenho" className="block">
+          <Card className="p-4 transition hover:border-brand-300 hover:shadow-md">
+            <div className="grid gap-4 sm:grid-cols-[1.1fr_1fr_auto] sm:items-center">
+              <div>
+                <p className="text-xs font-medium uppercase tracking-wide text-slate-500">Recebido em {anoAtual}</p>
+                <p className="mt-0.5 text-2xl font-bold tabular-nums text-slate-900">{brl(resumo.total)}</p>
+                <p className="mt-0.5 text-xs text-slate-500">
+                  no ritmo atual, fecha em <span className="font-semibold tabular-nums text-slate-700">{brl(projecao)}</span>
+                  {melhorMes >= 0 && resumo.porMes[melhorMes] > 0 && (
+                    <span className="text-slate-400"> · melhor mês: {MESES_CURTOS[melhorMes]}</span>
+                  )}
+                </p>
+              </div>
+
+              <div className="min-w-0">
+                <div className="mb-1.5 text-brand-600">
+                  <Sparkline pontos={resumo.porMes.slice(0, mesesPlot)} />
+                </div>
+                <MedidorMeta realizado={resumo.total} meta={meta} projecao={projecao} />
+              </div>
+
+              <span className="hidden shrink-0 items-center gap-1 text-xs font-semibold text-brand-700 sm:inline-flex">
+                <TrendingUp size={14} /> desempenho <ArrowRight size={13} />
+              </span>
+            </div>
+          </Card>
+        </Link>
+      )}
 
       {/* Bloco de anotações — o "post-it" do escritório */}
       <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 shadow-sm">
