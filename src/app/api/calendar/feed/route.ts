@@ -27,13 +27,18 @@ export async function GET(req: NextRequest) {
   }
 
   const sb = createClient(url, serviceKey);
-  const { data, error } = await sb
-    .from("eventos_agenda")
-    .select("id, titulo, inicio, fim, local, notas, link_virtual")
-    .order("inicio", { ascending: true });
+  const [{ data, error }, { data: prazos, error: erroPrazos }] = await Promise.all([
+    sb.from("eventos_agenda").select("id, titulo, inicio, fim, local, notas, link_virtual").order("inicio", { ascending: true }),
+    // Prazos pendentes entram no mesmo calendário: é o que faz o alarme do
+    // Google tocar no celular sem depender de notificação do app.
+    sb.from("prazos").select("id, titulo, tipo, data_limite, data_interna, notas, status").eq("status", "pendente"),
+  ]);
 
   if (error) {
     return NextResponse.json({ erro: error.message }, { status: 500 });
+  }
+  if (erroPrazos) {
+    return NextResponse.json({ erro: erroPrazos.message }, { status: 500 });
   }
 
   const eventos: EventoICS[] = (data ?? []).map((e) => ({
@@ -45,6 +50,30 @@ export async function GET(req: NextRequest) {
     notas: e.notas ?? undefined,
     link: e.link_virtual ?? undefined,
   }));
+
+  for (const p of prazos ?? []) {
+    if (!p.data_limite) continue;
+    const tipo = p.tipo ? ` (${p.tipo})` : "";
+    // O prazo fatal sempre entra. Quando há meta interna antes dele, entra um
+    // segundo lembrete — assim o aviso chega com folga para trabalhar, e o dia
+    // do vencimento não é a primeira notícia.
+    eventos.push({
+      id: `prazo-${p.id}`,
+      titulo: `⚖️ PRAZO FATAL: ${p.titulo}${tipo}`,
+      inicio: p.data_limite,
+      notas: p.notas ?? undefined,
+      diaInteiro: true,
+    });
+    if (p.data_interna && p.data_interna < p.data_limite) {
+      eventos.push({
+        id: `prazo-interno-${p.id}`,
+        titulo: `📌 Preparar: ${p.titulo}${tipo}`,
+        inicio: p.data_interna,
+        notas: `Meta interna. O prazo fatal é ${p.data_limite.slice(0, 10).split("-").reverse().join("/")}.`,
+        diaInteiro: true,
+      });
+    }
+  }
 
   return new NextResponse(gerarICS(eventos), {
     status: 200,

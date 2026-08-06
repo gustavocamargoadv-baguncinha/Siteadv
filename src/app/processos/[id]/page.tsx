@@ -9,6 +9,7 @@ import { AREAS, brl, dataBR, formatCNJ, hojeISO, rotuloDias, statusLancamento, u
 import { Badge, BotaoPrimario, Card, EmptyState, Field, Input, PageHeader, Textarea } from "@/components/ui";
 import { Modal } from "@/components/Modal";
 import { FASES, faseInfo } from "@/lib/fases";
+import { efeitoDaFase } from "@/lib/casos";
 
 export default function ProcessoDetalhe() {
   const { id } = useParams<{ id: string }>();
@@ -71,21 +72,13 @@ export default function ProcessoDetalhe() {
   }
 
   async function definirFase(v: SituacaoCaso) {
-    if (!proc || proc.situacao === v) return;
-    const info = faseInfo(v);
-    const patch: Partial<Processo> = { situacao: v };
-    // Fase encerrada arquiva o caso (sai dos "Ativos"); voltar a uma fase
-    // ativa reativa o caso automaticamente.
-    if (info?.encerrado) patch.status = "encerrado";
-    else if (proc.status === "encerrado") patch.status = "ativo";
-    await update(proc.id, patch);
+    if (!proc) return;
+    // regra compartilhada com o "Fechar o dia" (src/lib/casos.ts)
+    const efeito = efeitoDaFase(proc, v);
+    if (!efeito) return;
+    await update(proc.id, efeito.patch);
     // deixa rastro no histórico do caso
-    await addAndamento({
-      processo_id: proc.id,
-      data: hojeISO(),
-      origem: "manual",
-      descricao: `Fase do caso atualizada para "${info?.rotulo}".`,
-    });
+    await addAndamento({ processo_id: proc.id, data: hojeISO(), origem: "manual", descricao: efeito.descricao });
   }
 
   async function definirStatus(s: StatusProcesso) {

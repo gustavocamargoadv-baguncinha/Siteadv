@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
-import { ArrowRight, Star, Trash2, TrendingUp, Video } from "lucide-react";
+import { ArrowRight, MoonStar, Star, Trash2, TrendingUp, Video } from "lucide-react";
 import { useTable, byId } from "@/lib/hooks";
 import type { Andamento, Cliente, EventoAgenda, Lancamento, Prazo, Processo, Tarefa } from "@/lib/types";
 import { brl, dataBR, dataHoraBR, diasAteISO, formatCNJ, hojeISO, rotuloDias, statusLancamento, urgenciaPrazo, TIPOS_EVENTO } from "@/lib/format";
@@ -106,9 +106,22 @@ export default function Dashboard() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-xl font-bold text-slate-900">{saudacao}, Dr. Gustavo</h1>
-        <p className="text-sm text-slate-500 first-letter:uppercase">{hojeLongo}</p>
+      <div className="flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <h1 className="text-xl font-bold text-slate-900">{saudacao}, Dr. Gustavo</h1>
+          <p className="text-sm text-slate-500 first-letter:uppercase">{hojeLongo}</p>
+        </div>
+        {/* A partir do fim da tarde o fechamento do dia vira a ação principal */}
+        <Link
+          href="/fechar-dia"
+          className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-semibold transition ${
+            hora >= 17
+              ? "bg-slate-900 text-white shadow-sm hover:bg-slate-700"
+              : "text-slate-600 ring-1 ring-slate-200 hover:text-slate-900"
+          }`}
+        >
+          <MoonStar size={15} /> Fechar o dia
+        </Link>
       </div>
 
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">

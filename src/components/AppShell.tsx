@@ -13,6 +13,7 @@ import {
   Home,
   LogOut,
   Menu,
+  MoonStar,
   Settings,
   TrendingUp,
   Users,
@@ -27,6 +28,7 @@ import { sair, supabaseConfigurado } from "@/lib/supabase";
 
 const NAV = [
   { href: "/", rotulo: "Início", icone: Home },
+  { href: "/fechar-dia", rotulo: "Fechar o dia", icone: MoonStar },
   { href: "/processos", rotulo: "Processos", icone: Briefcase },
   { href: "/agenda", rotulo: "Agenda e Prazos", icone: CalendarDays },
   { href: "/clientes", rotulo: "Clientes", icone: Users },
