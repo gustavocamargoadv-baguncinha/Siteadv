@@ -593,6 +593,7 @@ export async function gerarParcelasVincendas(): Promise<ResultadoVincendas> {
   // pagamento do cliente, começando na próxima ocorrência desse dia.
   const hojeD = new Date();
   for (const cm of CONTRATOS_MANUAIS) {
+    if (clientesComCobrancaManual.has(cm.cliente_id)) continue; // saldo já lançado à mão
     const jaPago = pagosPorCliente.get(cm.cliente_id) ?? 0;
     const saldo = Math.round((cm.valor - jaPago) * 100) / 100;
     if (saldo < 0.5) continue; // quitado

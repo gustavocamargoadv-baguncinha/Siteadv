@@ -344,6 +344,9 @@ export const CASOS_WHATSAPP: CasoWhatsapp[] = [
     pagamentos: [
       { id: "impcw-l-212-1", valor: 400, data: "2026-07-08", descricao: "Honorários — parcela (defesa de Efrain)" },
     ],
+    cobrancas: [
+      { id: "cobrwa-212-1", valor: 1600, vencimento: "2026-08-08", descricao: "Saldo estimado do contrato (6x400, pago 2) — em dia, a vencer. Conferir." },
+    ],
   },
   {
     idx: 213,
@@ -424,8 +427,8 @@ export const CASOS_WHATSAPP: CasoWhatsapp[] = [
       { processo: "impcw-p-215", data: "2026-06-29", descricao: "Procuração colhida; solicitado boletim informativo e atestado de pena." },
       { processo: "impcw-p-215", data: "2026-07-03", descricao: "Protocolado o recurso de agravo em execução (R.A.)." },
     ],
-    pagamentos: [
-      { id: "impcw-l-215-1", valor: 400, data: "2026-06-27", descricao: "Honorários — 1ª parcela (execução penal — Romer/Alex)" },
+    cobrancas: [
+      { id: "cobrwa-215-1", valor: 1400, vencimento: "2026-07-27", descricao: "Saldo estimado do contrato (execução — 4x400, pago 1). Conferir." },
     ],
   },
   {
@@ -484,6 +487,9 @@ export const CASOS_WHATSAPP: CasoWhatsapp[] = [
     ],
     andamentos: [
       { processo: "impcw-p-218", data: "2025-07-25", descricao: "Acordo cível com a vítima assinado e juntado; peticionada a revisão da audiência de ANPP." },
+    ],
+    cobrancas: [
+      { id: "cobrwa-218-1", valor: 1680, vencimento: "2026-07-20", descricao: "Saldo estimado do contrato (6x420, pago 2). Conferir." },
     ],
   },
   {
@@ -888,6 +894,9 @@ export const CASOS_WHATSAPP: CasoWhatsapp[] = [
     pagamentos: [
       { id: "impcw-l-235-1", valor: 300, data: "2026-02-28", descricao: "Honorários — 1ª parcela (defesa de Bruno — furto/estelionato) — conferir valor" },
     ],
+    cobrancas: [
+      { id: "cobrwa-235-1", valor: 2850, vencimento: "2026-03-15", descricao: "Saldo estimado (7x450, pago 1). Conferir — pode ter pago parcelas em dinheiro (300/semana)." },
+    ],
   },
   {
     idx: 236,
@@ -996,6 +1005,9 @@ export const CASOS_WHATSAPP: CasoWhatsapp[] = [
     ],
     pagamentos: [
       { id: "impcw-l-239-1", valor: 375, data: "2025-09-19", descricao: "Honorários — parcela (defesa de Érica — apropriação indébita)" },
+    ],
+    cobrancas: [
+      { id: "cobrwa-239-1", valor: 2625, vencimento: "2026-02-05", descricao: "Mensalidades em aberto (jan–jul/2026, R$375/mês) — estimado. Ela mesma pediu para negociar o débito." },
     ],
   },
   {
