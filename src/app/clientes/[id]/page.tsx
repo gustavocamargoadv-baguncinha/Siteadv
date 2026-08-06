@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useState } from "react";
-import { ArrowLeft, Mail, MapPin, Pencil, Phone } from "lucide-react";
+import { ArrowLeft, KeyRound, Mail, MapPin, Pencil, Phone } from "lucide-react";
 import { useTable } from "@/lib/hooks";
 import type { Cliente, ContratoHonorarios, Documento, Lancamento, Processo } from "@/lib/types";
 import { AREAS, brl, dataBR, formatCNJ, statusLancamento, TIPOS_HONORARIOS } from "@/lib/format";
@@ -22,12 +22,46 @@ export default function ClienteDetalhe() {
   const { rows: documentos } = useTable<Documento>("documentos");
 
   const [editando, setEditando] = useState(false);
+  const [convidando, setConvidando] = useState(false);
+  const [avisoPortal, setAvisoPortal] = useState<{ ok: boolean; texto: string } | null>(null);
   const [form, setForm] = useState({
     tipo: "pf", nome: "", cpf_cnpj: "", rg: "", nacionalidade: "", estado_civil: "", profissao: "",
     email: "", telefone: "", endereco: "", notas: "",
   });
 
   const cli = clientes.find((c) => c.id === id);
+
+  // Libera o acesso do cliente ao portal: manda o convite por e-mail e amarra
+  // aquele login à ficha. O que ele passa a enxergar é decidido pela RLS no
+  // banco (migration 0003), não por esta tela.
+  async function liberarPortal() {
+    if (!cli || convidando) return;
+    if (!cli.email) {
+      setAvisoPortal({ ok: false, texto: "Cadastre o e-mail do cliente antes de liberar o portal." });
+      return;
+    }
+    setConvidando(true);
+    setAvisoPortal(null);
+    try {
+      const { getSupabase } = await import("@/lib/supabase");
+      const { data } = await getSupabase().auth.getSession();
+      const token = data.session?.access_token;
+      const r = await fetch("/api/portal/convidar", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+        body: JSON.stringify({ cliente_id: cli.id, email: cli.email, nome: cli.nome }),
+      });
+      const json = await r.json();
+      setAvisoPortal(
+        r.ok
+          ? { ok: true, texto: `Convite enviado para ${cli.email}. O cliente define a senha pelo link do e-mail.` }
+          : { ok: false, texto: json?.erro ?? "Não foi possível liberar o acesso." }
+      );
+    } catch {
+      setAvisoPortal({ ok: false, texto: "Falha de conexão ao liberar o acesso." });
+    }
+    setConvidando(false);
+  }
 
   function abrirEdicao() {
     if (!cli) return;
@@ -107,14 +141,34 @@ export default function ClienteDetalhe() {
         titulo={cli.nome}
         sub={cli.tipo === "pf" ? `CPF ${cli.cpf_cnpj ?? "—"}` : `CNPJ ${cli.cpf_cnpj ?? "—"}`}
         acao={
-          <button
-            onClick={abrirEdicao}
-            className="inline-flex items-center gap-1.5 rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-700 transition hover:border-brand-400 hover:text-brand-700"
-          >
-            <Pencil size={15} /> Editar
-          </button>
+          <div className="flex gap-2">
+            <button
+              onClick={liberarPortal}
+              disabled={convidando}
+              title={cli.email ? `Convidar ${cli.email}` : "Cadastre o e-mail do cliente primeiro"}
+              className="inline-flex items-center gap-1.5 rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-700 transition hover:border-brand-400 hover:text-brand-700 disabled:opacity-50"
+            >
+              <KeyRound size={15} /> {convidando ? "Enviando…" : "Liberar portal"}
+            </button>
+            <button
+              onClick={abrirEdicao}
+              className="inline-flex items-center gap-1.5 rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-700 transition hover:border-brand-400 hover:text-brand-700"
+            >
+              <Pencil size={15} /> Editar
+            </button>
+          </div>
         }
       />
+
+      {avisoPortal && (
+        <p
+          className={`mb-4 rounded-lg px-3 py-2 text-sm ${
+            avisoPortal.ok ? "bg-emerald-50 text-emerald-800" : "bg-red-50 text-red-700"
+          }`}
+        >
+          {avisoPortal.texto}
+        </p>
+      )}
 
       <Card className="space-y-2 p-4 text-sm text-slate-700">
         {cli.telefone && <p className="flex items-center gap-2"><Phone size={15} className="text-slate-400" /> {cli.telefone}</p>}

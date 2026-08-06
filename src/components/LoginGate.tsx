@@ -3,13 +3,20 @@
 import { useEffect, useState } from "react";
 import type { Session } from "@supabase/supabase-js";
 import { Scale } from "lucide-react";
-import { entrar, getSessao, onAuthChange, supabaseConfigurado } from "@/lib/supabase";
+import { entrar, getPerfil, getSessao, onAuthChange, supabaseConfigurado, type Perfil } from "@/lib/supabase";
+import { PortalCliente } from "@/components/PortalCliente";
 
 // Protege o sistema com login quando o Supabase está configurado (modo nuvem).
 // No modo demonstração (sem Supabase), abre direto — não há dados na nuvem.
+//
+// Quem entra pode ser da equipe ou um cliente: o cliente vai para o portal e o
+// app do escritório nem chega a ser montado para ele. Quem de fato barra o
+// acesso ao dado é a RLS (migration 0003) — isto aqui é a porta certa, não a
+// fechadura.
 export function LoginGate({ children }: { children: React.ReactNode }) {
   const [carregando, setCarregando] = useState(true);
   const [sessao, setSessao] = useState<Session | null>(null);
+  const [perfil, setPerfil] = useState<Perfil | null>(null);
 
   useEffect(() => {
     if (!supabaseConfigurado) {
@@ -23,6 +30,23 @@ export function LoginGate({ children }: { children: React.ReactNode }) {
     return onAuthChange((s) => setSessao(s));
   }, []);
 
+  // o papel só faz sentido com sessão; some ao sair
+  useEffect(() => {
+    if (!supabaseConfigurado || !sessao) {
+      setPerfil(null);
+      return;
+    }
+    let vivo = true;
+    getPerfil()
+      .then((p) => vivo && setPerfil(p))
+      // getPerfil já cai no padrão "advogado" sozinho; este catch é a última
+      // rede para nunca deixar alguém preso na tela de carregamento
+      .catch(() => vivo && setPerfil({ papel: "advogado", cliente_id: null }));
+    return () => {
+      vivo = false;
+    };
+  }, [sessao]);
+
   // modo demo: sem login
   if (!supabaseConfigurado) return <>{children}</>;
 
@@ -35,6 +59,20 @@ export function LoginGate({ children }: { children: React.ReactNode }) {
   }
 
   if (!sessao) return <TelaLogin />;
+
+  // ainda buscando o papel: não mostra o app do escritório antes de saber quem
+  // é — mostrar e depois trocar exibiria o menu interno a um cliente.
+  if (!perfil) {
+    return (
+      <div className="flex min-h-dvh items-center justify-center bg-slate-950 text-slate-400">
+        <span className="text-sm">Carregando…</span>
+      </div>
+    );
+  }
+
+  if (perfil.papel === "cliente") {
+    return <PortalCliente nome={sessao.user.user_metadata?.nome as string | undefined} />;
+  }
 
   return <>{children}</>;
 }

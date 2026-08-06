@@ -39,6 +39,12 @@ export default function PortalPage() {
         sub="Pré-visualize o que cada cliente vê ao acessar o portal pelo celular"
       />
 
+      <div className="mb-4 rounded-lg border border-blue-200 bg-blue-50 p-3 text-sm text-blue-900">
+        Para dar acesso de verdade a alguém, abra a ficha do cliente e use{" "}
+        <span className="font-semibold">Liberar portal</span> — ele recebe um convite por e-mail e passa a
+        enxergar apenas os próprios casos. Esta tela é só a prévia.
+      </div>
+
       <Card className="mb-4 p-4">
         <div className="flex items-center gap-2 text-sm text-slate-600">
           <Eye size={16} />
