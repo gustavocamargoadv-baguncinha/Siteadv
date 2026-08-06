@@ -188,7 +188,7 @@ function ImportarCasos() {
       {resultado && (
         <div className="rounded-lg bg-emerald-50 p-3 text-sm text-emerald-800">
           ✓ {resultado.clientesComplementados} clientes complementados, {resultado.clientesNovos} novos, {resultado.processosNovos} processos,{" "}
-          {resultado.andamentosNovos} andamentos, {resultado.eventosNovos} audiências e {resultado.pagamentosNovos} pagamentos.{" "}
+          {resultado.andamentosNovos} andamentos, {resultado.eventosNovos} audiências, {resultado.pagamentosNovos} pagamentos e {resultado.cobrancasNovas} cobranças em aberto.{" "}
           {resultado.removidos} não-clientes removidos. <a href="/processos" className="font-semibold underline">Ver processos →</a>
         </div>
       )}

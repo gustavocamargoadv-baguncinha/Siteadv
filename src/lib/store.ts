@@ -531,11 +531,13 @@ export async function gerarParcelasVincendas(): Promise<ResultadoVincendas> {
 
   const pagosPorCliente = new Map<string, number>();
   const pagoEmData = new Set<string>(); // "cliente_id|vencimento" já quitado nessa data
+  const clientesComCobrancaManual = new Set<string>(); // saldo já lançado à mão (cobrwa-)
   for (const l of lancs) {
     if (l.tipo === "receita" && l.pago_em && l.cliente_id && !l.id.startsWith("impzp-venc-")) {
       pagosPorCliente.set(l.cliente_id, (pagosPorCliente.get(l.cliente_id) ?? 0) + l.valor);
       pagoEmData.add(`${l.cliente_id}|${l.vencimento}`);
     }
+    if (l.cliente_id && l.id.startsWith("cobrwa-")) clientesComCobrancaManual.add(l.cliente_id);
   }
 
   const cutoff = new Date().toISOString().slice(0, 10); // hoje (usado nos contratos manuais)
@@ -550,6 +552,9 @@ export async function gerarParcelasVincendas(): Promise<ResultadoVincendas> {
 
   for (const ct of CONTRATOS_ZAPSIGN) {
     const clienteId = ct.match_id ?? `impzp-c-${String(ct.idx).padStart(2, "0")}`;
+    // saldo já lançado à mão (cobrança manual): não gera parcela automática, para
+    // não contar duas vezes a dívida do mesmo cliente.
+    if (clientesComCobrancaManual.has(clienteId)) continue;
     const parcela = Math.round((ct.valor / ct.parcelas) * 100) / 100;
     const jaPago = pagosPorCliente.get(clienteId) ?? 0;
     const pagas = Math.min(ct.parcelas, Math.max(0, Math.round(jaPago / parcela)));
@@ -636,6 +641,7 @@ export interface ResultadoCasos {
   andamentosNovos: number;
   eventosNovos: number;
   pagamentosNovos: number;
+  cobrancasNovas: number;
   removidos: number;
 }
 
@@ -658,7 +664,7 @@ export async function importarCasosWhatsapp(): Promise<ResultadoCasos> {
 
   const r: ResultadoCasos = {
     clientesNovos: 0, clientesComplementados: 0, processosNovos: 0,
-    andamentosNovos: 0, eventosNovos: 0, pagamentosNovos: 0, removidos: 0,
+    andamentosNovos: 0, eventosNovos: 0, pagamentosNovos: 0, cobrancasNovas: 0, removidos: 0,
   };
   const digs = (x?: string) => (x ?? "").replace(/\D/g, "");
 
@@ -755,6 +761,14 @@ export async function importarCasosWhatsapp(): Promise<ResultadoCasos> {
       if (!lancExist.has(pg.id)) {
         await s.insert<Lancamento>("lancamentos", { id: pg.id, tipo: "receita", categoria: "Honorários", cliente_id: clienteId, descricao: pg.descricao, valor: pg.valor, vencimento: pg.data, pago_em: pg.data } as Partial<Lancamento>);
         r.pagamentosNovos++;
+      }
+    }
+
+    // cobranças manuais (saldo em aberto que não vem de contrato modelado)
+    for (const cb of caso.cobrancas ?? []) {
+      if (!lancExist.has(cb.id)) {
+        await s.insert<Lancamento>("lancamentos", { id: cb.id, tipo: "receita", categoria: "Honorários", cliente_id: clienteId, descricao: cb.descricao, valor: cb.valor, vencimento: cb.vencimento } as Partial<Lancamento>);
+        r.cobrancasNovas++;
       }
     }
   }

@@ -20,6 +20,12 @@ export interface CasoWhatsapp {
   andamentos: { processo: string; data: string; descricao: string }[];
   eventos?: { id: string; tipo: string; titulo: string; inicio: string; local?: string; processo?: string }[];
   pagamentos?: { id: string; valor: number; data: string; descricao: string }[];
+  // Saldos em aberto (dívida real que NÃO vem de um contrato modelado — ex.: calote
+  // com saldo de caso antigo). Entram no Financeiro como recebíveis NÃO pagos, com a
+  // data de vencimento informada (se já passou, aparecem em atraso na Cobrança).
+  // Cliente com cobrança manual é excluído da geração automática de parcelas ZapSign,
+  // para o saldo não ser contado duas vezes.
+  cobrancas?: { id: string; valor: number; vencimento: string; descricao: string }[];
 }
 
 // Clientes que NÃO são clientes (pagamentos por outros motivos) — serão removidos.
@@ -659,6 +665,9 @@ export const CASOS_WHATSAPP: CasoWhatsapp[] = [
     andamentos: [
       { processo: "impcw-p-225", data: "2026-04-27", descricao: "Audiência de instrução realizada; processo segue concluso para sentença." },
       { processo: "impcw-p-225", data: "2026-06-30", descricao: "Obtida ordem para restituição do veículo apreendido sem necessidade de pagamento de pátio." },
+    ],
+    cobrancas: [
+      { id: "cobrwa-225-1", valor: 1875, vencimento: "2026-05-23", descricao: "Saldo em aberto — 1º caso (Diego/Tainan), já com resultado de liberdade. Cobrar." },
     ],
   },
   {
