@@ -2,11 +2,12 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import { ArrowRight, MessageCircle, PhoneOff } from "lucide-react";
+import { ArrowRight, HeartHandshake, MessageCircle, PhoneOff } from "lucide-react";
 import { useTable, byId } from "@/lib/hooks";
 import type { Cliente, Lancamento } from "@/lib/types";
-import { brl, dataBR, diasAteISO, statusLancamento } from "@/lib/format";
-import { Badge, Card, EmptyState, PageHeader, StatCard } from "@/components/ui";
+import { brl, dataBR, diasAteISO, emCobranca, hojeISO, statusLancamento } from "@/lib/format";
+import { Badge, BotaoPrimario, Card, EmptyState, Field, Input, PageHeader, StatCard } from "@/components/ui";
+import { Modal } from "@/components/Modal";
 
 type Aba = "atraso" | "avencer";
 
@@ -30,14 +31,17 @@ interface Devedor {
 }
 
 export default function CobrancaPage() {
-  const { rows: lancamentos } = useTable<Lancamento>("lancamentos");
+  const { rows: lancamentos, update } = useTable<Lancamento>("lancamentos");
   const { rows: clientes } = useTable<Cliente>("clientes");
   const cliMap = byId(clientes);
 
   const [aba, setAba] = useState<Aba>("atraso");
+  const [perdoando, setPerdoando] = useState<Cliente | null>(null);
 
+  // `emCobranca` já exclui recebidos E perdoados — é o que faz o cliente
+  // perdoado sumir daqui sem sumir do sistema.
   const emAberto = useMemo(
-    () => lancamentos.filter((l) => l.tipo === "receita" && !l.pago_em && l.cliente_id),
+    () => lancamentos.filter((l) => emCobranca(l) && l.cliente_id),
     [lancamentos]
   );
 
@@ -129,15 +133,107 @@ export default function CobrancaPage() {
       ) : (
         <div className="space-y-2">
           {grupos.map((d) => (
-            <DevedorCard key={d.cliente.id} d={d} aba={aba} />
+            <DevedorCard key={d.cliente.id} d={d} aba={aba} onPerdoar={() => setPerdoando(d.cliente)} />
           ))}
         </div>
+      )}
+
+      {perdoando && (
+        <PerdoarModal
+          cliente={perdoando}
+          // TODAS as parcelas em aberto do cliente, não só as da aba visível:
+          // perdoar "o que ele deve" e deixar as futuras vivas o traria de volta
+          // à cobrança no mês seguinte.
+          parcelas={emAberto.filter((l) => l.cliente_id === perdoando.id)}
+          onFechar={() => setPerdoando(null)}
+          onConfirmar={async (motivo) => {
+            const hoje = hojeISO();
+            for (const l of emAberto.filter((x) => x.cliente_id === perdoando.id)) {
+              await update(l.id, { perdoado_em: hoje, perdoado_motivo: motivo || null });
+            }
+            setPerdoando(null);
+          }}
+        />
       )}
     </div>
   );
 }
 
-function DevedorCard({ d, aba }: { d: Devedor; aba: Aba }) {
+/** Confirmação do perdão. Mostra exatamente o que vai sair da cobrança — o
+ *  advogado precisa ver o total e a contagem antes de abrir mão. */
+function PerdoarModal({
+  cliente,
+  parcelas,
+  onFechar,
+  onConfirmar,
+}: {
+  cliente: Cliente;
+  parcelas: Lancamento[];
+  onFechar: () => void;
+  onConfirmar: (motivo: string) => Promise<void>;
+}) {
+  const [motivo, setMotivo] = useState("");
+  const [salvando, setSalvando] = useState(false);
+  const total = parcelas.reduce((s, l) => s + l.valor, 0);
+
+  return (
+    <Modal aberto titulo="Perdoar a dívida" onFechar={onFechar}>
+      <div className="space-y-3">
+        <p className="text-sm text-slate-700">
+          Abrir mão de <span className="font-bold tabular-nums text-slate-900">{brl(total)}</span> de{" "}
+          <span className="font-semibold">{cliente.nome}</span> — {parcelas.length} parcela
+          {parcelas.length === 1 ? "" : "s"} em aberto.
+        </p>
+        <ul className="max-h-40 space-y-1 overflow-y-auto rounded-lg bg-slate-50 p-2.5 text-xs text-slate-600">
+          {parcelas.map((l) => (
+            <li key={l.id} className="flex justify-between gap-3">
+              <span className="min-w-0 truncate">{l.descricao.replace(/ — honorários.*/, "")}</span>
+              <span className="shrink-0 tabular-nums">
+                {brl(l.valor)} · venc. {dataBR(l.vencimento)}
+              </span>
+            </li>
+          ))}
+        </ul>
+        <Field rotulo="Motivo (opcional)">
+          <Input
+            autoFocus
+            value={motivo}
+            onChange={(e) => setMotivo(e.target.value)}
+            placeholder="acordo, cliente sumiu, pro bono…"
+          />
+        </Field>
+        <p className="rounded-lg bg-slate-50 p-2.5 text-xs text-slate-500">
+          Ele sai da cobrança ativa agora. Nada é apagado: o valor fica registrado na ficha dele e na aba
+          <span className="font-semibold"> Perdoados</span> do Financeiro, de onde dá para devolver à cobrança. Perdão
+          nunca conta como faturamento.
+        </p>
+        <div className="flex justify-end gap-2 pt-1">
+          <button
+            onClick={onFechar}
+            className="rounded-lg px-3 py-2 text-sm font-semibold text-slate-600 transition hover:text-slate-900"
+          >
+            Cancelar
+          </button>
+          <BotaoPrimario
+            disabled={salvando}
+            onClick={async () => {
+              setSalvando(true);
+              try {
+                await onConfirmar(motivo.trim());
+              } finally {
+                setSalvando(false);
+              }
+            }}
+          >
+            <HeartHandshake size={15} /> {salvando ? "Perdoando…" : "Perdoar dívida"}
+          </BotaoPrimario>
+        </div>
+      </div>
+    </Modal>
+  );
+}
+
+function DevedorCard({ d, aba, onPerdoar }: { d: Devedor; aba: Aba; onPerdoar: () => void }) {
   const emAtraso = aba === "atraso";
   const msg =
     `Olá, ${primeiroNome(d.cliente.nome)}! Aqui é do escritório do Dr. Gustavo Camargo. ` +
@@ -205,6 +301,14 @@ function DevedorCard({ d, aba }: { d: Devedor; aba: Aba }) {
         >
           Ver ficha <ArrowRight size={13} />
         </Link>
+        {/* discreto de propósito: perdoar é exceção, não a ação esperada aqui */}
+        <button
+          onClick={onPerdoar}
+          className="ml-auto inline-flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-xs font-medium text-slate-500 transition hover:bg-slate-100 hover:text-slate-800"
+          title="Abrir mão desta dívida — sai da cobrança e fica arquivada"
+        >
+          <HeartHandshake size={13} /> Perdoar
+        </button>
       </div>
     </Card>
   );

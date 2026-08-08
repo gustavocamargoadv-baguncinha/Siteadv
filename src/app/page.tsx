@@ -5,7 +5,7 @@ import { useEffect, useMemo, useState } from "react";
 import { ArrowRight, MoonStar, Star, Trash2, TrendingUp, Video } from "lucide-react";
 import { useTable, byId } from "@/lib/hooks";
 import type { Andamento, Cliente, EventoAgenda, Lancamento, Prazo, Processo, Tarefa } from "@/lib/types";
-import { brl, dataBR, dataHoraBR, diasAteISO, formatCNJ, hojeISO, rotuloDias, statusLancamento, urgenciaPrazo, TIPOS_EVENTO } from "@/lib/format";
+import { brl, dataBR, dataHoraBR, diasAteISO, emCobranca, formatCNJ, hojeISO, rotuloDias, statusLancamento, urgenciaPrazo, TIPOS_EVENTO } from "@/lib/format";
 import { MESES_CURTOS, lerMeta, metaSugerida, projecaoAno, resumoAno } from "@/lib/metricas";
 import { MedidorMeta, Sparkline } from "@/components/Charts";
 import { Badge, Card, EmptyState, StatCard } from "@/components/ui";
@@ -45,9 +45,7 @@ export default function Dashboard() {
     .sort((a, b) => a.inicio.localeCompare(b.inicio))
     .slice(0, 5);
 
-  const aReceber = lancamentos
-    .filter((l) => l.tipo === "receita" && !l.pago_em)
-    .reduce((s, l) => s + l.valor, 0);
+  const aReceber = lancamentos.filter(emCobranca).reduce((s, l) => s + l.valor, 0);
   const atrasados = lancamentos.filter((l) => l.tipo === "receita" && statusLancamento(l) === "atrasado");
 
   const ultimosAndamentos = [...andamentos].sort((a, b) => b.data.localeCompare(a.data)).slice(0, 5);

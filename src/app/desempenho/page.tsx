@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { Check, Pencil, TrendingDown, TrendingUp } from "lucide-react";
 import { useTable } from "@/lib/hooks";
 import type { Cliente, Lancamento, Processo } from "@/lib/types";
@@ -23,6 +24,7 @@ import { BarraCarteira, GraficoArea, ListaBarras, MedidorMeta } from "@/componen
 import { Card, EmptyState, PageHeader } from "@/components/ui";
 
 export default function DesempenhoPage() {
+  const router = useRouter();
   const { rows: lancamentos } = useTable<Lancamento>("lancamentos");
   const { rows: processos } = useTable<Processo>("processos");
   const { rows: clientes } = useTable<Cliente>("clientes");
@@ -91,6 +93,15 @@ export default function DesempenhoPage() {
 
   const mediaMensal = resumo.mesesDecorridos ? resumo.total / resumo.mesesDecorridos : 0;
   const melhorMes = resumo.porMes.indexOf(Math.max(...resumo.porMes));
+
+  // Detalhar o mês só faz sentido nos anos que têm lançamento de verdade. Os
+  // anos fechados vieram das planilhas como total agregado por mês: o clique
+  // abriria uma lista vazia e pareceria bug.
+  const detalharMes = resumo.historico
+    ? undefined
+    : (i: number) => router.push(`/financeiro?mes=${ano}-${String(i + 1).padStart(2, "0")}`);
+
+  const verFase = (i: number) => router.push(`/processos?fase=${carteira.fatias[i].fase}`);
 
   if (anos.length === 0) {
     return (
@@ -199,12 +210,18 @@ export default function DesempenhoPage() {
             </span>
           )}
         </div>
-        <GraficoArea pontos={pontos} rotulos={rotulos} ultimoParcial={ehAnoCorrente} />
-        {ehAnoCorrente && (
-          <p className="mt-1 text-xs text-slate-400">
-            O mês corrente ({MESES_CURTOS[resumo.mesesDecorridos - 1]}) ainda está em curso — por isso aparece esmaecido.
-          </p>
-        )}
+        <GraficoArea
+          pontos={pontos}
+          rotulos={rotulos}
+          ultimoParcial={ehAnoCorrente}
+          onSelecionar={detalharMes}
+        />
+        <p className="mt-1 text-xs text-slate-400">
+          {ehAnoCorrente && `O mês corrente (${MESES_CURTOS[resumo.mesesDecorridos - 1]}) ainda está em curso — por isso aparece esmaecido. `}
+          {detalharMes
+            ? "Toque num mês para ver os recebimentos daquele mês."
+            : `${ano} veio da planilha de controle, que guarda só o total de cada mês — não há recebimento a abrir.`}
+        </p>
       </Card>
 
       <div className="grid gap-4 lg:grid-cols-2">
@@ -224,7 +241,8 @@ export default function DesempenhoPage() {
                 <span className="text-2xl font-bold tabular-nums text-slate-900">{carteira.ativos}</span> casos em andamento
                 <span className="text-slate-400"> · {carteira.encerrados} encerrados</span>
               </p>
-              <BarraCarteira fatias={carteira.fatias} />
+              <BarraCarteira fatias={carteira.fatias} onSelecionar={verFase} />
+              <p className="mt-3 text-xs text-slate-400">Toque numa fase para ver os casos.</p>
             </>
           )}
         </Card>

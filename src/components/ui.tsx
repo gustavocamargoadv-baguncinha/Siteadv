@@ -14,12 +14,23 @@ export function PageHeader({ titulo, sub, acao }: { titulo: string; sub?: string
   );
 }
 
-export function BotaoPrimario({ children, onClick, type = "button" }: { children: ReactNode; onClick?: () => void; type?: "button" | "submit" }) {
+export function BotaoPrimario({
+  children,
+  onClick,
+  type = "button",
+  disabled = false,
+}: {
+  children: ReactNode;
+  onClick?: () => void;
+  type?: "button" | "submit";
+  disabled?: boolean;
+}) {
   return (
     <button
       type={type}
       onClick={onClick}
-      className="inline-flex items-center gap-1.5 rounded-lg bg-brand-600 px-3.5 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-brand-700 active:scale-95"
+      disabled={disabled}
+      className="inline-flex items-center gap-1.5 rounded-lg bg-brand-600 px-3.5 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-brand-700 active:scale-95 disabled:pointer-events-none disabled:opacity-60"
     >
       {children}
     </button>

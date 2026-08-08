@@ -159,6 +159,14 @@ export interface Lancamento {
   vencimento: string; // ISO date
   pago_em?: string;
   forma_pagamento?: string;
+  // Dívida perdoada: o escritório abriu mão de receber. NÃO é o mesmo que
+  // recebida — nunca entra no faturamento. Sai da cobrança ativa mas continua
+  // guardada, para o histórico do cliente. Reversível (basta limpar o campo).
+  // `null` (e não `undefined`) é o que desfaz o perdão: o Supabase recebe o
+  // patch como JSON, e chave com `undefined` some na serialização — a coluna
+  // nunca seria limpa em produção.
+  perdoado_em?: string | null; // ISO date
+  perdoado_motivo?: string | null;
   created_at?: string;
 }
 

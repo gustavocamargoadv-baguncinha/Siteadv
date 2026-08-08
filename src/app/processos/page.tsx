@@ -1,22 +1,41 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
-import { Plus, Search, Download, Loader2 } from "lucide-react";
+import { Suspense, useMemo, useState } from "react";
+import { useSearchParams } from "next/navigation";
+import { Plus, Search, Download, Loader2, X } from "lucide-react";
 import { useTable, byId } from "@/lib/hooks";
-import type { Cliente, Membro, Processo } from "@/lib/types";
+import type { Cliente, Membro, Processo, SituacaoCaso } from "@/lib/types";
 import { AREAS, formatCNJ, dataBR } from "@/lib/format";
 import { Badge, BotaoPrimario, Card, EmptyState, Field, Input, PageHeader, Select, Textarea } from "@/components/ui";
 import { Modal } from "@/components/Modal";
 import { faseInfo } from "@/lib/fases";
+import { faseCarteira } from "@/lib/metricas";
 
 const COR_STATUS = { ativo: "verde", suspenso: "ambar", arquivado: "cinza", encerrado: "azul" } as const;
 
+// useSearchParams() precisa de fronteira de Suspense no App Router — sem ela o
+// build falha ao pré-renderizar a rota.
 export default function ProcessosPage() {
+  return (
+    <Suspense fallback={<PageHeader titulo="Processos" sub="carregando…" />}>
+      <ProcessosConteudo />
+    </Suspense>
+  );
+}
+
+function ProcessosConteudo() {
   const { rows: processos, insert } = useTable<Processo>("processos");
   const { rows: clientes } = useTable<Cliente>("clientes");
   const { rows: membros } = useTable<Membro>("membros");
   const cliMap = byId(clientes);
+
+  // Fase vinda da Desempenho (clique na carteira). Guardada em estado próprio
+  // para o "✕" limpar sem precisar mexer na URL.
+  const faseUrl = useSearchParams().get("fase") as SituacaoCaso | null;
+  const [faseLimpa, setFaseLimpa] = useState(false);
+  const fase = faseLimpa ? null : faseUrl;
+  const infoFase = faseInfo(fase ?? undefined);
 
   const [busca, setBusca] = useState("");
   const [filtroStatus, setFiltroStatus] = useState("ativo");
@@ -39,7 +58,10 @@ export default function ProcessosPage() {
   const filtrados = useMemo(() => {
     const q = busca.toLowerCase();
     return processos
-      .filter((p) => (filtroStatus === "todos" ? true : p.status === filtroStatus))
+      // O filtro de fase SUBSTITUI o de status: a carteira da Desempenho conta
+      // todo caso não encerrado (inclusive suspensos e arquivados), então cruzar
+      // os dois traria menos casos do que o número em que ele acabou de clicar.
+      .filter((p) => (fase ? faseCarteira(p) === fase : filtroStatus === "todos" ? true : p.status === filtroStatus))
       .filter((p) => {
         if (!q) return true;
         const cli = cliMap.get(p.cliente_id);
@@ -51,7 +73,7 @@ export default function ProcessosPage() {
         );
       })
       .sort((a, b) => (b.created_at ?? "").localeCompare(a.created_at ?? ""));
-  }, [processos, busca, filtroStatus, cliMap]);
+  }, [processos, busca, filtroStatus, fase, cliMap]);
 
   function abrirNovo() {
     setCnjMsg(null);
@@ -137,6 +159,24 @@ export default function ProcessosPage() {
         acao={<BotaoPrimario onClick={abrirNovo}><Plus size={16} /> Novo processo</BotaoPrimario>}
       />
 
+      {infoFase && (
+        <div className="mb-3 flex flex-wrap items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2">
+          <span className="text-sm text-slate-600">Vindo do Desempenho — mostrando só:</span>
+          <Badge cor={infoFase.cor}>
+            {infoFase.emoji} {infoFase.rotulo}
+          </Badge>
+          <span className="text-sm tabular-nums text-slate-500">
+            {filtrados.length} caso{filtrados.length === 1 ? "" : "s"}
+          </span>
+          <button
+            onClick={() => setFaseLimpa(true)}
+            className="ml-auto inline-flex items-center gap-1 rounded-lg px-2 py-1 text-xs font-semibold text-slate-600 transition hover:bg-white hover:text-slate-900"
+          >
+            <X size={13} /> limpar
+          </button>
+        </div>
+      )}
+
       <div className="mb-4 flex flex-wrap gap-2">
         <div className="relative flex-1 min-w-48">
           <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
@@ -150,7 +190,9 @@ export default function ProcessosPage() {
         <select
           value={filtroStatus}
           onChange={(e) => setFiltroStatus(e.target.value)}
-          className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm"
+          disabled={!!fase}
+          title={fase ? "Enquanto o filtro de fase estiver ativo, ele manda na lista" : undefined}
+          className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm disabled:bg-slate-100 disabled:text-slate-400"
         >
           <option value="ativo">Ativos</option>
           <option value="suspenso">Suspensos</option>

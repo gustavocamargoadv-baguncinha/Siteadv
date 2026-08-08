@@ -12,7 +12,7 @@ import Link from "next/link";
 import { ArrowRight, Check, Star, Trash2 } from "lucide-react";
 import { useTable, byId } from "@/lib/hooks";
 import type { Andamento, Cliente, EventoAgenda, Lancamento, Prazo, Processo, Tarefa } from "@/lib/types";
-import { brl, dataBR, dataHoraBR, formatCNJ, hojeISO, statusLancamento, TIPOS_EVENTO } from "@/lib/format";
+import { brl, dataBR, dataHoraBR, emCobranca, formatCNJ, hojeISO, statusLancamento, TIPOS_EVENTO } from "@/lib/format";
 import { PRESETS_PRAZO, calcularPrazo } from "@/lib/prazos";
 import { AndamentoRapido } from "@/components/AndamentoRapido";
 import { Badge, Card, EmptyState, Field, Input, PageHeader, Select } from "@/components/ui";
@@ -61,7 +61,7 @@ export default function FecharDiaPage() {
   const aBaixar = useMemo(
     () =>
       lancamentos
-        .filter((l) => l.tipo === "receita" && !l.pago_em && l.vencimento <= limiteBaixa)
+        .filter((l) => emCobranca(l) && l.vencimento <= limiteBaixa)
         .sort((a, b) => a.vencimento.localeCompare(b.vencimento))
         .slice(0, 8),
     [lancamentos, limiteBaixa]

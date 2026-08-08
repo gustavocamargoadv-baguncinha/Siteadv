@@ -48,12 +48,27 @@ export function rotuloDias(dataLimite: string): string {
   return `em ${d} dias`;
 }
 
-export type StatusLancamento = "pago" | "atrasado" | "pendente";
+export type StatusLancamento = "pago" | "perdoado" | "atrasado" | "pendente";
 
-export function statusLancamento(l: { pago_em?: string; vencimento: string }): StatusLancamento {
+export function statusLancamento(l: {
+  pago_em?: string | null;
+  perdoado_em?: string | null;
+  vencimento: string;
+}): StatusLancamento {
   if (l.pago_em) return "pago";
+  // antes do teste de vencimento: dívida perdoada não é "atrasada", ela saiu
+  // da régua de cobrança — continuar chamando de atraso reacenderia o vermelho
+  // em todas as telas.
+  if (l.perdoado_em) return "perdoado";
   if (diasAteISO(l.vencimento) < 0) return "atrasado";
   return "pendente";
+}
+
+/** Ainda é para cobrar? Fonte única do "em aberto": nem recebido, nem perdoado.
+ *  Toda tela que soma dívida deve passar por aqui — foi por espalhar
+ *  `!l.pago_em` que a regra de perdão precisaria ser lembrada em seis lugares. */
+export function emCobranca(l: { tipo: string; pago_em?: string | null; perdoado_em?: string | null }): boolean {
+  return l.tipo === "receita" && !l.pago_em && !l.perdoado_em;
 }
 
 /** Máscara visual do número CNJ: NNNNNNN-DD.AAAA.J.TR.OOOO */

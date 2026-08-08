@@ -3,10 +3,10 @@
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useState } from "react";
-import { ArrowLeft, KeyRound, Mail, MapPin, Pencil, Phone } from "lucide-react";
+import { ArrowLeft, HeartHandshake, KeyRound, Mail, MapPin, Pencil, Phone, RotateCcw } from "lucide-react";
 import { useTable } from "@/lib/hooks";
 import type { Cliente, ContratoHonorarios, Documento, Lancamento, Processo } from "@/lib/types";
-import { AREAS, brl, dataBR, formatCNJ, statusLancamento, TIPOS_HONORARIOS } from "@/lib/format";
+import { AREAS, brl, dataBR, emCobranca, formatCNJ, statusLancamento, TIPOS_HONORARIOS } from "@/lib/format";
 import { Badge, BotaoPrimario, Card, EmptyState, Field, Input, PageHeader, Select, Textarea } from "@/components/ui";
 import { Modal } from "@/components/Modal";
 import { GerarDocumentos } from "@/components/GerarDocumentos";
@@ -18,7 +18,7 @@ export default function ClienteDetalhe() {
   const { rows: clientes, update: updateCliente } = useTable<Cliente>("clientes");
   const { rows: processos } = useTable<Processo>("processos");
   const { rows: contratos } = useTable<ContratoHonorarios>("contratos_honorarios");
-  const { rows: lancamentos } = useTable<Lancamento>("lancamentos");
+  const { rows: lancamentos, update } = useTable<Lancamento>("lancamentos");
   const { rows: documentos } = useTable<Documento>("documentos");
 
   const [editando, setEditando] = useState(false);
@@ -113,7 +113,12 @@ export default function ClienteDetalhe() {
   const contratosCli = contratos.filter((h) => h.cliente_id === cli.id);
   const financeiro = lancamentos.filter((l) => l.cliente_id === cli.id);
   const docs = documentos.filter((d) => d.cliente_id === cli.id);
-  const emAberto = financeiro.filter((l) => l.tipo === "receita" && !l.pago_em).reduce((s, l) => s + l.valor, 0);
+  const emAberto = financeiro.filter(emCobranca).reduce((s, l) => s + l.valor, 0);
+  // Perdoado fica à parte do "em aberto": não é dívida (não se cobra mais) nem
+  // receita (nunca entrou). É o histórico — o que pesa antes de aceitar um caso
+  // novo desse cliente.
+  const perdoado = financeiro.filter((l) => l.tipo === "receita" && l.perdoado_em);
+  const totalPerdoado = perdoado.reduce((s, l) => s + l.valor, 0);
 
   // Resumo contratado × recebido × em aberto (reproduz a antiga aba "Processos" da planilha)
   const totalContratado = contratosCli.reduce((s, h) => s + (h.valor_fixo ?? 0), 0);
@@ -129,7 +134,7 @@ export default function ClienteDetalhe() {
     .sort((a, b) => a.vencimento.localeCompare(b.vencimento));
   const parcelasTotal = recebiveis.length;
   const parcelasPagas = recebiveis.filter((l) => l.pago_em).length;
-  const proximaParcela = recebiveis.find((l) => !l.pago_em);
+  const proximaParcela = recebiveis.find((l) => emCobranca(l));
 
   return (
     <div className="space-y-4">
@@ -265,8 +270,30 @@ export default function ClienteDetalhe() {
         <Card className="p-4">
           <div className="mb-3 flex items-center justify-between">
             <h2 className="text-sm font-bold text-slate-900">Financeiro</h2>
-            {emAberto > 0 && <Badge cor="ambar">{brl(emAberto)} em aberto</Badge>}
+            <div className="flex flex-wrap items-center gap-1.5">
+              {emAberto > 0 && <Badge cor="ambar">{brl(emAberto)} em aberto</Badge>}
+              {totalPerdoado > 0 && <Badge cor="cinza">{brl(totalPerdoado)} perdoado</Badge>}
+            </div>
           </div>
+          {totalPerdoado > 0 && (
+            <div className="mb-3 flex flex-wrap items-center gap-2 rounded-lg bg-slate-50 px-3 py-2">
+              <HeartHandshake size={14} className="shrink-0 text-slate-400" />
+              <p className="min-w-0 flex-1 text-xs text-slate-600">
+                O escritório abriu mão de <span className="font-semibold tabular-nums">{brl(totalPerdoado)}</span>
+                {perdoado[0]?.perdoado_em && ` em ${dataBR(perdoado[0].perdoado_em)}`}
+                {perdoado[0]?.perdoado_motivo && ` — ${perdoado[0].perdoado_motivo}`}.
+              </p>
+              <button
+                onClick={async () => {
+                  for (const l of perdoado) await update(l.id, { perdoado_em: null, perdoado_motivo: null });
+                }}
+                className="inline-flex shrink-0 items-center gap-1 rounded-lg px-2 py-1 text-xs font-semibold text-slate-600 transition hover:bg-white hover:text-slate-900"
+                title="Devolver à cobrança ativa"
+              >
+                <RotateCcw size={12} /> devolver
+              </button>
+            </div>
+          )}
           {financeiro.length === 0 ? (
             <EmptyState>Sem lançamentos.</EmptyState>
           ) : (

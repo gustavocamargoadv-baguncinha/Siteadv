@@ -41,6 +41,7 @@ export function GraficoArea({
   rotulos,
   altura = 200,
   ultimoParcial = false,
+  onSelecionar,
 }: {
   pontos: number[];
   rotulos: string[];
@@ -48,6 +49,9 @@ export function GraficoArea({
   /** O último ponto é o mês em curso (ainda incompleto) — desenhado esmaecido
    *  para não parecer uma queda real na tendência. */
   ultimoParcial?: boolean;
+  /** Torna os pontos clicáveis (detalhar o período). Quando ausente, o gráfico
+   *  segue só com tooltip — sem cursor de link prometendo algo que não acontece. */
+  onSelecionar?: (indice: number) => void;
 }) {
   const [ativo, setAtivo] = useState<number | null>(null);
   const { ref, largura } = useLargura<HTMLDivElement>();
@@ -143,7 +147,10 @@ export function GraficoArea({
               onMouseEnter={() => setAtivo(i)}
               onMouseLeave={() => setAtivo(null)}
               onTouchStart={() => setAtivo(i)}
-              style={{ cursor: "pointer" }}
+              onClick={onSelecionar ? () => onSelecionar(i) : undefined}
+              style={{ cursor: onSelecionar ? "pointer" : "default" }}
+              role={onSelecionar ? "button" : undefined}
+              aria-label={onSelecionar ? `Ver recebimentos de ${rotulos[i]}` : undefined}
             />
           </g>
         ))}
@@ -157,6 +164,7 @@ export function GraficoArea({
           <span className="font-semibold tabular-nums">{brl(pontos[ativo])}</span>
           <span className="ml-1.5 text-slate-300">{rotulos[ativo]}</span>
           {ultimoParcial && ativo === pontos.length - 1 && <span className="ml-1 text-slate-400">(em curso)</span>}
+          {onSelecionar && <span className="ml-1.5 text-slate-400">· toque para detalhar</span>}
         </div>
       )}
     </div>
@@ -170,8 +178,11 @@ export function GraficoArea({
  * ------------------------------------------------------------------ */
 export function BarraCarteira({
   fatias,
+  onSelecionar,
 }: {
   fatias: { rotulo: string; emoji: string; cor: string; quantidade: number }[];
+  /** Torna cada fatia clicável (abrir a lista daquela fase). */
+  onSelecionar?: (indice: number) => void;
 }) {
   const total = fatias.reduce((s, f) => s + f.quantidade, 0);
   if (total === 0) return null;
@@ -179,28 +190,59 @@ export function BarraCarteira({
   return (
     <div>
       <div className="flex h-3.5 w-full gap-0.5 overflow-hidden rounded-full">
-        {fatias.map((f) => (
-          <div
-            key={f.rotulo}
-            className="h-full first:rounded-l-full last:rounded-r-full"
-            style={{ width: `${(f.quantidade / total) * 100}%`, backgroundColor: f.cor }}
-            title={`${f.rotulo}: ${f.quantidade}`}
-          />
-        ))}
+        {fatias.map((f, i) =>
+          onSelecionar ? (
+            <button
+              key={f.rotulo}
+              type="button"
+              onClick={() => onSelecionar(i)}
+              aria-label={`Ver os ${f.quantidade} casos em ${f.rotulo}`}
+              className="h-full transition first:rounded-l-full last:rounded-r-full hover:opacity-75"
+              style={{ width: `${(f.quantidade / total) * 100}%`, backgroundColor: f.cor }}
+              title={`${f.rotulo}: ${f.quantidade}`}
+            />
+          ) : (
+            <div
+              key={f.rotulo}
+              className="h-full first:rounded-l-full last:rounded-r-full"
+              style={{ width: `${(f.quantidade / total) * 100}%`, backgroundColor: f.cor }}
+              title={`${f.rotulo}: ${f.quantidade}`}
+            />
+          )
+        )}
       </div>
       {/* uma coluna: o rótulo da fase precisa caber inteiro — truncar destruiria a
           distinção entre "Aguardando trâmite" e "Aguardando o cliente" */}
       <ul className="mt-3 space-y-1.5">
-        {fatias.map((f) => (
-          <li key={f.rotulo} className="flex items-center gap-2 text-sm">
-            <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ backgroundColor: f.cor }} aria-hidden />
-            <span className="min-w-0 flex-1 text-slate-700">{f.rotulo}</span>
-            <span className="shrink-0 font-semibold tabular-nums text-slate-900">{f.quantidade}</span>
-            <span className="w-10 shrink-0 text-right text-xs tabular-nums text-slate-400">
-              {Math.round((f.quantidade / total) * 100)}%
-            </span>
-          </li>
-        ))}
+        {fatias.map((f, i) => {
+          const conteudo = (
+            <>
+              <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ backgroundColor: f.cor }} aria-hidden />
+              <span className="min-w-0 flex-1 text-left text-slate-700">{f.rotulo}</span>
+              <span className="shrink-0 font-semibold tabular-nums text-slate-900">{f.quantidade}</span>
+              <span className="w-10 shrink-0 text-right text-xs tabular-nums text-slate-400">
+                {Math.round((f.quantidade / total) * 100)}%
+              </span>
+            </>
+          );
+          return (
+            <li key={f.rotulo}>
+              {onSelecionar ? (
+                // linha inteira clicável: no celular o alvo é a largura do card,
+                // não a bolinha de 10px
+                <button
+                  type="button"
+                  onClick={() => onSelecionar(i)}
+                  className="-mx-2 flex w-[calc(100%+1rem)] items-center gap-2 rounded-lg px-2 py-1 text-sm transition hover:bg-slate-50"
+                >
+                  {conteudo}
+                </button>
+              ) : (
+                <span className="flex items-center gap-2 text-sm">{conteudo}</span>
+              )}
+            </li>
+          );
+        })}
       </ul>
     </div>
   );

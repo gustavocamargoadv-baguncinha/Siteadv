@@ -102,20 +102,32 @@ const COR_FASE: Partial<Record<SituacaoCaso, string>> = {
   aguardando_cliente: "#2563eb",
 };
 
+/** Em que fatia da carteira ativa este processo cai — `null` quando está
+ *  encerrado (fora da carteira).
+ *
+ *  Fonte única da regra: o gráfico da Desempenho e o filtro da lista de
+ *  Processos chamam esta mesma função. Se cada tela reimplementasse o critério,
+ *  o card diria "33 casos" e a lista abriria com outro número — e aí não dá
+ *  para confiar em nenhum dos dois. */
+export function faseCarteira(p: Processo): SituacaoCaso | null {
+  const info = FASES.find((f) => f.valor === p.situacao);
+  if (p.status === "encerrado" || info?.encerrado) return null;
+  // sem fase definida entra como "preciso agir" — é o padrão seguro: aparece
+  // no vermelho e cobra uma decisão, em vez de sumir do radar.
+  return info?.valor ?? "precisa_agir";
+}
+
 /** Distribuição da carteira ATIVA por fase (os encerrados viram estatística à
  *  parte — misturá-los esconderia onde está o trabalho de verdade). */
 export function distribuicaoCarteira(processos: Processo[]): { fatias: FatiaCarteira[]; ativos: number; encerrados: number } {
   const ativosPorFase = new Map<SituacaoCaso, number>();
   let encerrados = 0;
   for (const p of processos) {
-    const info = FASES.find((f) => f.valor === p.situacao);
-    if (p.status === "encerrado" || info?.encerrado) {
+    const fase = faseCarteira(p);
+    if (fase === null) {
       encerrados++;
       continue;
     }
-    // sem fase definida entra como "preciso agir" — é o padrão seguro: aparece
-    // no vermelho e cobra uma decisão, em vez de sumir do radar.
-    const fase: SituacaoCaso = info?.valor ?? "precisa_agir";
     ativosPorFase.set(fase, (ativosPorFase.get(fase) ?? 0) + 1);
   }
   const fatias: FatiaCarteira[] = [];
