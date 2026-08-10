@@ -29,7 +29,9 @@ export interface CasoWhatsapp {
 }
 
 // Clientes que NÃO são clientes (pagamentos por outros motivos) — serão removidos.
-export const REMOVER_CLIENTES = ["imp26c-joaoluizdeo", "imp26c-gustavorob"];
+// `imp26c-luanfrancisco`: amigo do Dr. Gustavo; os PIX que apareceram no extrato
+// são pessoais, não honorários.
+export const REMOVER_CLIENTES = ["imp26c-joaoluizdeo", "imp26c-gustavorob", "imp26c-luanfrancisco"];
 
 export const CASOS_WHATSAPP: CasoWhatsapp[] = [
   {

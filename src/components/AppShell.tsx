@@ -98,11 +98,18 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       {drawer && (
         <div className="fixed inset-0 z-40 md:hidden" onClick={() => setDrawer(false)}>
           <div className="absolute inset-0 bg-black/50" />
-          <aside className="absolute inset-y-0 left-0 flex w-64 flex-col bg-slate-950" onClick={(e) => e.stopPropagation()}>
-            <div className="flex items-center justify-between pr-3">
+          <aside
+            className="absolute inset-y-0 left-0 flex w-64 flex-col bg-slate-950 pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between pr-2">
               <Logo />
-              <button onClick={() => setDrawer(false)} className="rounded-lg p-2 text-slate-400" aria-label="Fechar menu">
-                <X size={20} />
+              <button
+                onClick={() => setDrawer(false)}
+                className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-lg text-slate-400 transition hover:bg-white/10"
+                aria-label="Fechar menu"
+              >
+                <X size={22} />
               </button>
             </div>
             <NavLinks onNavigate={() => setDrawer(false)} />
@@ -110,34 +117,51 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         </div>
       )}
 
-      {/* Barra superior */}
-      <header className="sticky top-0 z-20 flex h-14 items-center gap-3 border-b border-slate-200 bg-white px-4 md:pl-64">
-        <button onClick={() => setDrawer(true)} className="rounded-lg p-1.5 text-slate-600 hover:bg-slate-100 md:hidden" aria-label="Abrir menu">
-          <Menu size={22} />
-        </button>
-        <div className="flex items-center md:hidden">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/logo-camargo.png" alt="Gustavo Camargo Advocacia" className="h-7 w-auto" />
-        </div>
-        <div className="ml-auto flex items-center gap-1">
-          <Link href="/agenda" className="relative inline-flex rounded-lg p-2 text-slate-600 hover:bg-slate-100" aria-label="Prazos urgentes">
-            <Bell size={20} />
-            {urgentes > 0 && (
-              <span className="absolute -right-0.5 -top-0.5 flex h-4.5 min-w-4 items-center justify-center rounded-full bg-red-600 px-1 text-[10px] font-bold text-white">
-                {urgentes}
-              </span>
-            )}
-          </Link>
-          {supabaseConfigurado && (
-            <button
-              onClick={() => sair()}
-              className="inline-flex rounded-lg p-2 text-slate-600 hover:bg-slate-100"
-              aria-label="Sair"
-              title="Sair"
+      {/* Barra superior.
+          O app roda como PWA com status bar translúcida (`black-translucent` +
+          `viewportFit: cover`): o relógio e a bateria do iPhone desenham POR CIMA
+          da página. Sem reservar a `safe-area-inset-top`, eles caíam em cima do
+          botão do menu — daí a impressão de que o canto não clicava.
+          O branco sobe atrás da status bar e a barra de verdade fica abaixo dela. */}
+      <header className="sticky top-0 z-20 border-b border-slate-200 bg-white pt-[env(safe-area-inset-top)] md:pl-64">
+        <div className="flex h-14 items-center gap-1 px-2 sm:px-4">
+          {/* 44×44: alvo de toque mínimo confortável no celular. O ícone fica
+              opticamente na mesma posição de antes; o que cresce é a área. */}
+          <button
+            onClick={() => setDrawer(true)}
+            className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-lg text-slate-600 transition hover:bg-slate-100 active:bg-slate-200 md:hidden"
+            aria-label="Abrir menu"
+          >
+            <Menu size={24} />
+          </button>
+          <div className="flex min-w-0 items-center md:hidden">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/logo-camargo.png" alt="Gustavo Camargo Advocacia" className="h-7 w-auto" />
+          </div>
+          <div className="ml-auto flex items-center">
+            <Link
+              href="/agenda"
+              className="relative inline-flex h-11 w-11 items-center justify-center rounded-lg text-slate-600 transition hover:bg-slate-100 active:bg-slate-200"
+              aria-label="Prazos urgentes"
             >
-              <LogOut size={20} />
-            </button>
-          )}
+              <Bell size={20} />
+              {urgentes > 0 && (
+                <span className="absolute right-1.5 top-1.5 flex h-4.5 min-w-4 items-center justify-center rounded-full bg-red-600 px-1 text-[10px] font-bold text-white">
+                  {urgentes}
+                </span>
+              )}
+            </Link>
+            {supabaseConfigurado && (
+              <button
+                onClick={() => sair()}
+                className="inline-flex h-11 w-11 items-center justify-center rounded-lg text-slate-600 transition hover:bg-slate-100 active:bg-slate-200"
+                aria-label="Sair"
+                title="Sair"
+              >
+                <LogOut size={20} />
+              </button>
+            )}
+          </div>
         </div>
       </header>
 

@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useState } from "react";
-import { ArrowLeft, HeartHandshake, KeyRound, Mail, MapPin, Pencil, Phone, RotateCcw } from "lucide-react";
+import { ArrowLeft, HeartHandshake, KeyRound, Mail, MapPin, Pencil, Phone, RotateCcw, Trash2 } from "lucide-react";
 import { useTable } from "@/lib/hooks";
 import type { Cliente, ContratoHonorarios, Documento, Lancamento, Processo } from "@/lib/types";
 import { AREAS, brl, dataBR, emCobranca, formatCNJ, statusLancamento, TIPOS_HONORARIOS } from "@/lib/format";
@@ -15,13 +15,15 @@ export default function ClienteDetalhe() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
 
-  const { rows: clientes, update: updateCliente } = useTable<Cliente>("clientes");
+  const { rows: clientes, update: updateCliente, remove: removeCliente } = useTable<Cliente>("clientes");
   const { rows: processos } = useTable<Processo>("processos");
-  const { rows: contratos } = useTable<ContratoHonorarios>("contratos_honorarios");
-  const { rows: lancamentos, update } = useTable<Lancamento>("lancamentos");
-  const { rows: documentos } = useTable<Documento>("documentos");
+  const { rows: contratos, remove: removeContrato } = useTable<ContratoHonorarios>("contratos_honorarios");
+  const { rows: lancamentos, update, remove: removeLancamento } = useTable<Lancamento>("lancamentos");
+  const { rows: documentos, remove: removeDocumento } = useTable<Documento>("documentos");
 
   const [editando, setEditando] = useState(false);
+  const [excluindo, setExcluindo] = useState(false);
+  const [apagando, setApagando] = useState(false);
   const [convidando, setConvidando] = useState(false);
   const [avisoPortal, setAvisoPortal] = useState<{ ok: boolean; texto: string } | null>(null);
   const [form, setForm] = useState({
@@ -135,6 +137,29 @@ export default function ClienteDetalhe() {
   const parcelasTotal = recebiveis.length;
   const parcelasPagas = recebiveis.filter((l) => l.pago_em).length;
   const proximaParcela = recebiveis.find((l) => emCobranca(l));
+
+  /** Apaga o cliente e o que só existe por causa dele.
+   *
+   *  Os lançamentos vão explicitamente, um a um, ANTES do cliente: no banco a
+   *  chave é `on delete set null`, então apagar só o cliente deixaria os
+   *  pagamentos órfãos — eles sumiriam da ficha mas continuariam somando no
+   *  faturamento como "Sem vínculo", que é justamente o que se quer eliminar.
+   *
+   *  Processos não são apagados aqui: um caso criminal apagado por engano não
+   *  tem volta, então a exclusão fica bloqueada enquanto houver algum. */
+  async function excluirCliente() {
+    if (!cli) return;
+    setApagando(true);
+    try {
+      for (const l of financeiro) await removeLancamento(l.id);
+      for (const c of contratosCli) await removeContrato(c.id);
+      for (const d of docs) await removeDocumento(d.id);
+      await removeCliente(cli.id);
+      router.push("/clientes");
+    } finally {
+      setApagando(false);
+    }
+  }
 
   return (
     <div className="space-y-4">
@@ -380,6 +405,82 @@ export default function ClienteDetalhe() {
           </Field>
           <div className="flex justify-end"><BotaoPrimario type="submit">Salvar alterações</BotaoPrimario></div>
         </form>
+      </Modal>
+
+      {/* Zona de exclusão — discreta e no fim da página de propósito */}
+      <div className="flex justify-end pt-2">
+        <button
+          onClick={() => setExcluindo(true)}
+          className="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium text-slate-400 transition hover:bg-red-50 hover:text-red-700"
+        >
+          <Trash2 size={13} /> Excluir cliente
+        </button>
+      </div>
+
+      <Modal aberto={excluindo} titulo="Excluir cliente" onFechar={() => setExcluindo(false)}>
+        {casos.length > 0 ? (
+          <div className="space-y-3">
+            <p className="text-sm text-slate-700">
+              <span className="font-semibold">{cli.nome}</span> tem {casos.length} processo
+              {casos.length === 1 ? "" : "s"} cadastrado{casos.length === 1 ? "" : "s"}. A exclusão fica bloqueada
+              enquanto houver algum — processo apagado por engano não tem volta.
+            </p>
+            <p className="rounded-lg bg-slate-50 p-2.5 text-xs text-slate-600">
+              Se o cadastro entrou por engano (uma transferência que não era honorário, por exemplo), apague antes os
+              processos ligados a ele. Se for cliente de verdade que você só não quer mais ver na lista, o caminho é
+              encerrar os casos, não excluir a ficha.
+            </p>
+            <div className="flex justify-end">
+              <button onClick={() => setExcluindo(false)} className="rounded-lg px-3 py-2 text-sm font-semibold text-slate-600 hover:text-slate-900">
+                Entendi
+              </button>
+            </div>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            <p className="text-sm text-slate-700">
+              Apagar <span className="font-semibold">{cli.nome}</span> e tudo que existe por causa dele. Isto{" "}
+              <span className="font-semibold">não</span> tem desfazer.
+            </p>
+            <ul className="space-y-1 rounded-lg bg-slate-50 p-2.5 text-xs text-slate-600">
+              <li className="flex justify-between gap-3">
+                <span>Lançamentos no financeiro</span>
+                <span className="tabular-nums">
+                  {financeiro.length} · {brl(financeiro.reduce((s, l) => s + l.valor, 0))}
+                </span>
+              </li>
+              <li className="flex justify-between gap-3">
+                <span>Contratos de honorários</span>
+                <span className="tabular-nums">{contratosCli.length}</span>
+              </li>
+              <li className="flex justify-between gap-3">
+                <span>Documentos</span>
+                <span className="tabular-nums">{docs.length}</span>
+              </li>
+            </ul>
+            {totalRecebido > 0 && (
+              <p className="rounded-lg bg-amber-50 p-2.5 text-xs text-amber-800">
+                {brl(totalRecebido)} já recebidos vão sair do faturamento — o total do ano e os gráficos do Desempenho
+                mudam. É o que se espera quando o valor não era honorário.
+              </p>
+            )}
+            <div className="flex justify-end gap-2 pt-1">
+              <button
+                onClick={() => setExcluindo(false)}
+                className="rounded-lg px-3 py-2 text-sm font-semibold text-slate-600 transition hover:text-slate-900"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={excluirCliente}
+                disabled={apagando}
+                className="inline-flex items-center gap-1.5 rounded-lg bg-red-600 px-3.5 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-red-700 active:scale-95 disabled:pointer-events-none disabled:opacity-60"
+              >
+                <Trash2 size={15} /> {apagando ? "Apagando…" : "Apagar definitivamente"}
+              </button>
+            </div>
+          </div>
+        )}
       </Modal>
     </div>
   );
