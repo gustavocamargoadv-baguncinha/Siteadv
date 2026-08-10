@@ -40,7 +40,34 @@ function FinanceiroConteudo() {
 
   const [filtro, setFiltro] = useState<Filtro>("todos");
   const [modal, setModal] = useState(false);
-  const [form, setForm] = useState({ categoria: "Honorários", cliente_id: "", processo_id: "", descricao: "", valor: "", vencimento: "" });
+  // `recebido` é a pergunta que faltava: o dinheiro JÁ entrou ou é uma conta a
+  // receber? Sem ela todo lançamento nascia como recebível e, com data de hoje
+  // ou de ontem, aparecia como parcela atrasada — dinheiro que entrou virava
+  // cobrança. Começa em "já recebi" porque é o uso do dia a dia (registrar o
+  // pagamento que acabou de cair); parcela futura sai do contrato.
+  const [form, setForm] = useState({
+    recebido: true,
+    categoria: "Honorários",
+    cliente_id: "",
+    processo_id: "",
+    descricao: "",
+    valor: "",
+    data: "",
+  });
+  // Data de recebimento em correção (id do lançamento) — o ✓ grava hoje, e daqui
+  // se ajusta quando o pagamento caiu num outro dia.
+  const [corrigindoData, setCorrigindoData] = useState<string | null>(null);
+
+  const cliSelecionado = form.cliente_id ? cliMap.get(form.cliente_id) : undefined;
+  // Com o cliente escolhido, a descrição já vem pronta: sobra digitar o valor.
+  const descricaoSugerida = cliSelecionado ? `${form.categoria} — ${cliSelecionado.nome}` : "";
+
+  function abrirNovo() {
+    // hoje só aqui (e não no useState) para o servidor e o navegador não
+    // renderizarem datas diferentes na virada do dia
+    setForm({ recebido: true, categoria: "Honorários", cliente_id: "", processo_id: "", descricao: "", valor: "", data: hojeISO() });
+    setModal(true);
+  }
 
   const mesAtual = hojeISO().slice(0, 7);
   const anoAtual = hojeISO().slice(0, 4);
@@ -101,17 +128,21 @@ function FinanceiroConteudo() {
   async function salvar(e: React.FormEvent) {
     e.preventDefault();
     const valor = parseFloat(form.valor.replace(",", "."));
-    if (!form.descricao || !form.vencimento || !valor || valor <= 0) return;
+    const descricao = form.descricao.trim() || descricaoSugerida;
+    if (!descricao || !form.data || !valor || valor <= 0) return;
     await insert({
       tipo: "receita",
       categoria: form.categoria,
       cliente_id: form.cliente_id || undefined,
       processo_id: form.processo_id || undefined,
-      descricao: form.descricao,
+      descricao,
       valor,
-      vencimento: form.vencimento,
+      // Já recebido: o vencimento é o próprio dia do pagamento. Gravar uma data
+      // anterior faria o lançamento nascer marcado como atraso no histórico,
+      // mesmo tendo sido pago em dia.
+      vencimento: form.data,
+      ...(form.recebido ? { pago_em: form.data } : {}),
     });
-    setForm({ categoria: "Honorários", cliente_id: "", processo_id: "", descricao: "", valor: "", vencimento: "" });
     setModal(false);
   }
 
@@ -120,7 +151,7 @@ function FinanceiroConteudo() {
       <PageHeader
         titulo="Financeiro"
         sub="Honorários e recebíveis"
-        acao={<BotaoPrimario onClick={() => setModal(true)}><Plus size={16} /> Novo recebimento</BotaoPrimario>}
+        acao={<BotaoPrimario onClick={abrirNovo}><Plus size={16} /> Novo recebimento</BotaoPrimario>}
       />
 
       <div className="mb-5 grid grid-cols-2 gap-3 lg:grid-cols-4">
@@ -218,11 +249,36 @@ function FinanceiroConteudo() {
                     {l.categoria}
                     {cli && ` · ${cli.nome}`}
                     {" · "}
-                    {l.pago_em
-                      ? `recebido em ${dataBR(l.pago_em)}`
-                      : l.perdoado_em
-                        ? `perdoado em ${dataBR(l.perdoado_em)} · vencia ${dataBR(l.vencimento)}`
-                        : `vence ${dataBR(l.vencimento)}`}
+                    {l.pago_em ? (
+                      corrigindoData === l.id ? (
+                        // corrigir a data direto na linha: o ✓ grava hoje, mas o
+                        // pagamento pode ter caído na sexta
+                        <input
+                          autoFocus
+                          type="date"
+                          defaultValue={l.pago_em}
+                          onBlur={() => setCorrigindoData(null)}
+                          onChange={async (e) => {
+                            if (!e.target.value) return;
+                            await update(l.id, { pago_em: e.target.value });
+                            setCorrigindoData(null);
+                          }}
+                          className="rounded border border-brand-400 px-1.5 py-0.5 text-xs"
+                        />
+                      ) : (
+                        <button
+                          onClick={() => setCorrigindoData(l.id)}
+                          className="underline decoration-dotted underline-offset-2 transition hover:text-slate-900"
+                          title="Corrigir a data do recebimento"
+                        >
+                          recebido em {dataBR(l.pago_em)}
+                        </button>
+                      )
+                    ) : l.perdoado_em ? (
+                      `perdoado em ${dataBR(l.perdoado_em)} · vencia ${dataBR(l.vencimento)}`
+                    ) : (
+                      `vence ${dataBR(l.vencimento)}`
+                    )}
                   </p>
                   {l.perdoado_motivo && (
                     <p className="mt-1 inline-flex items-center gap-1 text-xs italic text-slate-500">
@@ -262,31 +318,66 @@ function FinanceiroConteudo() {
         </div>
       )}
 
-      <Modal aberto={modal} titulo="Novo recebimento" onFechar={() => setModal(false)}>
+      <Modal aberto={modal} titulo={form.recebido ? "Registrar pagamento" : "Nova conta a receber"} onFechar={() => setModal(false)}>
         <form onSubmit={salvar} className="space-y-3">
-          <Field rotulo="Categoria">
-            <Select value={form.categoria} onChange={(e) => setForm({ ...form, categoria: e.target.value })}>
-              {["Honorários", "Consultoria", "Êxito", "Outras receitas"].map((c) => (
-                <option key={c} value={c}>{c}</option>
-              ))}
-            </Select>
-          </Field>
-          <Field rotulo="Descrição" obrigatorio>
-            <Input required value={form.descricao} onChange={(e) => setForm({ ...form, descricao: e.target.value })} placeholder="Ex.: Parcela 1/4 — apelação" />
-          </Field>
-          <div className="grid grid-cols-2 gap-3">
-            <Field rotulo="Valor (R$)" obrigatorio>
-              <Input required inputMode="decimal" value={form.valor} onChange={(e) => setForm({ ...form, valor: e.target.value })} placeholder="3000,00" />
-            </Field>
-            <Field rotulo="Vencimento" obrigatorio>
-              <Input required type="date" value={form.vencimento} onChange={(e) => setForm({ ...form, vencimento: e.target.value })} />
-            </Field>
+          {/* A pergunta que decide tudo, antes de qualquer campo */}
+          <div className="grid grid-cols-2 gap-2">
+            {(
+              [
+                [true, "💰 Já recebi", "o dinheiro entrou"],
+                [false, "⏳ A receber", "vai vencer"],
+              ] as const
+            ).map(([v, rotulo, dica]) => (
+              <button
+                key={String(v)}
+                type="button"
+                onClick={() => setForm({ ...form, recebido: v })}
+                className={`rounded-xl border px-3 py-2.5 text-left transition ${
+                  form.recebido === v
+                    ? "border-brand-500 bg-brand-50 ring-1 ring-brand-500"
+                    : "border-slate-200 bg-white hover:border-slate-300"
+                }`}
+              >
+                <span className={`block text-sm font-semibold ${form.recebido === v ? "text-brand-800" : "text-slate-700"}`}>
+                  {rotulo}
+                </span>
+                <span className="block text-xs text-slate-500">{dica}</span>
+              </button>
+            ))}
           </div>
+
           <Field rotulo="Cliente">
             <Select value={form.cliente_id} onChange={(e) => setForm({ ...form, cliente_id: e.target.value, processo_id: "" })}>
               <option value="">Sem vínculo</option>
               {clientes.map((c) => (
                 <option key={c.id} value={c.id}>{c.nome}</option>
+              ))}
+            </Select>
+          </Field>
+          <div className="grid grid-cols-2 gap-3">
+            <Field rotulo="Valor (R$)" obrigatorio>
+              <Input required inputMode="decimal" value={form.valor} onChange={(e) => setForm({ ...form, valor: e.target.value })} placeholder="3000,00" />
+            </Field>
+            <Field rotulo={form.recebido ? "Recebido em" : "Vencimento"} obrigatorio>
+              <Input required type="date" value={form.data} onChange={(e) => setForm({ ...form, data: e.target.value })} />
+            </Field>
+          </div>
+          <Field rotulo="Descrição">
+            <Input
+              value={form.descricao}
+              onChange={(e) => setForm({ ...form, descricao: e.target.value })}
+              placeholder={descricaoSugerida || "Ex.: Parcela 1/4 — apelação"}
+            />
+            {descricaoSugerida && !form.descricao.trim() && (
+              <p className="mt-1 text-xs text-slate-400">
+                Em branco, salva como “{descricaoSugerida}”.
+              </p>
+            )}
+          </Field>
+          <Field rotulo="Categoria">
+            <Select value={form.categoria} onChange={(e) => setForm({ ...form, categoria: e.target.value })}>
+              {["Honorários", "Consultoria", "Êxito", "Outras receitas"].map((c) => (
+                <option key={c} value={c}>{c}</option>
               ))}
             </Select>
           </Field>
@@ -300,7 +391,9 @@ function FinanceiroConteudo() {
               </Select>
             </Field>
           )}
-          <div className="flex justify-end"><BotaoPrimario type="submit">Salvar recebimento</BotaoPrimario></div>
+          <div className="flex justify-end">
+            <BotaoPrimario type="submit">{form.recebido ? "Registrar pagamento" : "Salvar conta a receber"}</BotaoPrimario>
+          </div>
         </form>
       </Modal>
     </div>
