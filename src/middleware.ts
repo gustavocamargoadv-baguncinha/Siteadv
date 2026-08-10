@@ -5,7 +5,7 @@ import type { NextRequest } from "next/server";
 // página inicial e /custodia devem ficar acessíveis. Qualquer outra rota
 // (telas do sistema de gestão, APIs) é redirecionada para a raiz, para não
 // expor nada além da landing no domínio da campanha.
-const ROTAS_LIBERADAS = new Set(["/", "/custodia"]);
+const ROTAS_LIBERADAS = new Set(["/", "/custodia", "/criminal"]);
 
 export function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;

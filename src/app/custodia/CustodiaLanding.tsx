@@ -1,5 +1,24 @@
 import type { Metadata } from "next";
 import { Analytics } from "@/components/Analytics";
+import {
+  EMAIL,
+  FOTO_ADVOGADO,
+  GOOGLE_LINK,
+  IconCheck,
+  IconClock,
+  IconMail,
+  IconPhone,
+  IconPin,
+  IconScale,
+  IconShield,
+  IconStar,
+  IconWhats,
+  MAPS_LINK,
+  REGIAO,
+  SITE_URL,
+  TEL_CEL,
+  whatsLink,
+} from "../_landing/comum";
 
 /* -------------------------------------------------------------------------
    Landing page de captação — Audiência de Custódia em Itapetininga e região.
@@ -10,38 +29,9 @@ import { Analytics } from "@/components/Analytics";
    deve ser apresentado ao juiz em até 24 horas).
    ------------------------------------------------------------------------- */
 
-const WHATS_NUM = "5515996055581";
-const WHATS_MSG =
-  "Olá, Dr. Gustavo. Preciso de ajuda com uma audiência de custódia em Itapetininga e região.";
-const WHATS_LINK = `https://wa.me/${WHATS_NUM}?text=${encodeURIComponent(WHATS_MSG)}`;
-const TEL_CEL = "+5515996055581";
-const EMAIL = "gustavocamargo@adv.oabsp.org.br";
-// Perfil do Google Business do escritório (avaliações + mapa).
-const GOOGLE_LINK = "https://share.google/bS1dIETXyDOdjrZkA";
-const MAPS_LINK = GOOGLE_LINK;
-const FOTO_ADVOGADO = "/advogado-gustavo-camargo.jpg";
-
-const REGIAO = [
-  "Itapetininga",
-  "Tatuí",
-  "Cerquilho",
-  "Cesário Lange",
-  "Boituva",
-  "Angatuba",
-  "Guareí",
-  "Sarapuí",
-  "Alambari",
-  "São Miguel Arcanjo",
-  "Capão Bonito",
-  "Buri",
-  "Itapeva",
-  "Porangaba",
-  "Bofete",
-];
-
-// Endereço final do site (configure NEXT_PUBLIC_SITE_URL na Vercel com o seu
-// domínio; sem isso, usa um padrão só para o build não reclamar).
-const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://defesa-em-custodia.vercel.app";
+const WHATS_LINK = whatsLink(
+  "Olá, Dr. Gustavo. Preciso de ajuda com uma audiência de custódia em Itapetininga e região.",
+);
 
 // Metadata compartilhada pelas rotas que servem a landing ("/" e "/custodia").
 // O canonical concentra o SEO na raiz para o Google não tratar as duas como
@@ -120,71 +110,6 @@ const jsonLd = {
     closes: "23:59",
   },
 };
-
-/* --------------------------------- ícones -------------------------------- */
-function IconWhats({ className = "" }: { className?: string }) {
-  return (
-    <svg viewBox="0 0 24 24" fill="currentColor" className={className} aria-hidden="true">
-      <path d="M17.5 14.4c-.3-.2-1.8-.9-2-1-.3-.1-.5-.2-.7.1-.2.3-.8 1-1 1.2-.2.2-.4.2-.7.1-.3-.2-1.3-.5-2.4-1.5-.9-.8-1.5-1.8-1.7-2.1-.2-.3 0-.5.1-.6.1-.1.3-.4.4-.5.1-.2.2-.3.3-.5.1-.2 0-.4 0-.5-.1-.2-.7-1.6-.9-2.2-.2-.6-.5-.5-.7-.5h-.6c-.2 0-.5.1-.8.4-.3.3-1 1-1 2.5s1.1 2.9 1.2 3.1c.2.2 2.1 3.2 5.1 4.5.7.3 1.3.5 1.7.6.7.2 1.4.2 1.9.1.6-.1 1.8-.7 2-1.4.3-.7.3-1.3.2-1.4-.1-.1-.3-.2-.6-.4zM12 2C6.5 2 2 6.5 2 12c0 1.8.5 3.4 1.3 4.9L2 22l5.3-1.4c1.4.8 3 1.2 4.7 1.2 5.5 0 10-4.5 10-10S17.5 2 12 2z" />
-    </svg>
-  );
-}
-function IconPhone({ className = "" }: { className?: string }) {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className} aria-hidden="true">
-      <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.96.36 1.9.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.9.34 1.85.57 2.81.7A2 2 0 0 1 22 16.92z" />
-    </svg>
-  );
-}
-function IconClock({ className = "" }: { className?: string }) {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className} aria-hidden="true">
-      <circle cx="12" cy="12" r="10" /><path d="M12 6v6l4 2" />
-    </svg>
-  );
-}
-function IconShield({ className = "" }: { className?: string }) {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className} aria-hidden="true">
-      <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
-    </svg>
-  );
-}
-function IconScale({ className = "" }: { className?: string }) {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className} aria-hidden="true">
-      <path d="M12 3v18M7 21h10M12 3l7 4M12 3L5 7M5 7l-3 6a4 4 0 0 0 6 0L5 7zM19 7l-3 6a4 4 0 0 0 6 0l-3-6z" />
-    </svg>
-  );
-}
-function IconPin({ className = "" }: { className?: string }) {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className} aria-hidden="true">
-      <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" /><circle cx="12" cy="10" r="3" />
-    </svg>
-  );
-}
-function IconCheck({ className = "" }: { className?: string }) {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className={className} aria-hidden="true">
-      <path d="M20 6 9 17l-5-5" />
-    </svg>
-  );
-}
-function IconMail({ className = "" }: { className?: string }) {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className} aria-hidden="true">
-      <rect x="2" y="4" width="20" height="16" rx="2" /><path d="m22 7-10 6L2 7" />
-    </svg>
-  );
-}
-function IconStar({ className = "" }: { className?: string }) {
-  return (
-    <svg viewBox="0 0 24 24" fill="currentColor" className={className} aria-hidden="true">
-      <path d="M12 2l2.9 6.3 6.9.7-5.1 4.6 1.4 6.8L12 17.8 5.9 20.4l1.4-6.8L2.2 9l6.9-.7L12 2z" />
-    </svg>
-  );
-}
 
 /* --------------------------------- página -------------------------------- */
 export function CustodiaLanding() {
