@@ -290,7 +290,19 @@ function FinanceiroConteudo() {
                   </div>
                   <p className="mt-0.5 text-xs text-slate-500">
                     {l.categoria}
-                    {cli && ` · ${cli.nome}`}
+                    {cli && (
+                      <>
+                        {" · "}
+                        {/* atalho para a ficha: daqui se vê os casos, o contrato
+                            e o que mais o cliente deve, sem procurar na lista */}
+                        <Link
+                          href={`/clientes/${cli.id}`}
+                          className="font-medium text-slate-600 underline decoration-slate-300 underline-offset-2 transition hover:text-brand-700 hover:decoration-brand-500"
+                        >
+                          {cli.nome}
+                        </Link>
+                      </>
+                    )}
                     {" · "}
                     {l.pago_em ? (
                       corrigindoData === l.id ? (
