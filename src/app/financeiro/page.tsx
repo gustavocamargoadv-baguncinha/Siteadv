@@ -2,7 +2,7 @@
 
 import { Suspense, useMemo, useState } from "react";
 import Link from "next/link";
-import { ArrowLeft, Check, HeartHandshake, Plus, RotateCcw, X } from "lucide-react";
+import { ArrowLeft, Check, HeartHandshake, Pencil, Plus, RotateCcw, Trash2, X } from "lucide-react";
 import { useSearchParams } from "next/navigation";
 import { useTable, byId } from "@/lib/hooks";
 import type { Cliente, Lancamento, Processo } from "@/lib/types";
@@ -27,7 +27,7 @@ export default function FinanceiroPage() {
 }
 
 function FinanceiroConteudo() {
-  const { rows: lancamentos, insert, update } = useTable<Lancamento>("lancamentos");
+  const { rows: lancamentos, insert, update, remove } = useTable<Lancamento>("lancamentos");
   const { rows: clientes } = useTable<Cliente>("clientes");
   const { rows: processos } = useTable<Processo>("processos");
   const cliMap = byId(clientes);
@@ -45,7 +45,11 @@ function FinanceiroConteudo() {
   // ou de ontem, aparecia como parcela atrasada — dinheiro que entrou virava
   // cobrança. Começa em "já recebi" porque é o uso do dia a dia (registrar o
   // pagamento que acabou de cair); parcela futura sai do contrato.
+  // `id` nulo = lançamento novo; preenchido = editando um que já existe. O mesmo
+  // formulário serve aos dois — e é por ele que se conserta engano: trocar para
+  // "A receber" desmarca um recebimento lançado sem querer.
   const [form, setForm] = useState({
+    id: null as string | null,
     recebido: true,
     categoria: "Honorários",
     cliente_id: "",
@@ -54,6 +58,7 @@ function FinanceiroConteudo() {
     valor: "",
     data: "",
   });
+  const [confirmandoExclusao, setConfirmandoExclusao] = useState(false);
   // Data de recebimento em correção (id do lançamento) — o ✓ grava hoje, e daqui
   // se ajusta quando o pagamento caiu num outro dia.
   const [corrigindoData, setCorrigindoData] = useState<string | null>(null);
@@ -65,7 +70,24 @@ function FinanceiroConteudo() {
   function abrirNovo() {
     // hoje só aqui (e não no useState) para o servidor e o navegador não
     // renderizarem datas diferentes na virada do dia
-    setForm({ recebido: true, categoria: "Honorários", cliente_id: "", processo_id: "", descricao: "", valor: "", data: hojeISO() });
+    setForm({ id: null, recebido: true, categoria: "Honorários", cliente_id: "", processo_id: "", descricao: "", valor: "", data: hojeISO() });
+    setConfirmandoExclusao(false);
+    setModal(true);
+  }
+
+  function abrirEdicao(l: Lancamento) {
+    setForm({
+      id: l.id,
+      recebido: !!l.pago_em,
+      categoria: l.categoria,
+      cliente_id: l.cliente_id ?? "",
+      processo_id: l.processo_id ?? "",
+      descricao: l.descricao,
+      // vírgula decimal, como ele digita
+      valor: String(l.valor).replace(".", ","),
+      data: l.pago_em ?? l.vencimento,
+    });
+    setConfirmandoExclusao(false);
     setModal(true);
   }
 
@@ -130,8 +152,9 @@ function FinanceiroConteudo() {
     const valor = parseFloat(form.valor.replace(",", "."));
     const descricao = form.descricao.trim() || descricaoSugerida;
     if (!descricao || !form.data || !valor || valor <= 0) return;
-    await insert({
-      tipo: "receita",
+
+    const campos = {
+      tipo: "receita" as const,
       categoria: form.categoria,
       cliente_id: form.cliente_id || undefined,
       processo_id: form.processo_id || undefined,
@@ -141,8 +164,28 @@ function FinanceiroConteudo() {
       // anterior faria o lançamento nascer marcado como atraso no histórico,
       // mesmo tendo sido pago em dia.
       vencimento: form.data,
-      ...(form.recebido ? { pago_em: form.data } : {}),
-    });
+    };
+
+    if (form.id) {
+      await update(form.id, {
+        ...campos,
+        // `null` e não `undefined`: é assim que o campo é LIMPO. Voltar para
+        // "a receber" tem de apagar a data de pagamento — é esse o desfazer de
+        // quem marcou recebido por engano.
+        pago_em: form.recebido ? form.data : null,
+        // pago e perdoado ao mesmo tempo é proibido no banco; registrar o
+        // pagamento encerra o perdão.
+        ...(form.recebido ? { perdoado_em: null, perdoado_motivo: null } : {}),
+      });
+    } else {
+      await insert({ ...campos, ...(form.recebido ? { pago_em: form.data } : {}) });
+    }
+    setModal(false);
+  }
+
+  async function excluirLancamento() {
+    if (!form.id) return;
+    await remove(form.id);
     setModal(false);
   }
 
@@ -293,33 +336,54 @@ function FinanceiroConteudo() {
                 >
                   {brl(l.valor)}
                 </p>
-                {l.perdoado_em ? (
-                  <button
-                    onClick={() => update(l.id, { perdoado_em: null, perdoado_motivo: null })}
-                    className="shrink-0 rounded-lg border border-slate-300 bg-white p-1.5 text-slate-600 transition hover:bg-slate-100"
-                    title="Desfazer — devolver à cobrança"
-                  >
-                    <RotateCcw size={16} />
-                  </button>
-                ) : (
-                  !l.pago_em && (
+                <div className="flex shrink-0 items-center gap-1">
+                  {l.perdoado_em ? (
                     <button
-                      onClick={() => update(l.id, { pago_em: hojeISO() })}
-                      className="shrink-0 rounded-lg border border-emerald-300 bg-emerald-50 p-1.5 text-emerald-700 transition hover:bg-emerald-100"
-                      title="Marcar como recebido"
+                      onClick={() => update(l.id, { perdoado_em: null, perdoado_motivo: null })}
+                      className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-slate-300 bg-white text-slate-600 transition hover:bg-slate-100"
+                      title="Desfazer — devolver à cobrança"
                     >
-                      <Check size={16} />
+                      <RotateCcw size={16} />
                     </button>
-                  )
-                )}
+                  ) : (
+                    !l.pago_em && (
+                      <button
+                        onClick={() => update(l.id, { pago_em: hojeISO() })}
+                        className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-emerald-300 bg-emerald-50 text-emerald-700 transition hover:bg-emerald-100"
+                        title="Marcar como recebido"
+                      >
+                        <Check size={16} />
+                      </button>
+                    )
+                  )}
+                  {/* a saída para todo engano: corrigir valor, desmarcar o
+                      recebimento ou apagar o lançamento */}
+                  <button
+                    onClick={() => abrirEdicao(l)}
+                    className="inline-flex h-9 w-9 items-center justify-center rounded-lg text-slate-400 transition hover:bg-slate-100 hover:text-slate-700"
+                    title="Corrigir ou apagar este lançamento"
+                  >
+                    <Pencil size={15} />
+                  </button>
+                </div>
               </Card>
             );
           })}
         </div>
       )}
 
-      <Modal aberto={modal} titulo={form.recebido ? "Registrar pagamento" : "Nova conta a receber"} onFechar={() => setModal(false)}>
+      <Modal
+        aberto={modal}
+        titulo={form.id ? "Corrigir lançamento" : form.recebido ? "Registrar pagamento" : "Nova conta a receber"}
+        onFechar={() => setModal(false)}
+      >
         <form onSubmit={salvar} className="space-y-3">
+          {form.id && (
+            <p className="rounded-lg bg-slate-50 p-2.5 text-xs text-slate-600">
+              Marcou como recebido sem querer? Troque para <span className="font-semibold">⏳ A receber</span> — a data
+              do pagamento é apagada e ele volta para a cobrança.
+            </p>
+          )}
           {/* A pergunta que decide tudo, antes de qualquer campo */}
           <div className="grid grid-cols-2 gap-2">
             {(
@@ -391,8 +455,38 @@ function FinanceiroConteudo() {
               </Select>
             </Field>
           )}
-          <div className="flex justify-end">
-            <BotaoPrimario type="submit">{form.recebido ? "Registrar pagamento" : "Salvar conta a receber"}</BotaoPrimario>
+          <div className="flex flex-wrap items-center justify-end gap-2 pt-1">
+            {form.id &&
+              (confirmandoExclusao ? (
+                <div className="mr-auto flex items-center gap-2">
+                  <span className="text-xs text-slate-600">Apagar de vez?</span>
+                  <button
+                    type="button"
+                    onClick={excluirLancamento}
+                    className="rounded-lg bg-red-600 px-2.5 py-1.5 text-xs font-semibold text-white transition hover:bg-red-700"
+                  >
+                    Sim, apagar
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setConfirmandoExclusao(false)}
+                    className="text-xs font-semibold text-slate-500 hover:text-slate-800"
+                  >
+                    não
+                  </button>
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => setConfirmandoExclusao(true)}
+                  className="mr-auto inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium text-slate-400 transition hover:bg-red-50 hover:text-red-700"
+                >
+                  <Trash2 size={13} /> Apagar lançamento
+                </button>
+              ))}
+            <BotaoPrimario type="submit">
+              {form.id ? "Salvar correção" : form.recebido ? "Registrar pagamento" : "Salvar conta a receber"}
+            </BotaoPrimario>
           </div>
         </form>
       </Modal>

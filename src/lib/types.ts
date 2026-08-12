@@ -157,7 +157,10 @@ export interface Lancamento {
   descricao: string;
   valor: number;
   vencimento: string; // ISO date
-  pago_em?: string;
+  // `null` desmarca o recebimento (o desfazer de quem lançou pagamento por
+  // engano). Vale a mesma regra do perdão: `undefined` sumiria na serialização
+  // do patch e a coluna nunca seria limpa no Supabase.
+  pago_em?: string | null;
   forma_pagamento?: string;
   // Dívida perdoada: o escritório abriu mão de receber. NÃO é o mesmo que
   // recebida — nunca entra no faturamento. Sai da cobrança ativa mas continua
