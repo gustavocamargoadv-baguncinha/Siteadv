@@ -142,55 +142,113 @@ export function desenharCard(canvas: HTMLCanvasElement, o: OpcoesCard) {
   ctx.fillStyle = FUNDO;
   ctx.fillRect(0, 0, W, H);
 
-  // 2) medir o bloco de texto, encolhendo até caber
-  let tamTitulo = Math.round(W * 0.086);
-  let tamSub = Math.round(W * 0.039);
-  const alturaMax = H * 0.42;
+  const temFoto = Boolean(o.imagemFundo);
+
+  // 2) medir o bloco de texto, encolhendo até caber.
+  //    Sem foto sobra muito mais espaço, então o texto pode crescer.
+  let tamTitulo = Math.round(W * (temFoto ? 0.086 : 0.098));
+  let tamSub = Math.round(W * (temFoto ? 0.039 : 0.042));
+  const alturaMax = H * (temFoto ? 0.42 : 0.62);
+  const MAX_LINHAS_SUB = temFoto ? 4 : 6;
 
   const medir = () => {
     ctx.font = `800 ${tamTitulo}px ${FONTE}`;
     const linhasT = quebrar(ctx, fatiar(o.titulo.toUpperCase()), larguraTexto);
     ctx.font = `500 ${tamSub}px ${FONTE}`;
-    const linhasS = o.subtitulo?.trim() ? quebrar(ctx, fatiar(o.subtitulo), larguraTexto) : [];
+    let linhasS = o.subtitulo?.trim() ? quebrar(ctx, fatiar(o.subtitulo), larguraTexto) : [];
+    // corta o excesso para a arte não virar um texto corrido
+    if (linhasS.length > MAX_LINHAS_SUB) {
+      linhasS = linhasS.slice(0, MAX_LINHAS_SUB).map((l, i) =>
+        i === MAX_LINHAS_SUB - 1 ? [...l.slice(0, -1), { ...l[l.length - 1], txt: `${l[l.length - 1].txt}…` }] : l
+      );
+    }
     const hT = linhasT.length * tamTitulo * 1.08;
     const hS = linhasS.length * tamSub * 1.34;
     return { linhasT, linhasS, altura: hT + (linhasS.length ? tamSub * 0.75 + hS : 0) };
   };
 
+  // Maior palavra da manchete: se não couber numa linha, ela vazaria da arte
+  // (e palavras enormes ainda geram linhas órfãs feias).
+  const maiorPalavra = () => {
+    ctx.font = `800 ${tamTitulo}px ${FONTE}`;
+    return fatiar(o.titulo.toUpperCase()).reduce((m, p) => Math.max(m, ctx.measureText(p.txt).width), 0);
+  };
+
   let bloco = medir();
-  while (bloco.altura > alturaMax && tamTitulo > Math.round(W * 0.045)) {
+  const tamMinimo = Math.round(W * 0.045);
+  // "SE" sozinho na primeira linha fica feio: encolhe um pouco até juntar.
+  const orfaNoComeco = () =>
+    bloco.linhasT.length > 1 && bloco.linhasT[0].length === 1 && bloco.linhasT[0][0].txt.length <= 4;
+
+  while (
+    (bloco.altura > alturaMax || maiorPalavra() > larguraTexto * 0.95 || orfaNoComeco()) &&
+    tamTitulo > tamMinimo
+  ) {
     tamTitulo -= 3;
     tamSub = Math.max(Math.round(W * 0.028), tamSub - 1);
     bloco = medir();
   }
 
-  // 3) posições: assinatura embaixo, texto acima dela, foto ocupando o resto
   const alturaAssinatura = Math.round(H * 0.135);
   const respiro = Math.round(H * 0.045);
-  let fimFoto = H - alturaAssinatura - bloco.altura - respiro;
-  fimFoto = Math.min(Math.max(fimFoto, H * 0.32), H * 0.68);
+  // onde termina a área nobre do topo (tarja + etiqueta)
+  const topoLivre = alturaTarja + Math.round(H * (o.etiqueta?.trim() ? 0.115 : 0.05));
 
-  // 4) foto de fundo (ou gradiente da marca quando não houver)
+  // 3) fundo: foto ou composição da marca
+  let inicioTexto: number;
   if (o.imagemFundo) {
+    let fimFoto = H - alturaAssinatura - bloco.altura - respiro;
+    fimFoto = Math.min(Math.max(fimFoto, H * 0.32), H * 0.68);
+
     cobrir(ctx, o.imagemFundo, 0, alturaTarja, W, fimFoto - alturaTarja);
-    // leve escurecida geral para a manchete respirar
     ctx.fillStyle = "rgba(0,0,0,0.18)";
     ctx.fillRect(0, alturaTarja, W, fimFoto - alturaTarja);
-  } else {
-    const g = ctx.createLinearGradient(0, alturaTarja, W, fimFoto);
-    g.addColorStop(0, "#13203a");
-    g.addColorStop(1, "#0a1120");
-    ctx.fillStyle = g;
-    ctx.fillRect(0, alturaTarja, W, fimFoto - alturaTarja);
-  }
 
-  // 5) dissolve a base da foto no fundo escuro
-  const alturaFade = Math.min(fimFoto - alturaTarja, H * 0.3);
-  const fade = ctx.createLinearGradient(0, fimFoto - alturaFade, 0, fimFoto);
-  fade.addColorStop(0, "rgba(8,13,24,0)");
-  fade.addColorStop(1, FUNDO);
-  ctx.fillStyle = fade;
-  ctx.fillRect(0, fimFoto - alturaFade, W, alturaFade);
+    // dissolve a base da foto no fundo escuro
+    const alturaFade = Math.min(fimFoto - alturaTarja, H * 0.3);
+    const fade = ctx.createLinearGradient(0, fimFoto - alturaFade, 0, fimFoto);
+    fade.addColorStop(0, "rgba(8,13,24,0)");
+    fade.addColorStop(1, FUNDO);
+    ctx.fillStyle = fade;
+    ctx.fillRect(0, fimFoto - alturaFade, W, alturaFade);
+
+    inicioTexto = fimFoto + respiro;
+  } else {
+    // Sem foto: fundo com profundidade + marca d'água jurídica, e o texto
+    // centralizado no espaço livre (nada de vazio no topo).
+    const g = ctx.createLinearGradient(0, 0, W, H);
+    g.addColorStop(0, "#16243f");
+    g.addColorStop(0.55, "#0d1526");
+    g.addColorStop(1, "#070b14");
+    ctx.fillStyle = g;
+    ctx.fillRect(0, alturaTarja, W, H - alturaTarja);
+
+    // brilho suave atrás da manchete
+    const brilho = ctx.createRadialGradient(W * 0.2, H * 0.3, 0, W * 0.2, H * 0.3, W * 0.85);
+    brilho.addColorStop(0, "rgba(255,255,255,0.06)");
+    brilho.addColorStop(1, "rgba(255,255,255,0)");
+    ctx.fillStyle = brilho;
+    ctx.fillRect(0, alturaTarja, W, H - alturaTarja);
+
+    // marca d'água: o símbolo de parágrafo, discreto
+    ctx.save();
+    ctx.globalAlpha = 0.06;
+    ctx.fillStyle = o.destaque;
+    ctx.font = `800 ${Math.round(W * 0.78)}px ${FONTE}`;
+    ctx.textAlign = "right";
+    ctx.textBaseline = "middle";
+    ctx.fillText("§", W + W * 0.06, H * 0.3);
+    ctx.restore();
+    ctx.textAlign = "left";
+
+    const disponivel = H - alturaAssinatura - topoLivre;
+    const filete = Math.round(H * 0.035);
+    inicioTexto = topoLivre + Math.max(0, (disponivel - bloco.altura - filete) / 2) + filete;
+
+    // filete dourado acima da manchete
+    ctx.fillStyle = o.destaque;
+    ctx.fillRect(margem, inicioTexto - filete, Math.round(W * 0.13), Math.max(5, Math.round(W * 0.008)));
+  }
 
   // 6) tarja de cor no topo
   ctx.fillStyle = o.destaque;
@@ -217,7 +275,7 @@ export function desenharCard(canvas: HTMLCanvasElement, o: OpcoesCard) {
 
   // 7) manchete
   ctx.textBaseline = "alphabetic";
-  let y = fimFoto + respiro + tamTitulo * 0.82;
+  let y = inicioTexto + tamTitulo * 0.82;
   ctx.font = `800 ${tamTitulo}px ${FONTE}`;
   for (const linha of bloco.linhasT) {
     desenharLinha(ctx, linha, margem, y, "#ffffff", o.destaque);
@@ -245,10 +303,10 @@ export function desenharCard(canvas: HTMLCanvasElement, o: OpcoesCard) {
   ctx.font = `500 ${tamCred}px ${FONTE}`;
   const larguraCred = ctx.measureText(o.credencial).width;
 
-  const temFoto = Boolean(o.fotoAutor);
+  const temRetrato = Boolean(o.fotoAutor);
   const larguraTextoAss = Math.max(larguraNome, larguraCred);
   const vao = Math.round(W * 0.02);
-  const total = (temFoto ? diametro + vao : 0) + larguraTextoAss;
+  const total = (temRetrato ? diametro + vao : 0) + larguraTextoAss;
   const inicio = (W - total) / 2;
 
   if (o.fotoAutor) {
@@ -269,7 +327,7 @@ export function desenharCard(canvas: HTMLCanvasElement, o: OpcoesCard) {
     ctx.stroke();
   }
 
-  const xTexto = inicio + (temFoto ? diametro + vao : 0);
+  const xTexto = inicio + (temRetrato ? diametro + vao : 0);
   ctx.textAlign = "left";
   ctx.font = `700 ${tamNome}px ${FONTE}`;
   ctx.fillStyle = "#ffffff";
@@ -291,17 +349,47 @@ export function carregarImagem(src: string): Promise<HTMLImageElement> {
   });
 }
 
-/** Tira da pauta o prefixo da fonte ("Síntese Criminal: …") para virar manchete. */
-export function tituloParaArte(titulo: string): string {
-  const semPrefixo = titulo.replace(/^[A-Za-zÀ-ú][A-Za-zÀ-ú.\s]{2,24}:\s+/, "");
-  return (semPrefixo || titulo).replace(/\s+—\s+.*$/, "").trim();
+/** Converte códigos HTML (&#8230;, &amp;…) de volta em texto legível. */
+export function decodificarHtml(s: string): string {
+  return s
+    .replace(/&#(\d+);/g, (_, n) => String.fromCharCode(Number(n)))
+    .replace(/&#x([0-9a-fA-F]+);/g, (_, h) => String.fromCharCode(parseInt(h, 16)))
+    .replace(/&nbsp;/g, " ")
+    .replace(/&hellip;/g, "…")
+    .replace(/&(?:lsquo|rsquo|apos);/g, "'")
+    .replace(/&(?:ldquo|rdquo|quot);/g, '"')
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&amp;/g, "&");
 }
 
-/** Limpa rodapés de RSS ("O post … apareceu primeiro em …") do resumo. */
-export function resumoParaArte(resumo?: string): string {
+/** Tira da pauta o prefixo da fonte ("Síntese Criminal: …") para virar manchete. */
+export function tituloParaArte(titulo: string): string {
+  const limpo = decodificarHtml(titulo);
+  const semPrefixo = limpo.replace(/^[A-Za-zÀ-ú][A-Za-zÀ-ú.\s]{2,24}:\s+/, "");
+  return (semPrefixo || limpo).replace(/\s+—\s+.*$/, "").trim();
+}
+
+/**
+ * Prepara o resumo para virar linha de apoio: decodifica códigos HTML, remove
+ * o rodapé que os feeds RSS grudam no fim ("O post … apareceu primeiro em …",
+ * inclusive quando vem cortado) e encurta na última frase inteira.
+ */
+export function resumoParaArte(resumo?: string, limite = 230): string {
   if (!resumo) return "";
-  return resumo
-    .replace(/O post .*?apareceu primeiro em .*?\.?\s*$/i, "")
+  const texto = decodificarHtml(resumo)
+    .replace(/\[\s*(?:…|\.\.\.)\s*\]/g, " ")
+    .replace(/\bO post\b[\s\S]*$/i, "")
+    .replace(/\bLeia (?:mais|na íntegra)\b[\s\S]*$/i, "")
+    .replace(/\bapareceu primeiro em\b[\s\S]*$/i, "")
     .replace(/\s+/g, " ")
     .trim();
+
+  if (texto.length <= limite) return texto;
+
+  const corte = texto.slice(0, limite);
+  const fimFrase = Math.max(corte.lastIndexOf(". "), corte.lastIndexOf("! "), corte.lastIndexOf("? "));
+  if (fimFrase > limite * 0.45) return corte.slice(0, fimFrase + 1).trim();
+  const fimPalavra = corte.lastIndexOf(" ");
+  return `${(fimPalavra > 0 ? corte.slice(0, fimPalavra) : corte).trim()}…`;
 }
