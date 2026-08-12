@@ -21,6 +21,15 @@ export const ROTULO_FONTE: Record<FontePauta, string> = {
   blogs: "Blogs consolidados",
 };
 
+// Versão curta, para a etiqueta das artes de Instagram.
+export const ROTULO_CURTO: Record<FontePauta, string> = {
+  stf: "STF",
+  stj: "STJ",
+  camara: "Câmara",
+  senado: "Senado",
+  blogs: "Direito Penal",
+};
+
 export const COR_FONTE: Record<FontePauta, "azul" | "roxo" | "verde" | "ambar" | "rosa"> = {
   stf: "azul",
   stj: "roxo",

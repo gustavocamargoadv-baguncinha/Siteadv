@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { ExternalLink, Inbox, Newspaper, RefreshCw, Trash2, Archive, PenLine, Eye } from "lucide-react";
+import { ExternalLink, Inbox, Instagram, Newspaper, RefreshCw, Trash2, Archive, PenLine, Eye } from "lucide-react";
 import { useTable } from "@/lib/hooks";
 import type { Pauta, Post, FontePauta } from "@/lib/types";
 
@@ -11,8 +11,10 @@ type Candidata = Omit<Pauta, "id" | "status" | "created_at">;
 import { getStore } from "@/lib/store";
 import { getSupabase, supabaseConfigurado } from "@/lib/supabase";
 import { CompartilharBotao } from "@/components/CompartilharBotao";
+import { InstagramGerador } from "@/components/InstagramGerador";
 import { PageHeader, Card, Field, Input, Textarea, BotaoPrimario, Badge, EmptyState } from "@/components/ui";
-import { gerarSlug, markdownParaHtml, ROTULO_FONTE, COR_FONTE } from "@/lib/blog";
+import { gerarSlug, markdownParaHtml, ROTULO_FONTE, ROTULO_CURTO, COR_FONTE } from "@/lib/blog";
+import { tituloParaArte, resumoParaArte } from "@/lib/instagram-card";
 import { dataBR } from "@/lib/format";
 
 type Aba = "pautas" | "posts";
@@ -79,6 +81,39 @@ function ChipFiltro({ ativo, onClick, n, children }: { ativo: boolean; onClick: 
       {children}
       <span className={`rounded-full px-1.5 text-[10px] ${ativo ? "bg-white/20" : "bg-slate-100 text-slate-500"}`}>{n}</span>
     </button>
+  );
+}
+
+// Botão que abre o gerador de arte para Instagram, já preenchido.
+function BotaoArte({
+  titulo,
+  subtitulo,
+  etiqueta,
+  rotulo = "Instagram",
+  className = "inline-flex items-center gap-1.5 rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50",
+  iconSize = 14,
+}: {
+  titulo: string;
+  subtitulo?: string;
+  etiqueta?: string;
+  rotulo?: string;
+  className?: string;
+  iconSize?: number;
+}) {
+  const [aberto, setAberto] = useState(false);
+  return (
+    <>
+      <button onClick={() => setAberto(true)} className={className}>
+        <Instagram size={iconSize} /> {rotulo}
+      </button>
+      <InstagramGerador
+        aberto={aberto}
+        onFechar={() => setAberto(false)}
+        tituloInicial={titulo}
+        subtituloInicial={subtitulo}
+        etiquetaInicial={etiqueta}
+      />
+    </>
   );
 }
 
@@ -213,6 +248,11 @@ function AbaPautas({ onEscrever }: { onEscrever: (p: Post) => void }) {
                   url={p.url}
                   className="inline-flex items-center gap-1.5 rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50"
                 />
+                <BotaoArte
+                  titulo={tituloParaArte(p.titulo)}
+                  subtitulo={resumoParaArte(p.resumo)}
+                  etiqueta={p.fonte === "blogs" ? p.tema ?? ROTULO_CURTO.blogs : ROTULO_CURTO[p.fonte]}
+                />
                 <button onClick={() => update(p.id, { status: "arquivada" })} className="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold text-slate-500 hover:bg-slate-100">
                   <Archive size={14} /> Arquivar
                 </button>
@@ -331,11 +371,21 @@ function EditorPost({ post, onFechar }: { post: Post; onFechar: () => void }) {
 
   return (
     <div>
-      <div className="mb-4 flex items-center justify-between">
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
         <button onClick={onFechar} className="text-sm font-semibold text-brand-600 hover:text-brand-700">← Voltar</button>
-        <button onClick={excluir} className="inline-flex items-center gap-1.5 text-sm font-semibold text-red-600 hover:text-red-700">
-          <Trash2 size={15} /> Excluir
-        </button>
+        <div className="flex items-center gap-2">
+          <BotaoArte
+            titulo={tituloParaArte(titulo)}
+            subtitulo={resumoParaArte(resumo)}
+            etiqueta="Direito Penal"
+            rotulo="Arte para Instagram"
+            className="inline-flex items-center gap-1.5 rounded-lg border border-slate-300 px-3 py-1.5 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+            iconSize={15}
+          />
+          <button onClick={excluir} className="inline-flex items-center gap-1.5 text-sm font-semibold text-red-600 hover:text-red-700">
+            <Trash2 size={15} /> Excluir
+          </button>
+        </div>
       </div>
 
       <Card className="space-y-4 p-4">
