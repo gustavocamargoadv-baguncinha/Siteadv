@@ -2,13 +2,13 @@
 
 import { Suspense, useMemo, useState } from "react";
 import Link from "next/link";
-import { ArrowLeft, Check, HeartHandshake, Pencil, Plus, RotateCcw, Trash2, X } from "lucide-react";
+import { ArrowLeft, Check, HeartHandshake, Pencil, Plus, RotateCcw, X } from "lucide-react";
 import { useSearchParams } from "next/navigation";
 import { useTable, byId } from "@/lib/hooks";
-import type { Cliente, Lancamento, Processo } from "@/lib/types";
-import { brl, dataBR, emCobranca, formatCNJ, hojeISO, statusLancamento } from "@/lib/format";
-import { Badge, BotaoPrimario, Card, EmptyState, Field, Input, PageHeader, Select, StatCard } from "@/components/ui";
-import { Modal } from "@/components/Modal";
+import type { Cliente, Lancamento } from "@/lib/types";
+import { brl, dataBR, emCobranca, hojeISO, statusLancamento } from "@/lib/format";
+import { Badge, BotaoPrimario, Card, EmptyState, PageHeader, StatCard } from "@/components/ui";
+import { EditarLancamento } from "@/components/EditarLancamento";
 
 type Filtro = "todos" | "areceber" | "atrasados" | "recebidos" | "perdoados";
 
@@ -27,9 +27,8 @@ export default function FinanceiroPage() {
 }
 
 function FinanceiroConteudo() {
-  const { rows: lancamentos, insert, update, remove } = useTable<Lancamento>("lancamentos");
+  const { rows: lancamentos, update } = useTable<Lancamento>("lancamentos");
   const { rows: clientes } = useTable<Cliente>("clientes");
-  const { rows: processos } = useTable<Processo>("processos");
   const cliMap = byId(clientes);
 
   // Mês vindo do gráfico da Desempenho. Enquanto está ativo ele manda na lista
@@ -40,54 +39,20 @@ function FinanceiroConteudo() {
 
   const [filtro, setFiltro] = useState<Filtro>("todos");
   const [modal, setModal] = useState(false);
-  // `recebido` é a pergunta que faltava: o dinheiro JÁ entrou ou é uma conta a
-  // receber? Sem ela todo lançamento nascia como recebível e, com data de hoje
-  // ou de ontem, aparecia como parcela atrasada — dinheiro que entrou virava
-  // cobrança. Começa em "já recebi" porque é o uso do dia a dia (registrar o
-  // pagamento que acabou de cair); parcela futura sai do contrato.
-  // `id` nulo = lançamento novo; preenchido = editando um que já existe. O mesmo
-  // formulário serve aos dois — e é por ele que se conserta engano: trocar para
-  // "A receber" desmarca um recebimento lançado sem querer.
-  const [form, setForm] = useState({
-    id: null as string | null,
-    recebido: true,
-    categoria: "Honorários",
-    cliente_id: "",
-    processo_id: "",
-    descricao: "",
-    valor: "",
-    data: "",
-  });
-  const [confirmandoExclusao, setConfirmandoExclusao] = useState(false);
+  // Lançamento em edição; `null` abre o formulário em branco. O formulário em
+  // si vive em <EditarLancamento>, compartilhado com a ficha do cliente.
+  const [emEdicao, setEmEdicao] = useState<Lancamento | null>(null);
   // Data de recebimento em correção (id do lançamento) — o ✓ grava hoje, e daqui
   // se ajusta quando o pagamento caiu num outro dia.
   const [corrigindoData, setCorrigindoData] = useState<string | null>(null);
 
-  const cliSelecionado = form.cliente_id ? cliMap.get(form.cliente_id) : undefined;
-  // Com o cliente escolhido, a descrição já vem pronta: sobra digitar o valor.
-  const descricaoSugerida = cliSelecionado ? `${form.categoria} — ${cliSelecionado.nome}` : "";
-
   function abrirNovo() {
-    // hoje só aqui (e não no useState) para o servidor e o navegador não
-    // renderizarem datas diferentes na virada do dia
-    setForm({ id: null, recebido: true, categoria: "Honorários", cliente_id: "", processo_id: "", descricao: "", valor: "", data: hojeISO() });
-    setConfirmandoExclusao(false);
+    setEmEdicao(null);
     setModal(true);
   }
 
   function abrirEdicao(l: Lancamento) {
-    setForm({
-      id: l.id,
-      recebido: !!l.pago_em,
-      categoria: l.categoria,
-      cliente_id: l.cliente_id ?? "",
-      processo_id: l.processo_id ?? "",
-      descricao: l.descricao,
-      // vírgula decimal, como ele digita
-      valor: String(l.valor).replace(".", ","),
-      data: l.pago_em ?? l.vencimento,
-    });
-    setConfirmandoExclusao(false);
+    setEmEdicao(l);
     setModal(true);
   }
 
@@ -146,48 +111,6 @@ function FinanceiroConteudo() {
   );
 
   const lista = mes ? doMes : filtrados;
-
-  async function salvar(e: React.FormEvent) {
-    e.preventDefault();
-    const valor = parseFloat(form.valor.replace(",", "."));
-    const descricao = form.descricao.trim() || descricaoSugerida;
-    if (!descricao || !form.data || !valor || valor <= 0) return;
-
-    const campos = {
-      tipo: "receita" as const,
-      categoria: form.categoria,
-      cliente_id: form.cliente_id || undefined,
-      processo_id: form.processo_id || undefined,
-      descricao,
-      valor,
-      // Já recebido: o vencimento é o próprio dia do pagamento. Gravar uma data
-      // anterior faria o lançamento nascer marcado como atraso no histórico,
-      // mesmo tendo sido pago em dia.
-      vencimento: form.data,
-    };
-
-    if (form.id) {
-      await update(form.id, {
-        ...campos,
-        // `null` e não `undefined`: é assim que o campo é LIMPO. Voltar para
-        // "a receber" tem de apagar a data de pagamento — é esse o desfazer de
-        // quem marcou recebido por engano.
-        pago_em: form.recebido ? form.data : null,
-        // pago e perdoado ao mesmo tempo é proibido no banco; registrar o
-        // pagamento encerra o perdão.
-        ...(form.recebido ? { perdoado_em: null, perdoado_motivo: null } : {}),
-      });
-    } else {
-      await insert({ ...campos, ...(form.recebido ? { pago_em: form.data } : {}) });
-    }
-    setModal(false);
-  }
-
-  async function excluirLancamento() {
-    if (!form.id) return;
-    await remove(form.id);
-    setModal(false);
-  }
 
   return (
     <div>
@@ -384,124 +307,11 @@ function FinanceiroConteudo() {
         </div>
       )}
 
-      <Modal
+      <EditarLancamento
         aberto={modal}
-        titulo={form.id ? "Corrigir lançamento" : form.recebido ? "Registrar pagamento" : "Nova conta a receber"}
+        lancamento={emEdicao}
         onFechar={() => setModal(false)}
-      >
-        <form onSubmit={salvar} className="space-y-3">
-          {form.id && (
-            <p className="rounded-lg bg-slate-50 p-2.5 text-xs text-slate-600">
-              Marcou como recebido sem querer? Troque para <span className="font-semibold">⏳ A receber</span> — a data
-              do pagamento é apagada e ele volta para a cobrança.
-            </p>
-          )}
-          {/* A pergunta que decide tudo, antes de qualquer campo */}
-          <div className="grid grid-cols-2 gap-2">
-            {(
-              [
-                [true, "💰 Já recebi", "o dinheiro entrou"],
-                [false, "⏳ A receber", "vai vencer"],
-              ] as const
-            ).map(([v, rotulo, dica]) => (
-              <button
-                key={String(v)}
-                type="button"
-                onClick={() => setForm({ ...form, recebido: v })}
-                className={`rounded-xl border px-3 py-2.5 text-left transition ${
-                  form.recebido === v
-                    ? "border-brand-500 bg-brand-50 ring-1 ring-brand-500"
-                    : "border-slate-200 bg-white hover:border-slate-300"
-                }`}
-              >
-                <span className={`block text-sm font-semibold ${form.recebido === v ? "text-brand-800" : "text-slate-700"}`}>
-                  {rotulo}
-                </span>
-                <span className="block text-xs text-slate-500">{dica}</span>
-              </button>
-            ))}
-          </div>
-
-          <Field rotulo="Cliente">
-            <Select value={form.cliente_id} onChange={(e) => setForm({ ...form, cliente_id: e.target.value, processo_id: "" })}>
-              <option value="">Sem vínculo</option>
-              {clientes.map((c) => (
-                <option key={c.id} value={c.id}>{c.nome}</option>
-              ))}
-            </Select>
-          </Field>
-          <div className="grid grid-cols-2 gap-3">
-            <Field rotulo="Valor (R$)" obrigatorio>
-              <Input required inputMode="decimal" value={form.valor} onChange={(e) => setForm({ ...form, valor: e.target.value })} placeholder="3000,00" />
-            </Field>
-            <Field rotulo={form.recebido ? "Recebido em" : "Vencimento"} obrigatorio>
-              <Input required type="date" value={form.data} onChange={(e) => setForm({ ...form, data: e.target.value })} />
-            </Field>
-          </div>
-          <Field rotulo="Descrição">
-            <Input
-              value={form.descricao}
-              onChange={(e) => setForm({ ...form, descricao: e.target.value })}
-              placeholder={descricaoSugerida || "Ex.: Parcela 1/4 — apelação"}
-            />
-            {descricaoSugerida && !form.descricao.trim() && (
-              <p className="mt-1 text-xs text-slate-400">
-                Em branco, salva como “{descricaoSugerida}”.
-              </p>
-            )}
-          </Field>
-          <Field rotulo="Categoria">
-            <Select value={form.categoria} onChange={(e) => setForm({ ...form, categoria: e.target.value })}>
-              {["Honorários", "Consultoria", "Êxito", "Outras receitas"].map((c) => (
-                <option key={c} value={c}>{c}</option>
-              ))}
-            </Select>
-          </Field>
-          {form.cliente_id && (
-            <Field rotulo="Processo">
-              <Select value={form.processo_id} onChange={(e) => setForm({ ...form, processo_id: e.target.value })}>
-                <option value="">Sem vínculo</option>
-                {processos.filter((p) => p.cliente_id === form.cliente_id).map((p) => (
-                  <option key={p.id} value={p.id}>{formatCNJ(p.numero_cnj)}</option>
-                ))}
-              </Select>
-            </Field>
-          )}
-          <div className="flex flex-wrap items-center justify-end gap-2 pt-1">
-            {form.id &&
-              (confirmandoExclusao ? (
-                <div className="mr-auto flex items-center gap-2">
-                  <span className="text-xs text-slate-600">Apagar de vez?</span>
-                  <button
-                    type="button"
-                    onClick={excluirLancamento}
-                    className="rounded-lg bg-red-600 px-2.5 py-1.5 text-xs font-semibold text-white transition hover:bg-red-700"
-                  >
-                    Sim, apagar
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setConfirmandoExclusao(false)}
-                    className="text-xs font-semibold text-slate-500 hover:text-slate-800"
-                  >
-                    não
-                  </button>
-                </div>
-              ) : (
-                <button
-                  type="button"
-                  onClick={() => setConfirmandoExclusao(true)}
-                  className="mr-auto inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium text-slate-400 transition hover:bg-red-50 hover:text-red-700"
-                >
-                  <Trash2 size={13} /> Apagar lançamento
-                </button>
-              ))}
-            <BotaoPrimario type="submit">
-              {form.id ? "Salvar correção" : form.recebido ? "Registrar pagamento" : "Salvar conta a receber"}
-            </BotaoPrimario>
-          </div>
-        </form>
-      </Modal>
+      />
     </div>
   );
 }

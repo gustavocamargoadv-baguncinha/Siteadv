@@ -3,13 +3,14 @@
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useState } from "react";
-import { ArrowLeft, HeartHandshake, KeyRound, Mail, MapPin, Pencil, Phone, RotateCcw, Trash2 } from "lucide-react";
+import { ArrowLeft, HeartHandshake, KeyRound, Mail, MapPin, Pencil, Phone, Plus, RotateCcw, Trash2 } from "lucide-react";
 import { useTable } from "@/lib/hooks";
 import type { Cliente, ContratoHonorarios, Documento, Lancamento, Processo } from "@/lib/types";
 import { AREAS, brl, dataBR, emCobranca, formatCNJ, statusLancamento, TIPOS_HONORARIOS } from "@/lib/format";
 import { Badge, BotaoPrimario, Card, EmptyState, Field, Input, PageHeader, Select, Textarea } from "@/components/ui";
 import { Modal } from "@/components/Modal";
 import { GerarDocumentos } from "@/components/GerarDocumentos";
+import { EditarLancamento } from "@/components/EditarLancamento";
 
 export default function ClienteDetalhe() {
   const { id } = useParams<{ id: string }>();
@@ -22,6 +23,9 @@ export default function ClienteDetalhe() {
   const { rows: documentos, remove: removeDocumento } = useTable<Documento>("documentos");
 
   const [editando, setEditando] = useState(false);
+  // Lançamento em correção pela ficha (null = novo lançamento para este cliente)
+  const [modalLanc, setModalLanc] = useState(false);
+  const [lancEditando, setLancEditando] = useState<Lancamento | null>(null);
   const [excluindo, setExcluindo] = useState(false);
   const [apagando, setApagando] = useState(false);
   const [convidando, setConvidando] = useState(false);
@@ -326,20 +330,54 @@ export default function ClienteDetalhe() {
               {financeiro.slice(0, 6).map((l) => {
                 const st = statusLancamento(l);
                 return (
-                  <li key={l.id} className="flex items-center justify-between gap-3 py-2">
-                    <div className="min-w-0">
+                  <li key={l.id} className="flex items-center justify-between gap-2 py-2">
+                    <div className="min-w-0 flex-1">
                       <p className="truncate text-sm text-slate-800">{l.descricao}</p>
-                      <p className="text-xs text-slate-500">vence {dataBR(l.vencimento)}</p>
+                      <p className="text-xs text-slate-500">
+                        {l.pago_em ? `recebido em ${dataBR(l.pago_em)}` : `vence ${dataBR(l.vencimento)}`}
+                      </p>
                     </div>
-                    <div className="text-right">
-                      <p className="text-sm font-semibold text-slate-800">{brl(l.valor)}</p>
-                      <Badge cor={st === "pago" ? "verde" : st === "atrasado" ? "vermelho" : "ambar"}>{st}</Badge>
+                    <div className="shrink-0 text-right">
+                      <p className="text-sm font-semibold tabular-nums text-slate-800">{brl(l.valor)}</p>
+                      <Badge cor={st === "pago" ? "verde" : st === "atrasado" ? "vermelho" : st === "perdoado" ? "cinza" : "ambar"}>
+                        {st}
+                      </Badge>
                     </div>
+                    {/* corrigir valor e data sem ter de achar o lançamento no
+                        Financeiro: a dívida se discute olhando a ficha */}
+                    <button
+                      onClick={() => {
+                        setLancEditando(l);
+                        setModalLanc(true);
+                      }}
+                      className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-slate-400 transition hover:bg-slate-100 hover:text-slate-700"
+                      title="Corrigir ou apagar este lançamento"
+                    >
+                      <Pencil size={14} />
+                    </button>
                   </li>
                 );
               })}
             </ul>
           )}
+          {financeiro.length > 6 && (
+            <p className="mt-2 text-xs text-slate-400">
+              Mostrando 6 de {financeiro.length}. Os demais estão no{" "}
+              <Link href="/financeiro" className="font-semibold text-brand-700 hover:underline">
+                Financeiro
+              </Link>
+              .
+            </p>
+          )}
+          <button
+            onClick={() => {
+              setLancEditando(null);
+              setModalLanc(true);
+            }}
+            className="mt-3 inline-flex items-center gap-1.5 rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs font-semibold text-slate-600 transition hover:border-brand-400 hover:text-brand-700"
+          >
+            <Plus size={14} /> Lançar para este cliente
+          </button>
         </Card>
       </div>
 
@@ -406,6 +444,13 @@ export default function ClienteDetalhe() {
           <div className="flex justify-end"><BotaoPrimario type="submit">Salvar alterações</BotaoPrimario></div>
         </form>
       </Modal>
+
+      <EditarLancamento
+        aberto={modalLanc}
+        lancamento={lancEditando}
+        clienteFixo={cli.id}
+        onFechar={() => setModalLanc(false)}
+      />
 
       {/* Zona de exclusão — discreta e no fim da página de propósito */}
       <div className="flex justify-end pt-2">
