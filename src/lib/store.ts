@@ -514,6 +514,13 @@ function somaMesesData(iso: string, meses: number): string {
   return `${alvo.getFullYear()}-${String(alvo.getMonth() + 1).padStart(2, "0")}-${String(alvo.getDate()).padStart(2, "0")}`;
 }
 
+/** Reais → centavos inteiros. Dividir dinheiro em ponto flutuante deixa restos
+ *  invisíveis (0,1 + 0,2 não dá exatamente 0,3), e um resto desses decide se a
+ *  parcela conta como paga ou não. Em centavos a conta é exata. */
+function emCentavos(v: number): number {
+  return Math.round(v * 100);
+}
+
 /** Gera as parcelas em aberto de cada contrato (ZapSign), lançando-as no
  *  Financeiro. Desconta o que o cliente já pagou (não duplica) e segue a cadência
  *  mensal a partir do dia da assinatura. Gera tanto as parcelas a vencer quanto as
@@ -577,8 +584,14 @@ export async function gerarParcelasVincendas(apenasCliente?: string): Promise<Re
     // não contar duas vezes a dívida do mesmo cliente.
     if (clientesComCobrancaManual.has(clienteId)) continue;
     const parcela = Math.round((ct.valor / ct.parcelas) * 100) / 100;
+    if (emCentavos(parcela) <= 0) continue; // contrato sem valor: nada a parcelar
     const jaPago = pagosPorCliente.get(clienteId) ?? 0;
-    const pagas = Math.min(ct.parcelas, Math.max(0, Math.round(jaPago / parcela)));
+    // Só conta como paga a parcela COBERTA POR INTEIRO. Arredondar aqui (era o
+    // que se fazia) dava a parcela por quitada a partir da metade: quem pagasse
+    // R$ 400 de uma parcela de R$ 800 sumia da cobrança devendo os outros R$ 400.
+    // Pagamento parcial agora não adianta a fila — fica no caixa, e a parcela
+    // continua em aberto até ser coberta.
+    const pagas = Math.min(ct.parcelas, Math.max(0, Math.floor(emCentavos(jaPago) / emCentavos(parcela))));
     if (pagas >= ct.parcelas) continue; // contrato quitado
 
     let gerouAlguma = false;
@@ -624,7 +637,13 @@ export async function gerarParcelasVincendas(apenasCliente?: string): Promise<Re
     const perdoado = perdoadoProjetado.get(cm.cliente_id) ?? 0;
     const saldo = Math.round((cm.valor - jaPago - perdoado) * 100) / 100;
     if (saldo < 0.5) continue; // quitado
-    const nRestantes = Math.max(1, Math.round(saldo / cm.parcela_valor));
+    if (emCentavos(cm.parcela_valor) <= 0) continue;
+    // Mesma regra do outro lado, vista pelo avesso: nenhuma parcela pode passar
+    // do valor contratado. O total sempre fechou, mas arredondar para baixo
+    // jogava o troco na última — um saldo de R$ 1.000 em parcelas de R$ 450
+    // virava R$ 450 + R$ 550, cobrando do cliente um mês acima do combinado.
+    // Arredondando para cima são R$ 450 + R$ 450 + R$ 100: a menor é a última.
+    const nRestantes = Math.max(1, Math.ceil(emCentavos(saldo) / emCentavos(cm.parcela_valor)));
 
     // primeiro vencimento: próxima ocorrência do dia_venc a partir de hoje
     let base = new Date(hojeD.getFullYear(), hojeD.getMonth(), cm.dia_venc);
