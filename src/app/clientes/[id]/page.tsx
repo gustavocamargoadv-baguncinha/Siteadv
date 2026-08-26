@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useState } from "react";
-import { ArrowLeft, HeartHandshake, KeyRound, Mail, MapPin, Pencil, Phone, Plus, RotateCcw, Trash2 } from "lucide-react";
+import { ArrowLeft, ChevronDown, ChevronUp, HeartHandshake, KeyRound, Mail, MapPin, Pencil, Phone, Plus, RotateCcw, Trash2 } from "lucide-react";
 import { useTable } from "@/lib/hooks";
 import type { Cliente, ContratoHonorarios, Documento, Lancamento, Processo } from "@/lib/types";
 import { AREAS, brl, dataBR, emCobranca, formatCNJ, statusLancamento, TIPOS_HONORARIOS } from "@/lib/format";
@@ -26,6 +26,10 @@ export default function ClienteDetalhe() {
   // Lançamento em correção pela ficha (null = novo lançamento para este cliente)
   const [modalLanc, setModalLanc] = useState(false);
   const [lancEditando, setLancEditando] = useState<Lancamento | null>(null);
+  // Card do Financeiro aberto por inteiro. Fechado ele mostra um resumo; mandar
+  // o resto para a tela do Financeiro não resolvia, porque lá estão os
+  // lançamentos de todos os clientes misturados.
+  const [verTodosLancamentos, setVerTodosLancamentos] = useState(false);
   const [excluindo, setExcluindo] = useState(false);
   const [apagando, setApagando] = useState(false);
   const [convidando, setConvidando] = useState(false);
@@ -158,9 +162,12 @@ export default function ClienteDetalhe() {
     .filter((l) => l.tipo === "receita" && (l.pago_em || l.perdoado_em))
     .sort((a, b) => dataLiquidacao(b).localeCompare(dataLiquidacao(a))); // mais recente no topo
   const POR_LADO = 4;
-  const aCobrarVisiveis = aCobrar.slice(0, POR_LADO);
-  const liquidadosVisiveis = liquidados.slice(0, POR_LADO);
+  const aCobrarVisiveis = verTodosLancamentos ? aCobrar : aCobrar.slice(0, POR_LADO);
+  const liquidadosVisiveis = verTodosLancamentos ? liquidados : liquidados.slice(0, POR_LADO);
   const visiveis = aCobrarVisiveis.length + liquidadosVisiveis.length;
+  // O que o resumo esconde pode ser justamente uma parcela atrasada — por isso o
+  // botão diz quantas ficaram de fora em vez de só "ver mais".
+  const ocultos = financeiro.length - visiveis;
 
   /** Uma linha do card do Financeiro. As duas listas desenham igual — separá-las
    *  em dois blocos de JSX faria uma divergir da outra na primeira mudança. */
@@ -399,14 +406,24 @@ export default function ClienteDetalhe() {
               )}
             </div>
           )}
-          {financeiro.length > visiveis && (
-            <p className="mt-2 text-xs text-slate-400">
-              Mostrando {visiveis} de {financeiro.length}. Os demais estão no{" "}
-              <Link href="/financeiro" className="font-semibold text-brand-700 hover:underline">
-                Financeiro
-              </Link>
-              .
-            </p>
+          {(ocultos > 0 || verTodosLancamentos) && (
+            <button
+              onClick={() => setVerTodosLancamentos((v) => !v)}
+              className="mt-2 inline-flex items-center gap-1 text-xs font-semibold text-brand-700 transition hover:underline"
+            >
+              {verTodosLancamentos ? (
+                <>
+                  <ChevronUp size={13} /> Ver menos
+                </>
+              ) : (
+                <>
+                  <ChevronDown size={13} /> Ver os {financeiro.length} lançamentos deste cliente
+                  <span className="font-normal text-slate-400">
+                    ({ocultos} {ocultos === 1 ? "oculto" : "ocultos"})
+                  </span>
+                </>
+              )}
+            </button>
           )}
           <button
             onClick={() => {
