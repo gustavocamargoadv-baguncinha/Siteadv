@@ -142,6 +142,64 @@ export default function ClienteDetalhe() {
   const parcelasPagas = recebiveis.filter((l) => l.pago_em).length;
   const proximaParcela = recebiveis.find((l) => emCobranca(l));
 
+  // O card do Financeiro mostra um recorte, não a lista inteira — e sem ordem
+  // nenhuma ele mostrava as linhas mais RECÉM-CRIADAS. Como o gerador cria de
+  // uma vez todas as parcelas futuras do contrato, elas ocupavam as vagas e o
+  // histórico de pagamentos do cliente sumia da própria ficha dele: ficava a
+  // impressão de que ele nunca pagou nada.
+  //
+  // O recorte agora é metade de cada lado — o que se cobra e o que já entrou —
+  // para nenhum dos dois esconder o outro.
+  const aCobrar = financeiro
+    .filter(emCobranca)
+    .sort((a, b) => a.vencimento.localeCompare(b.vencimento)); // atrasada no topo
+  const dataLiquidacao = (l: Lancamento) => l.pago_em ?? l.perdoado_em ?? "";
+  const liquidados = financeiro
+    .filter((l) => l.tipo === "receita" && (l.pago_em || l.perdoado_em))
+    .sort((a, b) => dataLiquidacao(b).localeCompare(dataLiquidacao(a))); // mais recente no topo
+  const POR_LADO = 4;
+  const aCobrarVisiveis = aCobrar.slice(0, POR_LADO);
+  const liquidadosVisiveis = liquidados.slice(0, POR_LADO);
+  const visiveis = aCobrarVisiveis.length + liquidadosVisiveis.length;
+
+  /** Uma linha do card do Financeiro. As duas listas desenham igual — separá-las
+   *  em dois blocos de JSX faria uma divergir da outra na primeira mudança. */
+  const linhaLancamento = (l: Lancamento) => {
+    const st = statusLancamento(l);
+    return (
+      <li key={l.id} className="flex items-center justify-between gap-2 py-2">
+        <div className="min-w-0 flex-1">
+          <p className="truncate text-sm text-slate-800">{l.descricao}</p>
+          <p className="text-xs text-slate-500">
+            {l.pago_em
+              ? `recebido em ${dataBR(l.pago_em)}`
+              : l.perdoado_em
+                ? `perdoado em ${dataBR(l.perdoado_em)}`
+                : `vence ${dataBR(l.vencimento)}`}
+          </p>
+        </div>
+        <div className="shrink-0 text-right">
+          <p className="text-sm font-semibold tabular-nums text-slate-800">{brl(l.valor)}</p>
+          <Badge cor={st === "pago" ? "verde" : st === "atrasado" ? "vermelho" : st === "perdoado" ? "cinza" : "ambar"}>
+            {st === "pago" ? "recebido" : st}
+          </Badge>
+        </div>
+        {/* corrigir valor e data sem ter de achar o lançamento no
+            Financeiro: a dívida se discute olhando a ficha */}
+        <button
+          onClick={() => {
+            setLancEditando(l);
+            setModalLanc(true);
+          }}
+          className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-slate-400 transition hover:bg-slate-100 hover:text-slate-700"
+          title="Corrigir ou apagar este lançamento"
+        >
+          <Pencil size={14} />
+        </button>
+      </li>
+    );
+  };
+
   /** Apaga o cliente e o que só existe por causa dele.
    *
    *  Os lançamentos vão explicitamente, um a um, ANTES do cliente: no banco a
@@ -326,43 +384,24 @@ export default function ClienteDetalhe() {
           {financeiro.length === 0 ? (
             <EmptyState>Sem lançamentos.</EmptyState>
           ) : (
-            <ul className="divide-y divide-slate-100">
-              {financeiro.slice(0, 6).map((l) => {
-                const st = statusLancamento(l);
-                return (
-                  <li key={l.id} className="flex items-center justify-between gap-2 py-2">
-                    <div className="min-w-0 flex-1">
-                      <p className="truncate text-sm text-slate-800">{l.descricao}</p>
-                      <p className="text-xs text-slate-500">
-                        {l.pago_em ? `recebido em ${dataBR(l.pago_em)}` : `vence ${dataBR(l.vencimento)}`}
-                      </p>
-                    </div>
-                    <div className="shrink-0 text-right">
-                      <p className="text-sm font-semibold tabular-nums text-slate-800">{brl(l.valor)}</p>
-                      <Badge cor={st === "pago" ? "verde" : st === "atrasado" ? "vermelho" : st === "perdoado" ? "cinza" : "ambar"}>
-                        {st}
-                      </Badge>
-                    </div>
-                    {/* corrigir valor e data sem ter de achar o lançamento no
-                        Financeiro: a dívida se discute olhando a ficha */}
-                    <button
-                      onClick={() => {
-                        setLancEditando(l);
-                        setModalLanc(true);
-                      }}
-                      className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-slate-400 transition hover:bg-slate-100 hover:text-slate-700"
-                      title="Corrigir ou apagar este lançamento"
-                    >
-                      <Pencil size={14} />
-                    </button>
-                  </li>
-                );
-              })}
-            </ul>
+            <div className="space-y-3">
+              {aCobrarVisiveis.length > 0 && (
+                <div>
+                  <p className="text-[11px] font-bold uppercase tracking-wide text-slate-400">A cobrar</p>
+                  <ul className="divide-y divide-slate-100">{aCobrarVisiveis.map(linhaLancamento)}</ul>
+                </div>
+              )}
+              {liquidadosVisiveis.length > 0 && (
+                <div>
+                  <p className="text-[11px] font-bold uppercase tracking-wide text-slate-400">Já recebido</p>
+                  <ul className="divide-y divide-slate-100">{liquidadosVisiveis.map(linhaLancamento)}</ul>
+                </div>
+              )}
+            </div>
           )}
-          {financeiro.length > 6 && (
+          {financeiro.length > visiveis && (
             <p className="mt-2 text-xs text-slate-400">
-              Mostrando 6 de {financeiro.length}. Os demais estão no{" "}
+              Mostrando {visiveis} de {financeiro.length}. Os demais estão no{" "}
               <Link href="/financeiro" className="font-semibold text-brand-700 hover:underline">
                 Financeiro
               </Link>
