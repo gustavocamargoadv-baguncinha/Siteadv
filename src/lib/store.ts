@@ -518,24 +518,44 @@ function somaMesesData(iso: string, meses: number): string {
  *  Financeiro. Desconta o que o cliente já pagou (não duplica) e segue a cadência
  *  mensal a partir do dia da assinatura. Gera tanto as parcelas a vencer quanto as
  *  já vencidas e não pagas — estas entram como "em atraso", para o cliente
- *  inadimplente aparecer na Cobrança. Pode rodar de novo: as parcelas geradas
- *  antes (id "impzp-venc-") são substituídas. */
-export async function gerarParcelasVincendas(): Promise<ResultadoVincendas> {
+ *  inadimplente aparecer na Cobrança.
+ *
+ *  Pode rodar de novo: as parcelas AINDA EM ABERTO (id "impzp-venc-") são
+ *  refeitas a partir do que o cliente já pagou. Parcela projetada que já foi
+ *  recebida ou perdoada não é mais projeção — é histórico, e sobrevive.
+ *
+ *  Com `apenasCliente`, refaz só a projeção daquele cliente: é o reacerto
+ *  automático de quem acabou de receber um pagamento, sem mexer no resto. */
+export async function gerarParcelasVincendas(apenasCliente?: string): Promise<ResultadoVincendas> {
   const s = getStore();
   const lancs = await s.list<Lancamento>("lancamentos");
 
-  // remove as parcelas a vencer geradas em execuções anteriores (recomeça limpo)
-  for (const l of lancs.filter((x) => x.id.startsWith("impzp-venc-"))) {
+  // Parcela projetada já quitada (ou perdoada) deixa de ser projeção: guarda um
+  // recebimento de verdade. Apagá-la junto com as demais apagava o dinheiro que
+  // ela registrava — quem marcasse ✓ numa parcela e rodasse este gerador de novo
+  // veria a parcela voltar em aberto, com o pagamento sumido.
+  const liquidada = (l: Lancamento) => !!l.pago_em || !!l.perdoado_em;
+  const projetadas = lancs.filter((x) => ehParcelaProjetada(x.id));
+  const preservadas = new Set(projetadas.filter(liquidada).map((l) => l.id));
+  for (const l of projetadas) {
+    if (liquidada(l)) continue;
+    if (apenasCliente && l.cliente_id !== apenasCliente) continue;
     await s.remove("lancamentos", l.id);
   }
 
   const pagosPorCliente = new Map<string, number>();
+  const perdoadoProjetado = new Map<string, number>(); // parcela projetada de que o escritório abriu mão
   const pagoEmData = new Set<string>(); // "cliente_id|vencimento" já quitado nessa data
   const clientesComCobrancaManual = new Set<string>(); // saldo já lançado à mão (cobrwa-)
   for (const l of lancs) {
-    if (l.tipo === "receita" && l.pago_em && l.cliente_id && !l.id.startsWith("impzp-venc-")) {
+    // sem exceção para "impzp-venc-": as únicas projetadas com pago_em são as
+    // preservadas acima, e o dinheiro delas conta como qualquer outro.
+    if (l.tipo === "receita" && l.pago_em && l.cliente_id) {
       pagosPorCliente.set(l.cliente_id, (pagosPorCliente.get(l.cliente_id) ?? 0) + l.valor);
       pagoEmData.add(`${l.cliente_id}|${l.vencimento}`);
+    }
+    if (l.tipo === "receita" && l.perdoado_em && l.cliente_id && preservadas.has(l.id)) {
+      perdoadoProjetado.set(l.cliente_id, (perdoadoProjetado.get(l.cliente_id) ?? 0) + l.valor);
     }
     if (l.cliente_id && l.id.startsWith("cobrwa-")) clientesComCobrancaManual.add(l.cliente_id);
   }
@@ -552,6 +572,7 @@ export async function gerarParcelasVincendas(): Promise<ResultadoVincendas> {
 
   for (const ct of CONTRATOS_ZAPSIGN) {
     const clienteId = ct.match_id ?? `impzp-c-${String(ct.idx).padStart(2, "0")}`;
+    if (apenasCliente && clienteId !== apenasCliente) continue;
     // saldo já lançado à mão (cobrança manual): não gera parcela automática, para
     // não contar duas vezes a dívida do mesmo cliente.
     if (clientesComCobrancaManual.has(clienteId)) continue;
@@ -569,12 +590,14 @@ export async function gerarParcelasVincendas(): Promise<ResultadoVincendas> {
       // vínculo, não inventa atraso: mantém apenas as parcelas a vencer, evitando
       // falso-positivo de quem pagou por outro registro.
       if (venc < cutoff && (!ct.match_id || venc < pisoAtraso)) continue;
+      const id = `impzp-venc-${String(ct.idx).padStart(2, "0")}-${k}`;
+      if (preservadas.has(id)) continue; // essa parcela já foi recebida ou perdoada
       // gera tanto as parcelas a vencer quanto as já vencidas e não pagas:
       // as vencidas entram como "em atraso" para o cliente aparecer na Cobrança.
       const ultima = k === ct.parcelas;
       const valor = ultima ? Math.round((ct.valor - parcela * (ct.parcelas - 1)) * 100) / 100 : parcela;
       await s.insert<Lancamento>("lancamentos", {
-        id: `impzp-venc-${String(ct.idx).padStart(2, "0")}-${k}`,
+        id,
         tipo: "receita",
         categoria: "Honorários",
         cliente_id: clienteId,
@@ -593,9 +616,13 @@ export async function gerarParcelasVincendas(): Promise<ResultadoVincendas> {
   // pagamento do cliente, começando na próxima ocorrência desse dia.
   const hojeD = new Date();
   for (const cm of CONTRATOS_MANUAIS) {
+    if (apenasCliente && cm.cliente_id !== apenasCliente) continue;
     if (clientesComCobrancaManual.has(cm.cliente_id)) continue; // saldo já lançado à mão
     const jaPago = pagosPorCliente.get(cm.cliente_id) ?? 0;
-    const saldo = Math.round((cm.valor - jaPago) * 100) / 100;
+    // parcela perdoada não volta para a fila: o escritório abriu mão dela, então
+    // ela abate o saldo igual a um pagamento, senão reapareceria no mês seguinte.
+    const perdoado = perdoadoProjetado.get(cm.cliente_id) ?? 0;
+    const saldo = Math.round((cm.valor - jaPago - perdoado) * 100) / 100;
     if (saldo < 0.5) continue; // quitado
     const nRestantes = Math.max(1, Math.round(saldo / cm.parcela_valor));
 
@@ -607,6 +634,7 @@ export async function gerarParcelasVincendas(): Promise<ResultadoVincendas> {
     let gerouAlguma = false;
     let colocadas = 0; // parcelas a vencer já geradas
     let mes = 0; // deslocamento de meses a partir do primeiro vencimento
+    let seq = 0; // sufixo do id; anda sozinho para não colidir com parcela preservada
     // gera exatamente nRestantes parcelas, pulando os meses cuja data já foi
     // quitada (ex.: 1ª parcela paga na assinatura, no próprio dia do vencimento)
     while (colocadas < nRestantes && mes < nRestantes + 12) {
@@ -615,8 +643,11 @@ export async function gerarParcelasVincendas(): Promise<ResultadoVincendas> {
       if (pagoEmData.has(`${cm.cliente_id}|${venc}`)) continue;
       const ultima = colocadas === nRestantes - 1;
       const valor = ultima ? Math.round((saldo - cm.parcela_valor * (nRestantes - 1)) * 100) / 100 : cm.parcela_valor;
+      do {
+        seq++;
+      } while (preservadas.has(`impzp-venc-${String(cm.idx).padStart(2, "0")}-${seq}`));
       await s.insert<Lancamento>("lancamentos", {
-        id: `impzp-venc-${String(cm.idx).padStart(2, "0")}-${colocadas + 1}`,
+        id: `impzp-venc-${String(cm.idx).padStart(2, "0")}-${seq}`,
         tipo: "receita",
         categoria: "Honorários",
         cliente_id: cm.cliente_id,
@@ -633,6 +664,31 @@ export async function gerarParcelasVincendas(): Promise<ResultadoVincendas> {
   }
 
   return { contratos, parcelasGeradas };
+}
+
+/** Esse lançamento é uma parcela projetada pelo gerador (e não algo digitado à
+ *  mão)? Enquanto está em aberto, ela é reescrita a cada reacerto. */
+export function ehParcelaProjetada(id: string): boolean {
+  return id.startsWith("impzp-venc-");
+}
+
+/** Reacerta a projeção de parcelas do cliente depois que um pagamento dele entra,
+ *  muda de valor ou é apagado.
+ *
+ *  Sem isso, a parcela projetada ficava "em atraso" ao lado do pagamento que a
+ *  quitou: o cliente aparecia devendo e pagando a mesma coisa, e o valor entrava
+ *  duas vezes em "A receber". A projeção só se acertava quando alguém lembrava de
+ *  clicar em "Gerar parcelas a vencer" nas Configurações.
+ *
+ *  Nunca deixa o pagamento falhar por causa do reacerto: o lançamento já foi
+ *  gravado quando isto roda, e o botão das Configurações continua refazendo tudo. */
+export async function reconciliarParcelasCliente(clienteId?: string | null): Promise<void> {
+  if (!clienteId) return;
+  try {
+    await gerarParcelasVincendas(clienteId);
+  } catch (e) {
+    console.warn("Não foi possível reacertar as parcelas deste cliente:", e);
+  }
 }
 
 export interface ResultadoCasos {

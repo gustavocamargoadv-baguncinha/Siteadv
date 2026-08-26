@@ -69,8 +69,7 @@ function FinanceiroConteudo() {
     // perdoada continua no sistema, mas não engorda mais esses números.
     const aReceber = receitas.filter(emCobranca).reduce((s, l) => s + l.valor, 0);
     const emAtraso = receitas.filter((l) => statusLancamento(l) === "atrasado").reduce((s, l) => s + l.valor, 0);
-    const perdoado = receitas.filter((l) => !!l.perdoado_em).reduce((s, l) => s + l.valor, 0);
-    return { recebidoMes, recebidoAno, aReceber, emAtraso, perdoado };
+    return { recebidoMes, recebidoAno, aReceber, emAtraso };
   }, [receitas, mesAtual, anoAtual]);
 
   // Recorte do mês: casa com o gráfico da Desempenho, que plota dinheiro
@@ -165,11 +164,6 @@ function FinanceiroConteudo() {
               }`}
             >
               {v}
-              {k === "perdoados" && totais.perdoado > 0 && (
-                <span className={`ml-1 tabular-nums ${filtro === k ? "text-slate-300" : "text-slate-400"}`}>
-                  {brl(totais.perdoado)}
-                </span>
-              )}
             </button>
           ))}
         </div>

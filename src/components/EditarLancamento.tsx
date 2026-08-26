@@ -11,6 +11,7 @@
 import { useEffect, useState } from "react";
 import { Trash2 } from "lucide-react";
 import { useTable } from "@/lib/hooks";
+import { ehParcelaProjetada, reconciliarParcelasCliente } from "@/lib/store";
 import type { Cliente, Lancamento, Processo } from "@/lib/types";
 import { formatCNJ, hojeISO } from "@/lib/format";
 import { BotaoPrimario, Field, Input, Select } from "@/components/ui";
@@ -108,6 +109,22 @@ export function EditarLancamento({ aberto, onFechar, lancamento = null, clienteF
       } else {
         await insert({ ...campos, ...(recebido ? { pago_em: data } : {}) });
       }
+      // Lançar o pagamento não pode deixar de pé a parcela projetada que ele
+      // quitou — senão o cliente segue "em atraso" logo abaixo do recebimento
+      // que acabou de entrar.
+      //
+      // A exceção é corrigir uma parcela projetada deixando-a em aberto: o
+      // reacerto reescreve as parcelas em aberto, então ele apagaria na hora a
+      // correção recém-feita. Aí a projeção espera o próximo movimento de
+      // dinheiro (ou o botão das Configurações).
+      if (!(lancamento && ehParcelaProjetada(lancamento.id) && !recebido)) {
+        await reconciliarParcelasCliente(clienteId);
+        // lançamento que trocou de dono: reacerta os dois, para nenhum dos dois
+        // ficar com a projeção velha
+        if (lancamento?.cliente_id && lancamento.cliente_id !== clienteId) {
+          await reconciliarParcelasCliente(lancamento.cliente_id);
+        }
+      }
       onFechar();
     } finally {
       setSalvando(false);
@@ -116,7 +133,14 @@ export function EditarLancamento({ aberto, onFechar, lancamento = null, clienteF
 
   async function apagar() {
     if (!lancamento) return;
+    // Apagar uma parcela projetada que ainda está em aberto é dizer "essa
+    // cobrança não existe": reacertar a traria de volta no mesmo instante, e o
+    // botão pareceria não funcionar.
+    const projetadaEmAberto =
+      ehParcelaProjetada(lancamento.id) && !lancamento.pago_em && !lancamento.perdoado_em;
     await remove(lancamento.id);
+    // apagar um recebimento devolve a dívida: a parcela volta para a fila
+    if (!projetadaEmAberto) await reconciliarParcelasCliente(lancamento.cliente_id);
     onFechar();
   }
 
