@@ -1,4 +1,4 @@
-// Camada de dados com dois backends intercambiáveis:
+﻿// Camada de dados com dois backends intercambiáveis:
 //  - LocalStore: persiste no localStorage (modo demo/offline, zero configuração)
 //  - SupaStore:  persiste no Supabase (produção multiusuário)
 // A escolha é automática: com credenciais do Supabase no ambiente, usa Supabase.
@@ -9,6 +9,7 @@ import { CONTRATOS_ZAPSIGN } from "./import-contratos";
 import { CONTRATOS_MANUAIS } from "./import-contratos-extra";
 import { AUDIENCIAS_ESAJ } from "./import-audiencias";
 import { CASOS_WHATSAPP, REMOVER_CLIENTES } from "./import-casos";
+import { somaMesesISO } from "./format";
 import { getSupabase, supabaseConfigurado } from "./supabase";
 import type { Andamento, Cliente, ContratoHonorarios, EventoAgenda, Lancamento, Processo, TableName } from "./types";
 
@@ -506,14 +507,6 @@ export interface ResultadoVincendas {
   parcelasGeradas: number;
 }
 
-function somaMesesData(iso: string, meses: number): string {
-  const [a, m, d] = iso.slice(0, 10).split("-").map(Number);
-  const alvo = new Date(a, m - 1 + meses, 1);
-  const ultimoDia = new Date(alvo.getFullYear(), alvo.getMonth() + 1, 0).getDate();
-  alvo.setDate(Math.min(d, ultimoDia));
-  return `${alvo.getFullYear()}-${String(alvo.getMonth() + 1).padStart(2, "0")}-${String(alvo.getDate()).padStart(2, "0")}`;
-}
-
 /** Reais → centavos inteiros. Dividir dinheiro em ponto flutuante deixa restos
  *  invisíveis (0,1 + 0,2 não dá exatamente 0,3), e um resto desses decide se a
  *  parcela conta como paga ou não. Em centavos a conta é exata. */
@@ -572,7 +565,7 @@ export async function gerarParcelasVincendas(apenasCliente?: string): Promise<Re
   // é o sinal acionável e de maior confiança (quem pagava e parou). Atraso mais
   // antigo costuma ser matéria encerrada ou pagamento feito fora do extrato (dinheiro),
   // e viraria falso-positivo; fica de fora para não poluir a Cobrança.
-  const pisoAtraso = somaMesesData(cutoff, -4);
+  const pisoAtraso = somaMesesISO(cutoff, -4);
 
   let contratos = 0;
   let parcelasGeradas = 0;
@@ -596,7 +589,7 @@ export async function gerarParcelasVincendas(apenasCliente?: string): Promise<Re
 
     let gerouAlguma = false;
     for (let k = pagas + 1; k <= ct.parcelas; k++) {
-      const venc = somaMesesData(ct.assinatura, k - 1);
+      const venc = somaMesesISO(ct.assinatura, k - 1);
       // Parcela já vencida só vira "em atraso" quando o pagamento é confiável de
       // reconciliar — ou seja, o contrato está vinculado a um cliente com
       // histórico (match_id) e o atraso não é antigo demais (> 12 meses). Sem
@@ -657,7 +650,7 @@ export async function gerarParcelasVincendas(apenasCliente?: string): Promise<Re
     // gera exatamente nRestantes parcelas, pulando os meses cuja data já foi
     // quitada (ex.: 1ª parcela paga na assinatura, no próprio dia do vencimento)
     while (colocadas < nRestantes && mes < nRestantes + 12) {
-      const venc = somaMesesData(baseISO, mes);
+      const venc = somaMesesISO(baseISO, mes);
       mes++;
       if (pagoEmData.has(`${cm.cliente_id}|${venc}`)) continue;
       const ultima = colocadas === nRestantes - 1;

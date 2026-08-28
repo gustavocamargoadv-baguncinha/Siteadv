@@ -29,6 +29,18 @@ export function diasAteISO(iso: string): number {
   return Math.round((alvo - hoje) / 86400000);
 }
 
+/** Soma meses a uma data ISO, sem estourar o fim do mês: 31/01 + 1 mês vira
+ *  28/02, não 03/03. É a cadência de toda parcela mensal do sistema — o gerador
+ *  de parcelas dos contratos e o parcelamento à mão usam esta mesma conta, para
+ *  as duas não caírem em dias diferentes. */
+export function somaMesesISO(iso: string, meses: number): string {
+  const [a, m, d] = iso.slice(0, 10).split("-").map(Number);
+  const alvo = new Date(a, m - 1 + meses, 1);
+  const ultimoDia = new Date(alvo.getFullYear(), alvo.getMonth() + 1, 0).getDate();
+  alvo.setDate(Math.min(d, ultimoDia));
+  return `${alvo.getFullYear()}-${String(alvo.getMonth() + 1).padStart(2, "0")}-${String(alvo.getDate()).padStart(2, "0")}`;
+}
+
 /** Urgência de um prazo pendente, para cor e ordenação. */
 export function urgenciaPrazo(dataLimite: string): "vencido" | "hoje" | "urgente" | "proximo" | "tranquilo" {
   const d = diasAteISO(dataLimite);

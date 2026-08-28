@@ -13,7 +13,7 @@ import { Trash2 } from "lucide-react";
 import { useTable } from "@/lib/hooks";
 import { ehParcelaProjetada, reconciliarParcelasCliente } from "@/lib/store";
 import type { Cliente, Lancamento, Processo } from "@/lib/types";
-import { formatCNJ, hojeISO } from "@/lib/format";
+import { brl, dataBR, formatCNJ, hojeISO, somaMesesISO } from "@/lib/format";
 import { BotaoPrimario, Field, Input, Select } from "@/components/ui";
 import { Modal } from "@/components/Modal";
 
@@ -41,6 +41,9 @@ export function EditarLancamento({ aberto, onFechar, lancamento = null, clienteF
   const [descricao, setDescricao] = useState("");
   const [valor, setValor] = useState("");
   const [data, setData] = useState("");
+  // Quantas parcelas mensais lançar de uma vez. Só vale para conta a receber
+  // NOVA: lançar as 10 do contrato uma a uma são 10 idas ao formulário.
+  const [parcelas, setParcelas] = useState("1");
   const [confirmando, setConfirmando] = useState(false);
   const [salvando, setSalvando] = useState(false);
 
@@ -49,6 +52,7 @@ export function EditarLancamento({ aberto, onFechar, lancamento = null, clienteF
   useEffect(() => {
     if (!aberto) return;
     setConfirmando(false);
+    setParcelas("1");
     if (lancamento) {
       setRecebido(!!lancamento.pago_em);
       setCategoria(lancamento.categoria);
@@ -73,6 +77,12 @@ export function EditarLancamento({ aberto, onFechar, lancamento = null, clienteF
   const cliente = clienteId ? clientes.find((c) => c.id === clienteId) : undefined;
   // Com o cliente escolhido, a descrição já vem pronta: sobra digitar o valor.
   const descricaoSugerida = cliente ? `${categoria} — ${cliente.nome}` : "";
+
+  // Parcelar só faz sentido em conta a receber nova: corrigir um lançamento
+  // existente é sobre ele, e dez recebimentos passados não entram todos juntos.
+  const podeParcelar = !lancamento && !recebido;
+  const nParcelas = podeParcelar ? Math.min(60, Math.max(1, parseInt(parcelas, 10) || 1)) : 1;
+  const valorNum = parseFloat(valor.replace(/\./g, "").replace(",", ".")) || 0;
 
   async function salvar(e: React.FormEvent) {
     e.preventDefault();
@@ -106,6 +116,16 @@ export function EditarLancamento({ aberto, onFechar, lancamento = null, clienteF
           // pagamento encerra o perdão.
           ...(recebido ? { perdoado_em: null, perdoado_motivo: null } : {}),
         });
+      } else if (nParcelas > 1) {
+        // Uma linha por parcela, mês a mês a partir da data escolhida. São
+        // lançamentos comuns — dá para corrigir, perdoar ou apagar cada um.
+        for (let k = 1; k <= nParcelas; k++) {
+          await insert({
+            ...campos,
+            descricao: `Parcela ${k}/${nParcelas} — ${desc}`,
+            vencimento: somaMesesISO(data, k - 1),
+          });
+        }
       } else {
         await insert({ ...campos, ...(recebido ? { pago_em: data } : {}) });
       }
@@ -147,7 +167,15 @@ export function EditarLancamento({ aberto, onFechar, lancamento = null, clienteF
   return (
     <Modal
       aberto={aberto}
-      titulo={lancamento ? "Corrigir lançamento" : recebido ? "Registrar pagamento" : "Nova conta a receber"}
+      titulo={
+        lancamento
+          ? "Corrigir lançamento"
+          : recebido
+            ? "Registrar pagamento"
+            : nParcelas > 1
+              ? `Novas contas a receber (${nParcelas}x)`
+              : "Nova conta a receber"
+      }
       onFechar={onFechar}
     >
       <form onSubmit={salvar} className="space-y-3">
@@ -206,13 +234,52 @@ export function EditarLancamento({ aberto, onFechar, lancamento = null, clienteF
         )}
 
         <div className="grid grid-cols-2 gap-3">
-          <Field rotulo="Valor (R$)" obrigatorio>
+          <Field rotulo={nParcelas > 1 ? "Valor de CADA parcela (R$)" : "Valor (R$)"} obrigatorio>
             <Input required inputMode="decimal" value={valor} onChange={(e) => setValor(e.target.value)} placeholder="3000,00" />
           </Field>
-          <Field rotulo={recebido ? "Recebido em" : "Vencimento"} obrigatorio>
+          <Field rotulo={recebido ? "Recebido em" : nParcelas > 1 ? "1º vencimento" : "Vencimento"} obrigatorio>
             <Input required type="date" value={data} onChange={(e) => setData(e.target.value)} />
           </Field>
         </div>
+
+        {podeParcelar && (
+          <Field rotulo="Parcelas (mensais)">
+            <Input
+              type="number"
+              min={1}
+              max={60}
+              inputMode="numeric"
+              value={parcelas}
+              onChange={(e) => setParcelas(e.target.value)}
+            />
+            {nParcelas > 1 ? (
+              // O valor digitado é o de CADA parcela, mas o contrato costuma ser
+              // falado pelo total ("4.500 em 10x"). Mostrar o total e a última
+              // data faz o engano de digitar o total aqui saltar aos olhos antes
+              // de virar 10 lançamentos errados.
+              <p className="mt-1 text-xs text-slate-600">
+                {valorNum > 0 && (
+                  <>
+                    <span className="font-semibold">
+                      {nParcelas}x de {brl(valorNum)} = {brl(valorNum * nParcelas)}
+                    </span>
+                    {" · "}
+                  </>
+                )}
+                {data && (
+                  <>
+                    vencem de {dataBR(data)} a {dataBR(somaMesesISO(data, nParcelas - 1))}, todo dia{" "}
+                    {Number(data.slice(8, 10))}
+                  </>
+                )}
+              </p>
+            ) : (
+              <p className="mt-1 text-xs text-slate-400">
+                Deixe 1 para um lançamento só. Mais que isso, lança uma parcela por mês a partir do vencimento.
+              </p>
+            )}
+          </Field>
+        )}
 
         <Field rotulo="Descrição">
           <Input
@@ -274,7 +341,15 @@ export function EditarLancamento({ aberto, onFechar, lancamento = null, clienteF
               </button>
             ))}
           <BotaoPrimario type="submit" disabled={salvando}>
-            {salvando ? "Salvando…" : lancamento ? "Salvar correção" : recebido ? "Registrar pagamento" : "Salvar conta a receber"}
+            {salvando
+              ? "Salvando…"
+              : lancamento
+                ? "Salvar correção"
+                : recebido
+                  ? "Registrar pagamento"
+                  : nParcelas > 1
+                    ? `Lançar as ${nParcelas} parcelas`
+                    : "Salvar conta a receber"}
           </BotaoPrimario>
         </div>
       </form>
