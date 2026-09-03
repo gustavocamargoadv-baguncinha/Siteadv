@@ -11,6 +11,7 @@ import { Badge, BotaoPrimario, Card, EmptyState, Field, Input, PageHeader, Selec
 import { Modal } from "@/components/Modal";
 import { GerarDocumentos } from "@/components/GerarDocumentos";
 import { EditarLancamento } from "@/components/EditarLancamento";
+import { NovoProcesso } from "@/components/NovoProcesso";
 
 export default function ClienteDetalhe() {
   const { id } = useParams<{ id: string }>();
@@ -26,6 +27,7 @@ export default function ClienteDetalhe() {
   // Lançamento em correção pela ficha (null = novo lançamento para este cliente)
   const [modalLanc, setModalLanc] = useState(false);
   const [lancEditando, setLancEditando] = useState<Lancamento | null>(null);
+  const [modalProcesso, setModalProcesso] = useState(false);
   // Card do Financeiro aberto por inteiro. Fechado ele mostra um resumo; mandar
   // o resto para a tela do Financeiro não resolvia, porque lá estão os
   // lançamentos de todos os clientes misturados.
@@ -334,6 +336,14 @@ export default function ClienteDetalhe() {
             ))}
           </ul>
         )}
+        {/* o caso nasce aqui, com o contrato na mão — obrigar a ir até a tela de
+            Processos e reencontrar o cliente na lista era um desvio à toa */}
+        <button
+          onClick={() => setModalProcesso(true)}
+          className="mt-3 inline-flex items-center gap-1.5 rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs font-semibold text-slate-600 transition hover:border-brand-400 hover:text-brand-700"
+        >
+          <Plus size={14} /> Cadastrar processo
+        </button>
       </Card>
 
       <div className="grid gap-4 lg:grid-cols-2">
@@ -507,6 +517,8 @@ export default function ClienteDetalhe() {
         clienteFixo={cli.id}
         onFechar={() => setModalLanc(false)}
       />
+
+      <NovoProcesso aberto={modalProcesso} clienteFixo={cli.id} onFechar={() => setModalProcesso(false)} />
 
       {/* Zona de exclusão — discreta e no fim da página de propósito */}
       <div className="flex justify-end pt-2">
