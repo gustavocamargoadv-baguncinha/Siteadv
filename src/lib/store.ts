@@ -587,7 +587,9 @@ export async function gerarParcelasVincendas(apenasCliente?: string): Promise<Re
     const pagas = Math.min(ct.parcelas, Math.max(0, Math.floor(emCentavos(jaPago) / emCentavos(parcela))));
     if (pagas >= ct.parcelas) continue; // contrato quitado
 
-    let gerouAlguma = false;
+    // Primeiro decide QUAIS parcelas vão para a tela; só depois os valores. O
+    // valor da última depende de quantas são, e isso não se sabe no meio do laço.
+    const aGerar: number[] = [];
     for (let k = pagas + 1; k <= ct.parcelas; k++) {
       const venc = somaMesesISO(ct.assinatura, k - 1);
       // Parcela já vencida só vira "em atraso" quando o pagamento é confiável de
@@ -596,20 +598,50 @@ export async function gerarParcelasVincendas(apenasCliente?: string): Promise<Re
       // vínculo, não inventa atraso: mantém apenas as parcelas a vencer, evitando
       // falso-positivo de quem pagou por outro registro.
       if (venc < cutoff && (!ct.match_id || venc < pisoAtraso)) continue;
-      const id = `impzp-venc-${String(ct.idx).padStart(2, "0")}-${k}`;
-      if (preservadas.has(id)) continue; // essa parcela já foi recebida ou perdoada
-      // gera tanto as parcelas a vencer quanto as já vencidas e não pagas:
-      // as vencidas entram como "em atraso" para o cliente aparecer na Cobrança.
-      const ultima = k === ct.parcelas;
-      const valor = ultima ? Math.round((ct.valor - parcela * (ct.parcelas - 1)) * 100) / 100 : parcela;
+      if (preservadas.has(`impzp-venc-${String(ct.idx).padStart(2, "0")}-${k}`)) continue; // já recebida ou perdoada
+      aGerar.push(k);
+    }
+
+    // A fila tem de somar o SALDO REAL do contrato, senão a ficha mostra duas
+    // dívidas diferentes para o mesmo cliente: o cabeçalho fazia contratado −
+    // recebido (R$ 4.600) e o card somava parcelas cheias (6 × R$ 800 = R$ 4.800).
+    // A diferença é o troco de quem pagou um valor avulso — R$ 200 numa parcela
+    // de R$ 800 — que não fecha parcela nenhuma e ficava cobrado duas vezes.
+    // Esse troco cai na ÚLTIMA parcela, a única que ainda dá para ajustar sem
+    // desmentir o combinado: as demais seguem no valor do contrato.
+    //
+    // Só quando a fila cobre todas as que faltam. Havendo parcela suprimida (a
+    // vencida antiga que não vira atraso), o total mostrado é menor de propósito
+    // — jogar a diferença na última traria de volta a dívida que se escolheu não
+    // exibir.
+    const filaCompleta = aGerar.length === ct.parcelas - pagas;
+    const saldoCent = emCentavos(ct.valor) - emCentavos(jaPago);
+
+    let gerouAlguma = false;
+    for (let i = 0; i < aGerar.length; i++) {
+      const k = aGerar[i];
+      const venc = somaMesesISO(ct.assinatura, k - 1);
+      const ehUltima = i === aGerar.length - 1;
+      let valorCent = emCentavos(parcela);
+      if (ehUltima) {
+        valorCent = filaCompleta
+          ? saldoCent - emCentavos(parcela) * (aGerar.length - 1)
+          : // sem fila completa, mantém a regra antiga: a última do contrato só
+            // absorve o resto da divisão do valor pelas parcelas
+            k === ct.parcelas
+            ? emCentavos(ct.valor) - emCentavos(parcela) * (ct.parcelas - 1)
+            : valorCent;
+        // rede de segurança: cliente que pagou adiantado não vira cobrança negativa
+        if (valorCent <= 0) continue;
+      }
       await s.insert<Lancamento>("lancamentos", {
-        id,
+        id: `impzp-venc-${String(ct.idx).padStart(2, "0")}-${k}`,
         tipo: "receita",
         categoria: "Honorários",
         cliente_id: clienteId,
         processo_id: `impzp-p-${String(ct.idx).padStart(2, "0")}`,
         descricao: `Parcela ${k}/${ct.parcelas} — honorários (${ct.contratante})`,
-        valor,
+        valor: valorCent / 100,
         vencimento: venc,
       } as Partial<Lancamento>);
       parcelasGeradas++;
