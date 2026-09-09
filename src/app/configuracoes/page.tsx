@@ -94,7 +94,8 @@ function ImportarPlanilha() {
       )}
       <p className="text-xs text-slate-500">
         Observações da planilha: alguns nomes vêm truncados do extrato do banco (ex.: “ANA CAROLINE D”) — dá para
-        renomear em cada cliente. Um depósito em espécie de R$ 5.200 entrou sem cliente vinculado, para você confirmar a origem.
+        renomear em cada cliente. Um depósito em espécie de R$ 200 entrou sem cliente vinculado, para você confirmar a
+        origem — os R$ 5.000 do mesmo dia saíram da planilha por serem parte dos R$ 30.000 do Caso Debora, já lançados.
       </p>
     </Card>
   );

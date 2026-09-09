@@ -161,7 +161,11 @@ export const LANCAMENTOS_2026: Partial<Lancamento>[] = [
   { id: "imp26l-082", tipo: "receita", categoria: "Honorários", cliente_id: "imp26c-sandraregina", descricao: "Honorários — Sandra Regina", valor: 400.0, vencimento: "2026-04-17", pago_em: "2026-04-17", forma_pagamento: "PIX" },
   { id: "imp26l-083", tipo: "receita", categoria: "Honorários", cliente_id: "imp26c-karinapres", descricao: "Honorários — KARINA PRES", valor: 450.0, vencimento: "2026-04-20", pago_em: "2026-04-20", forma_pagamento: "PIX" },
   { id: "imp26l-084", tipo: "receita", categoria: "Honorários", cliente_id: "imp26c-andersoncampo", descricao: "Honorários — Anderson Campo", valor: 400.0, vencimento: "2026-04-20", pago_em: "2026-04-20", forma_pagamento: "PIX" },
-  { id: "imp26l-085", tipo: "receita", categoria: "Honorários", descricao: "Confirmar de qual cliente/caso é esse depósito", valor: 5000.0, vencimento: "2026-04-22", pago_em: "2026-04-22", forma_pagamento: "Espécie" },
+  // O depósito em espécie de R$ 5.000 em 22/04 (que era o "imp26l-085") saiu
+  // daqui: o escritório identificou a origem — é parte dos R$ 30.000 do Caso
+  // Debora, recebidos em dinheiro em fevereiro e só depois levados ao banco.
+  // O extrato via a entrada e o sistema contava o mesmo dinheiro duas vezes.
+  // O de R$ 200 do mesmo dia continua: ainda não foi identificado.
   { id: "imp26l-086", tipo: "receita", categoria: "Honorários", descricao: "Confirmar de qual cliente/caso é esse depósito", valor: 200.0, vencimento: "2026-04-22", pago_em: "2026-04-22", forma_pagamento: "Espécie" },
   { id: "imp26l-087", tipo: "receita", categoria: "Honorários", cliente_id: "imp26c-daianedasilv", descricao: "Honorários — Daiane da Silv", valor: 450.0, vencimento: "2026-04-22", pago_em: "2026-04-22", forma_pagamento: "PIX" },
   { id: "imp26l-088", tipo: "receita", categoria: "Honorários", cliente_id: "imp26c-valquiriapach", descricao: "Honorários — VALQUIRIA PACH", valor: 600.0, vencimento: "2026-04-22", pago_em: "2026-04-22", forma_pagamento: "PIX" },
