@@ -6,13 +6,14 @@ import { useRouter } from "next/navigation";
 import { Check, Pencil, TrendingDown, TrendingUp } from "lucide-react";
 import { useTable } from "@/lib/hooks";
 import type { Cliente, Lancamento, Processo } from "@/lib/types";
-import { brl, hojeISO } from "@/lib/format";
+import { brl, hojeISO, mesPorExtenso } from "@/lib/format";
 import {
   MESES_CURTOS,
   anosComDados,
   distribuicaoCarteira,
   lerMeta,
   metaSugerida,
+  previsaoMes,
   projecaoAno,
   resumoAno,
   salvarMeta,
@@ -85,14 +86,31 @@ export default function DesempenhoPage() {
   // só os meses que já aconteceram — plotar meses futuros como zero faria a
   // linha despencar e mentir sobre a tendência
   const mesesPlot = ehAnoCorrente ? resumo.mesesDecorridos : 12;
-  const pontos = resumo.porMes.slice(0, mesesPlot);
+
+  // Um caso de anos pago de uma vez estica a escala e achata todo o resto do
+  // ano. Com algum recebimento marcado como excepcional, o gráfico abre
+  // diluído — que é a leitura útil para comparar meses — e o botão devolve o
+  // caixa de verdade a um toque.
+  const [verCaixa, setVerCaixa] = useState(false);
+  const temDiluido = resumo.nDiluidos > 0;
+  const diluindo = temDiluido && !verCaixa;
+  const serie = diluindo ? resumo.porMesDiluido : resumo.porMes;
+
+  const pontos = serie.slice(0, mesesPlot);
   const rotulos = MESES_CURTOS.slice(0, mesesPlot);
+
+  // Previsão do mês corrente — sempre de hoje, independente do ano escolhido nas
+  // abas (olhar 2024 não muda o que vai entrar em setembro).
+  const previsao = useMemo(() => previsaoMes(lancamentos, hoje), [lancamentos, hoje]);
 
   const carteira = useMemo(() => distribuicaoCarteira(processos), [processos]);
   const top = useMemo(() => topClientes(lancamentos, clientes, ano, 6), [lancamentos, clientes, ano]);
 
   const mediaMensal = resumo.mesesDecorridos ? resumo.total / resumo.mesesDecorridos : 0;
-  const melhorMes = resumo.porMes.indexOf(Math.max(...resumo.porMes));
+  // o "melhor mês" acompanha o gráfico: apontar fevereiro enquanto a tela mostra
+  // a curva diluída (onde fevereiro não é mais o pico) seria contradizer o
+  // próprio desenho logo acima
+  const melhorMes = serie.indexOf(Math.max(...serie));
 
   // Detalhar o mês só faz sentido nos anos que têm lançamento de verdade. Os
   // anos fechados vieram das planilhas como total agregado por mês: o clique
@@ -201,14 +219,36 @@ export default function DesempenhoPage() {
 
       {/* Evolução mês a mês */}
       <Card className="p-4">
-        <div className="mb-1 flex items-center justify-between">
+        <div className="mb-1 flex flex-wrap items-center justify-between gap-2">
           <h2 className="text-sm font-bold text-slate-900">📈 Faturamento mês a mês — {ano}</h2>
-          {melhorMes >= 0 && resumo.porMes[melhorMes] > 0 && (
-            <span className="text-xs text-slate-500">
-              melhor mês: <span className="font-semibold text-slate-700">{MESES_CURTOS[melhorMes]}</span>{" "}
-              <span className="tabular-nums">{brl(resumo.porMes[melhorMes])}</span>
-            </span>
-          )}
+          <div className="flex flex-wrap items-center gap-3">
+            {temDiluido && (
+              <div className="flex gap-1">
+                {(
+                  [
+                    [false, "Diluído"],
+                    [true, "Como entrou"],
+                  ] as const
+                ).map(([v, rotulo]) => (
+                  <button
+                    key={rotulo}
+                    onClick={() => setVerCaixa(v)}
+                    className={`rounded-full px-2.5 py-1 text-xs font-semibold transition ${
+                      verCaixa === v ? "bg-slate-900 text-white" : "bg-white text-slate-600 ring-1 ring-slate-200 hover:text-slate-900"
+                    }`}
+                  >
+                    {rotulo}
+                  </button>
+                ))}
+              </div>
+            )}
+            {melhorMes >= 0 && serie[melhorMes] > 0 && (
+              <span className="text-xs text-slate-500">
+                melhor mês: <span className="font-semibold text-slate-700">{MESES_CURTOS[melhorMes]}</span>{" "}
+                <span className="tabular-nums">{brl(serie[melhorMes])}</span>
+              </span>
+            )}
+          </div>
         </div>
         <GraficoArea
           pontos={pontos}
@@ -216,13 +256,83 @@ export default function DesempenhoPage() {
           ultimoParcial={ehAnoCorrente}
           onSelecionar={detalharMes}
         />
+        {/* Diluir muda o desenho, não o dinheiro. Dizer isso na tela é o que
+            separa uma leitura mais justa de um gráfico que mente. */}
+        {diluindo && (
+          <p className="mt-1.5 rounded-lg bg-amber-50 px-2.5 py-1.5 text-xs text-amber-900">
+            <span className="font-semibold">{brl(resumo.totalDiluido)}</span> de{" "}
+            {resumo.nDiluidos === 1 ? "um recebimento excepcional" : `${resumo.nDiluidos} recebimentos excepcionais`} está
+            espalhado em partes iguais pelos {mesesPlot} meses, para o pico não achatar o resto do ano. O total de {ano}{" "}
+            não muda — o dinheiro entrou de uma vez. Toque em <span className="font-semibold">Como entrou</span> para ver
+            o mês real.
+          </p>
+        )}
         <p className="mt-1 text-xs text-slate-400">
           {ehAnoCorrente && `O mês corrente (${MESES_CURTOS[resumo.mesesDecorridos - 1]}) ainda está em curso — por isso aparece esmaecido. `}
           {detalharMes
-            ? "Toque num mês para ver os recebimentos daquele mês."
+            ? diluindo
+              ? "Toque num mês para ver os recebimentos daquele mês — lá aparece o que entrou de verdade, sem a diluição."
+              : "Toque num mês para ver os recebimentos daquele mês."
             : `${ano} veio da planilha de controle, que guarda só o total de cada mês — não há recebimento a abrir.`}
         </p>
       </Card>
+
+      {/* Quanto o mês deve fechar. Sempre o mês de HOJE — olhar 2024 nas abas
+          não muda o que vai entrar em setembro. */}
+      {ehAnoCorrente && (previsao.previsao > 0 || previsao.atrasadoAnterior > 0) && (
+        <Card className="p-4">
+          <div className="mb-3 flex items-center justify-between">
+            {/* sem `capitalize`: a classe põe maiúscula em TODA palavra e o mês
+                sairia "Previsão De Setembro De 2026" */}
+            <h2 className="text-sm font-bold text-slate-900">🔮 Previsão de {mesPorExtenso(previsao.mes)}</h2>
+            <Link href="/cobranca" className="text-xs font-semibold text-brand-700 hover:underline">
+              cobrança
+            </Link>
+          </div>
+
+          <p className="text-3xl font-bold tabular-nums text-slate-900">{brl(previsao.previsao)}</p>
+          <p className="mt-1 text-xs text-slate-500">
+            <span className="font-semibold tabular-nums text-emerald-700">{brl(previsao.recebido)}</span> já entraram
+            {previsao.aReceber > 0 && (
+              <>
+                {" + "}
+                <span className="font-semibold tabular-nums text-amber-700">{brl(previsao.aReceber)}</span> a vencer
+                <span className="tabular-nums"> ({previsao.quantidade} parcela{previsao.quantidade === 1 ? "" : "s"})</span>
+              </>
+            )}
+            {mediaMensal > 0 && (
+              <>
+                {" · "}
+                {previsao.previsao >= mediaMensal ? "acima" : "abaixo"} da média de{" "}
+                <span className="tabular-nums">{brl(mediaMensal)}</span>
+              </>
+            )}
+          </p>
+
+          <div className="mt-3 space-y-1.5">
+            {previsao.jaVenceu > 0 && (
+              <p className="rounded-lg bg-red-50 px-2.5 py-1.5 text-xs text-red-800">
+                <span className="font-semibold tabular-nums">{brl(previsao.jaVenceu)}</span> desse total já passou do
+                vencimento — é o que dá para cobrar hoje.
+              </p>
+            )}
+            {previsao.atrasadoAnterior > 0 && (
+              <p className="rounded-lg bg-slate-50 px-2.5 py-1.5 text-xs text-slate-600">
+                {/* Atraso velho fica FORA da previsão de propósito: somá-lo daria
+                    um número bonito que nunca se cumpre. */}
+                Fora desta conta: <span className="font-semibold tabular-nums">{brl(previsao.atrasadoAnterior)}</span>{" "}
+                parados de meses anteriores. Não entram na previsão porque já não vieram quando deviam — se caírem, é
+                lucro em cima disso.
+              </p>
+            )}
+          </div>
+
+          <p className="mt-2 text-xs text-slate-400">
+            É faturamento a receber, não lucro: o sistema registra as entradas, não as despesas do escritório — descontar
+            custo daqui seria inventar número.
+          </p>
+        </Card>
+      )}
 
       <div className="grid gap-4 lg:grid-cols-2">
         {/* Carteira ativa por fase — sempre a foto de HOJE, não do ano escolhido */}

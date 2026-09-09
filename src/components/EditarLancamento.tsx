@@ -44,6 +44,9 @@ export function EditarLancamento({ aberto, onFechar, lancamento = null, clienteF
   // Quantas parcelas mensais lançar de uma vez. Só vale para conta a receber
   // NOVA: lançar as 10 do contrato uma a uma são 10 idas ao formulário.
   const [parcelas, setParcelas] = useState("1");
+  // Honorário de um trabalho de anos, pago de uma vez. Não mexe no caixa — só
+  // autoriza o gráfico de Desempenho a espalhá-lo pelos meses do ano.
+  const [diluido, setDiluido] = useState(false);
   const [confirmando, setConfirmando] = useState(false);
   const [salvando, setSalvando] = useState(false);
 
@@ -61,7 +64,9 @@ export function EditarLancamento({ aberto, onFechar, lancamento = null, clienteF
       setDescricao(lancamento.descricao);
       setValor(String(lancamento.valor).replace(".", ",")); // vírgula, como ele digita
       setData(lancamento.pago_em ?? lancamento.vencimento);
+      setDiluido(!!lancamento.diluido);
     } else {
+      setDiluido(false);
       setRecebido(true);
       setCategoria(CATEGORIAS[0]);
       setClienteId(clienteFixo ?? "");
@@ -115,6 +120,9 @@ export function EditarLancamento({ aberto, onFechar, lancamento = null, clienteF
           // pago e perdoado ao mesmo tempo é proibido no banco; registrar o
           // pagamento encerra o perdão.
           ...(recebido ? { perdoado_em: null, perdoado_motivo: null } : {}),
+          // só o que já entrou tem mês de caixa para espalhar — voltar para "a
+          // receber" desmarca junto (o banco recusaria a combinação)
+          diluido: recebido ? diluido : null,
         });
       } else if (nParcelas > 1) {
         // Uma linha por parcela, mês a mês a partir da data escolhida. São
@@ -127,7 +135,7 @@ export function EditarLancamento({ aberto, onFechar, lancamento = null, clienteF
           });
         }
       } else {
-        await insert({ ...campos, ...(recebido ? { pago_em: data } : {}) });
+        await insert({ ...campos, ...(recebido ? { pago_em: data, diluido: diluido || undefined } : {}) });
       }
       // Lançar o pagamento não pode deixar de pé a parcela projetada que ele
       // quitou — senão o cliente segue "em atraso" logo abaixo do recebimento
@@ -279,6 +287,27 @@ export function EditarLancamento({ aberto, onFechar, lancamento = null, clienteF
               </p>
             )}
           </Field>
+        )}
+
+        {/* Caso de anos pago de uma vez. Fica escondido em "a receber" porque só
+            o que já entrou tem mês de caixa para espalhar. */}
+        {recebido && (
+          <label className="flex cursor-pointer items-start gap-2.5 rounded-lg bg-slate-50 p-2.5">
+            <input
+              type="checkbox"
+              checked={diluido}
+              onChange={(e) => setDiluido(e.target.checked)}
+              className="mt-0.5 h-4 w-4 shrink-0 accent-brand-600"
+            />
+            <span className="text-xs text-slate-600">
+              <span className="font-semibold text-slate-800">Recebimento excepcional</span> — honorário de um trabalho
+              que levou anos e caiu de uma vez.
+              <span className="block text-slate-500">
+                Não muda nada no caixa: o dinheiro continua contando no mês em que entrou. Só permite que o gráfico do
+                Desempenho o espalhe pelos meses, para o pico não achatar todos os outros.
+              </span>
+            </span>
+          </label>
         )}
 
         <Field rotulo="Descrição">

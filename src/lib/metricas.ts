@@ -33,6 +33,29 @@ export interface ResumoAno {
   mesesDecorridos: number;
   /** Veio do histórico agregado (planilha de ano fechado), não dos lançamentos. */
   historico?: boolean;
+  /** Os mesmos meses, com os recebimentos marcados como excepcionais espalhados
+   *  em partes iguais. Some exatamente o mesmo `total`: nada é criado nem
+   *  perdido, só muda de mês. */
+  porMesDiluido: number[];
+  /** Quanto e quantos recebimentos foram espalhados — para a tela poder dizer
+   *  ao usuário o que está vendo em vez de mostrar um gráfico diferente sem
+   *  explicação. */
+  totalDiluido: number;
+  nDiluidos: number;
+}
+
+/** Espalha `valor` em partes iguais pelos `meses` primeiros meses, em centavos,
+ *  distribuindo o resto um a um. Somar as partes devolve o valor original —
+ *  dividir em reais deixaria centavos para trás e o gráfico não bateria com o
+ *  total do ano. */
+function espalhar(destino: number[], valor: number, meses: number): void {
+  if (valor <= 0 || meses <= 0) return;
+  const centavos = Math.round(valor * 100);
+  const base = Math.floor(centavos / meses);
+  const resto = centavos - base * meses;
+  for (let m = 0; m < meses; m++) {
+    destino[m] += (base + (m < resto ? 1 : 0)) / 100;
+  }
 }
 
 export function resumoAno(lancamentos: Lancamento[], ano: string, hojeISO: string): ResumoAno {
@@ -46,12 +69,20 @@ export function resumoAno(lancamentos: Lancamento[], ano: string, hojeISO: strin
       nRecebimentos: hist.nRecebimentos,
       mesesDecorridos: 12,
       historico: true,
+      // ano fechado veio da planilha como total por mês: não há lançamento para
+      // marcar como excepcional, então diluído e caixa são a mesma coisa
+      porMesDiluido: hist.porMes,
+      totalDiluido: 0,
+      nDiluidos: 0,
     };
   }
 
   const porMes = new Array(12).fill(0);
+  const porMesDiluido = new Array(12).fill(0);
   let total = 0;
   let n = 0;
+  let totalDiluido = 0;
+  let nDiluidos = 0;
   for (const l of recebidas(lancamentos)) {
     if (!l.pago_em!.startsWith(ano)) continue;
     const m = Number(l.pago_em!.slice(5, 7)) - 1;
@@ -59,10 +90,20 @@ export function resumoAno(lancamentos: Lancamento[], ano: string, hojeISO: strin
     porMes[m] += l.valor;
     total += l.valor;
     n++;
+    if (l.diluido) {
+      totalDiluido += l.valor;
+      nDiluidos++;
+    } else {
+      porMesDiluido[m] += l.valor;
+    }
   }
   const anoCorrente = hojeISO.slice(0, 4);
   const mesesDecorridos = ano === anoCorrente ? Number(hojeISO.slice(5, 7)) : 12;
-  return { ano, total, porMes, nRecebimentos: n, mesesDecorridos };
+  // Espalha pelos meses que a tela plota (no ano corrente, os já decorridos) e
+  // não pelos 12: jogar parte do valor em meses que ainda não existem sumiria
+  // com ela do gráfico, e a soma das colunas deixaria de bater com o total.
+  espalhar(porMesDiluido, totalDiluido, mesesDecorridos);
+  return { ano, total, porMes, nRecebimentos: n, mesesDecorridos, porMesDiluido, totalDiluido, nDiluidos };
 }
 
 /** Projeção simples para o fim do ano: mantém a média mensal já realizada.
@@ -70,6 +111,57 @@ export function resumoAno(lancamentos: Lancamento[], ano: string, hojeISO: strin
 export function projecaoAno(r: ResumoAno): number {
   if (r.mesesDecorridos >= 12 || r.mesesDecorridos === 0) return r.total;
   return Math.round((r.total / r.mesesDecorridos) * 12);
+}
+
+export interface PrevisaoMes {
+  mes: string; // "2026-09"
+  /** Dinheiro que já entrou neste mês. */
+  recebido: number;
+  /** Ainda em aberto com vencimento dentro deste mês. */
+  aReceber: number;
+  /** A parte de `aReceber` cujo dia de vencimento já passou — é o que dá para
+   *  cobrar hoje, não semana que vem. */
+  jaVenceu: number;
+  /** Em aberto de meses anteriores. Fica FORA da previsão de propósito: é
+   *  dinheiro que já não veio quando devia, e somá-lo transformaria a previsão
+   *  num número otimista que nunca se cumpre. */
+  atrasadoAnterior: number;
+  /** recebido + aReceber. O mês fecha aqui se todo mundo pagar em dia. */
+  previsao: number;
+  quantidade: number; // quantas parcelas compõem o `aReceber`
+}
+
+/** Quanto o mês corrente deve fechar, somando o que já entrou ao que ainda vence
+ *  dentro dele.
+ *
+ *  É faturamento, não lucro: o sistema não registra despesas (o Financeiro só
+ *  tem receitas), então subtrair custo daqui seria inventar número. */
+export function previsaoMes(lancamentos: Lancamento[], hojeISO: string): PrevisaoMes {
+  const mes = hojeISO.slice(0, 10).slice(0, 7);
+  const hoje = hojeISO.slice(0, 10);
+  let recebido = 0;
+  let aReceber = 0;
+  let jaVenceu = 0;
+  let atrasadoAnterior = 0;
+  let quantidade = 0;
+
+  for (const l of lancamentos) {
+    if (l.tipo !== "receita") continue;
+    if (l.pago_em) {
+      if (l.pago_em.startsWith(mes)) recebido += l.valor;
+      continue;
+    }
+    if (l.perdoado_em) continue; // dívida perdoada não volta como previsão
+    if (l.vencimento.startsWith(mes)) {
+      aReceber += l.valor;
+      quantidade++;
+      if (l.vencimento < hoje) jaVenceu += l.valor;
+    } else if (l.vencimento < mes) {
+      atrasadoAnterior += l.valor;
+    }
+  }
+
+  return { mes, recebido, aReceber, jaVenceu, atrasadoAnterior, previsao: recebido + aReceber, quantidade };
 }
 
 /** Variação percentual entre dois valores. null quando não há base de comparação. */

@@ -29,6 +29,12 @@ export function diasAteISO(iso: string): number {
   return Math.round((alvo - hoje) / 86400000);
 }
 
+/** "2026-02" → "fevereiro de 2026". Sem dia fixo ao meio-dia o mês vira o
+ *  anterior nos fusos a oeste de Greenwich. */
+export function mesPorExtenso(mes: string): string {
+  return new Date(`${mes.slice(0, 7)}-01T12:00:00`).toLocaleDateString("pt-BR", { month: "long", year: "numeric" });
+}
+
 /** Soma meses a uma data ISO, sem estourar o fim do mês: 31/01 + 1 mês vira
  *  28/02, não 03/03. É a cadência de toda parcela mensal do sistema — o gerador
  *  de parcelas dos contratos e o parcelamento à mão usam esta mesma conta, para

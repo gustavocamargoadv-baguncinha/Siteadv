@@ -170,6 +170,12 @@ export interface Lancamento {
   // nunca seria limpa em produção.
   perdoado_em?: string | null; // ISO date
   perdoado_motivo?: string | null;
+  // Recebimento excepcional: honorário de um trabalho que levou anos e caiu de
+  // uma vez. NÃO muda o caixa — o dinheiro entrou no mês em que entrou, e todo
+  // total continua contando por `pago_em`. Só o gráfico de Desempenho oferece
+  // espalhá-lo pelos meses do ano, para um pico assim não achatar a leitura de
+  // todos os outros meses. `null` desmarca (mesma regra do perdão).
+  diluido?: boolean | null;
   created_at?: string;
 }
 

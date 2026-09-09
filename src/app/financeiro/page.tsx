@@ -6,16 +6,11 @@ import { ArrowLeft, Check, HeartHandshake, Pencil, Plus, RotateCcw, X } from "lu
 import { useSearchParams } from "next/navigation";
 import { useTable, byId } from "@/lib/hooks";
 import type { Cliente, Lancamento } from "@/lib/types";
-import { brl, dataBR, emCobranca, hojeISO, statusLancamento } from "@/lib/format";
+import { brl, dataBR, emCobranca, hojeISO, mesPorExtenso, statusLancamento } from "@/lib/format";
 import { Badge, BotaoPrimario, Card, EmptyState, PageHeader, StatCard } from "@/components/ui";
 import { EditarLancamento } from "@/components/EditarLancamento";
 
 type Filtro = "todos" | "areceber" | "atrasados" | "recebidos" | "perdoados";
-
-/** "2026-02" → "fevereiro de 2026" */
-function mesPorExtenso(mes: string): string {
-  return new Date(`${mes}-01T12:00:00`).toLocaleDateString("pt-BR", { month: "long", year: "numeric" });
-}
 
 // useSearchParams() precisa de fronteira de Suspense no App Router.
 export default function FinanceiroPage() {
