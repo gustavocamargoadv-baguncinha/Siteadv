@@ -139,14 +139,11 @@ export default function ClienteDetalhe() {
     .reduce((s, l) => s + l.valor, 0);
   const saldoContrato = totalContratado - totalRecebido;
 
-  // Em qual parcela o cliente está: conta os recebíveis pagos × total, em ordem
-  // de vencimento, e aponta a próxima em aberto.
-  const recebiveis = financeiro
+  // A próxima cobrança do cliente: a em aberto que vence primeiro.
+  const proximaParcela = financeiro
     .filter((l) => l.tipo === "receita")
-    .sort((a, b) => a.vencimento.localeCompare(b.vencimento));
-  const parcelasTotal = recebiveis.length;
-  const parcelasPagas = recebiveis.filter((l) => l.pago_em).length;
-  const proximaParcela = recebiveis.find((l) => emCobranca(l));
+    .sort((a, b) => a.vencimento.localeCompare(b.vencimento))
+    .find((l) => emCobranca(l));
 
   // O card do Financeiro mostra um recorte, não a lista inteira — e sem ordem
   // nenhuma ele mostrava as linhas mais RECÉM-CRIADAS. Como o gerador cria de
@@ -295,22 +292,39 @@ export default function ClienteDetalhe() {
         </div>
       )}
 
-      {parcelasTotal > 0 && (
+      {/* Andamento do contrato em DINHEIRO, não em contagem de parcelas.
+          Contar linhas dizia "5 de 11 pagas" num contrato de 10x: o total somava
+          os recebimentos avulsos às parcelas projetadas, dois tipos de coisa. E
+          o número de parcelas do contrato não é um dado do sistema — só existe
+          como texto na descrição ("10x de R$ 800,00"), de onde não dá para
+          calcular nada com honestidade. Valor pago sobre valor contratado a
+          ficha sabe com certeza, e é o que responde "quanto falta". */}
+      {(totalContratado > 0 || proximaParcela) && (
         <Card className="p-4">
           <div className="flex items-center justify-between gap-2">
-            <h2 className="text-sm font-bold text-slate-900">Parcelas</h2>
-            <span className="text-sm font-semibold text-slate-700">{parcelasPagas} de {parcelasTotal} pagas</span>
+            <h2 className="text-sm font-bold text-slate-900">Andamento do contrato</h2>
+            {totalContratado > 0 && (
+              <span className="text-sm font-semibold tabular-nums text-slate-700">
+                {brl(totalRecebido)} de {brl(totalContratado)}
+              </span>
+            )}
           </div>
-          <div className="mt-2 h-2 w-full overflow-hidden rounded-full bg-slate-100">
-            <div
-              className="h-full rounded-full bg-emerald-500 transition-all"
-              style={{ width: `${Math.round((parcelasPagas / parcelasTotal) * 100)}%` }}
-            />
-          </div>
+          {totalContratado > 0 && (
+            <div className="mt-2 h-2 w-full overflow-hidden rounded-full bg-slate-100">
+              <div
+                className="h-full rounded-full bg-emerald-500 transition-all"
+                style={{ width: `${Math.min(100, Math.round((totalRecebido / totalContratado) * 100))}%` }}
+              />
+            </div>
+          )}
           <p className="mt-2 text-xs text-slate-600">
             {proximaParcela
-              ? `Está na parcela ${parcelasPagas + 1} de ${parcelasTotal} — próxima: ${brl(proximaParcela.valor)}, vence ${dataBR(proximaParcela.vencimento)}.`
-              : "✓ Todas as parcelas quitadas."}
+              ? `Próxima: ${brl(proximaParcela.valor)}, vence ${dataBR(proximaParcela.vencimento)}.${
+                  saldoContrato > 0 ? ` Falta ${brl(saldoContrato)} para quitar.` : ""
+                }`
+              : saldoContrato > 0
+                ? `Sem parcela em aberto, mas faltam ${brl(saldoContrato)} do contrato.`
+                : "✓ Contrato quitado."}
           </p>
         </Card>
       )}

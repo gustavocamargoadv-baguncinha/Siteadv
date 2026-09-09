@@ -19,6 +19,24 @@ import { Modal } from "@/components/Modal";
 
 const CATEGORIAS = ["Honorários", "Consultoria", "Êxito", "Outras receitas"];
 
+/** Erro do banco em português de gente.
+ *
+ *  O Supabase recusa a gravação quando o app já pede uma coluna que a migração
+ *  ainda não criou. A mensagem crua ("PGRST204 … schema cache") não diz nada a
+ *  quem está lançando um honorário, e o que a pessoa precisa saber é que não é
+ *  culpa dela e o que fazer a respeito. */
+function mensagemDeErro(e: unknown): string {
+  const bruto = e instanceof Error ? e.message : typeof e === "string" ? e : JSON.stringify(e);
+  const codigo = typeof e === "object" && e !== null && "code" in e ? String((e as { code: unknown }).code) : "";
+  if (codigo === "PGRST204" || /schema cache|could not find the .* column/i.test(bruto)) {
+    return "O banco de dados ainda não tem um dos campos deste formulário. Falta rodar a última migração no Supabase (SQL Editor). Nada foi gravado.";
+  }
+  if (/failed to fetch|network/i.test(bruto)) {
+    return "Sem conexão com o banco agora. Nada foi gravado — confira a internet e tente de novo.";
+  }
+  return `Não foi possível salvar: ${bruto}`;
+}
+
 interface Props {
   aberto: boolean;
   onFechar: () => void;
@@ -47,6 +65,10 @@ export function EditarLancamento({ aberto, onFechar, lancamento = null, clienteF
   // Honorário de um trabalho de anos, pago de uma vez. Não mexe no caixa — só
   // autoriza o gráfico de Desempenho a espalhá-lo pelos meses do ano.
   const [diluido, setDiluido] = useState(false);
+  // Por que não salvou. Sem isto o formulário engolia a recusa do banco: o modal
+  // ficava aberto, sem aviso nenhum, e a pessoa clicava "Salvar" de novo achando
+  // que o clique não pegou.
+  const [erro, setErro] = useState<string | null>(null);
   const [confirmando, setConfirmando] = useState(false);
   const [salvando, setSalvando] = useState(false);
 
@@ -55,6 +77,7 @@ export function EditarLancamento({ aberto, onFechar, lancamento = null, clienteF
   useEffect(() => {
     if (!aberto) return;
     setConfirmando(false);
+    setErro(null);
     setParcelas("1");
     if (lancamento) {
       setRecebido(!!lancamento.pago_em);
@@ -96,6 +119,7 @@ export function EditarLancamento({ aberto, onFechar, lancamento = null, clienteF
     if (!desc || !data || !v || v <= 0) return;
 
     setSalvando(true);
+    setErro(null);
     try {
       const campos = {
         tipo: "receita" as const,
@@ -154,6 +178,10 @@ export function EditarLancamento({ aberto, onFechar, lancamento = null, clienteF
         }
       }
       onFechar();
+    } catch (e) {
+      // O modal FICA aberto de propósito: o que foi digitado continua na tela
+      // para ser reenviado depois de resolvida a causa.
+      setErro(mensagemDeErro(e));
     } finally {
       setSalvando(false);
     }
@@ -166,10 +194,18 @@ export function EditarLancamento({ aberto, onFechar, lancamento = null, clienteF
     // botão pareceria não funcionar.
     const projetadaEmAberto =
       ehParcelaProjetada(lancamento.id) && !lancamento.pago_em && !lancamento.perdoado_em;
-    await remove(lancamento.id);
-    // apagar um recebimento devolve a dívida: a parcela volta para a fila
-    if (!projetadaEmAberto) await reconciliarParcelasCliente(lancamento.cliente_id);
-    onFechar();
+    setErro(null);
+    try {
+      await remove(lancamento.id);
+      // apagar um recebimento devolve a dívida: a parcela volta para a fila
+      if (!projetadaEmAberto) await reconciliarParcelasCliente(lancamento.cliente_id);
+      onFechar();
+    } catch (e) {
+      // apagar que falha calado é pior que salvar: a pessoa sai achando que
+      // apagou e o lançamento continua contando no faturamento
+      setConfirmando(false);
+      setErro(mensagemDeErro(e));
+    }
   }
 
   return (
@@ -187,6 +223,11 @@ export function EditarLancamento({ aberto, onFechar, lancamento = null, clienteF
       onFechar={onFechar}
     >
       <form onSubmit={salvar} className="space-y-3">
+        {/* Primeiro elemento do formulário: quem clicou em salvar e não viu o
+            modal fechar olha para cá, não para o rodapé. */}
+        {erro && (
+          <p className="rounded-lg border border-red-300 bg-red-50 p-2.5 text-xs font-medium text-red-800">{erro}</p>
+        )}
         {lancamento && (
           <p className="rounded-lg bg-slate-50 p-2.5 text-xs text-slate-600">
             Marcou como recebido sem querer? Troque para <span className="font-semibold">⏳ A receber</span> — a data do
