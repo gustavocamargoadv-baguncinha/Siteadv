@@ -96,7 +96,14 @@ export default function Dashboard() {
     setMeta(lerMeta(anoAtual) ?? metaSugerida(resumo, null));
   }, [anoAtual, resumo]);
   const mesesPlot = resumo.mesesDecorridos;
-  const melhorMes = resumo.porMes.indexOf(Math.max(...resumo.porMes));
+  // Mesma curva da Desempenho: com recebimento excepcional marcado, o valor
+  // aparece espalhado. Aqui não há espaço para o botão "Como entrou" nem para a
+  // explicação, e é justamente por isso que a versão diluída é a certa neste
+  // lugar — a miniatura serve para ler o ritmo do ano de relance, e o pico
+  // sozinho achata todos os outros meses num traço só. O número grande ao lado
+  // continua sendo o caixa de verdade.
+  const serieInicio = resumo.porMesDiluido;
+  const melhorMes = serieInicio.indexOf(Math.max(...serieInicio));
 
   const hora = new Date().getHours();
   const saudacao = hora < 12 ? "Bom dia" : hora < 18 ? "Boa tarde" : "Boa noite";
@@ -144,7 +151,7 @@ export default function Dashboard() {
                 <p className="mt-0.5 text-2xl font-bold tabular-nums text-slate-900">{brl(resumo.total)}</p>
                 <p className="mt-0.5 text-xs text-slate-500">
                   no ritmo atual, fecha em <span className="font-semibold tabular-nums text-slate-700">{brl(projecao)}</span>
-                  {melhorMes >= 0 && resumo.porMes[melhorMes] > 0 && (
+                  {melhorMes >= 0 && serieInicio[melhorMes] > 0 && (
                     <span className="text-slate-400"> · melhor mês: {MESES_CURTOS[melhorMes]}</span>
                   )}
                 </p>
@@ -152,7 +159,7 @@ export default function Dashboard() {
 
               <div className="min-w-0">
                 <div className="mb-1.5 text-brand-600">
-                  <Sparkline pontos={resumo.porMes.slice(0, mesesPlot)} />
+                  <Sparkline pontos={serieInicio.slice(0, mesesPlot)} />
                 </div>
                 <MedidorMeta realizado={resumo.total} meta={meta} projecao={projecao} />
               </div>
