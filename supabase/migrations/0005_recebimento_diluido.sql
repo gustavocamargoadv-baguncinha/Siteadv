@@ -33,3 +33,20 @@ end $$;
 
 comment on column lancamentos.diluido is
   'Recebimento excepcional (trabalho de vários anos pago de uma vez). Não altera nenhum total: apenas autoriza o gráfico de Desempenho a espalhar o valor pelos meses do ano.';
+
+-- ---------------------------------------------------------------------------
+-- O caso que motivou a coluna: R$ 30.000 do Caso Debora, trabalho de anos pago
+-- de uma vez em 28/02/2026. É o pico que achatava 2026 inteiro no gráfico.
+--
+-- Os quatro critérios juntos (cliente, valor, data e ainda não marcado) apontam
+-- um único lançamento — não há como acertar outro por engano. Se nada casar,
+-- o update não faz nada e a migration segue: rodar de novo é seguro.
+-- ---------------------------------------------------------------------------
+update lancamentos l
+   set diluido = true
+  from clientes c
+ where l.cliente_id = c.id
+   and c.nome       = 'Caso Debora'
+   and l.valor      = 30000
+   and l.pago_em    = date '2026-02-28'
+   and l.diluido is distinct from true;

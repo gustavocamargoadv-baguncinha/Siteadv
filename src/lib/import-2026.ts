@@ -123,7 +123,10 @@ export const LANCAMENTOS_2026: Partial<Lancamento>[] = [
   { id: "imp26l-046", tipo: "receita", categoria: "Honorários", cliente_id: "imp26c-anaclarabarb", descricao: "Honorários — ANA CLARA BARB", valor: 750.0, vencimento: "2026-02-23", pago_em: "2026-02-23", forma_pagamento: "PIX" },
   { id: "imp26l-047", tipo: "receita", categoria: "Honorários", cliente_id: "imp26c-roselinarodri", descricao: "Honorários — Roselina Rodri", valor: 400.0, vencimento: "2026-02-24", pago_em: "2026-02-24", forma_pagamento: "PIX" },
   { id: "imp26l-048", tipo: "receita", categoria: "Honorários", cliente_id: "imp26c-joaoluizdeo", descricao: "Honorários — JOAO LUIZ DE O", valor: 38.42, vencimento: "2026-02-25", pago_em: "2026-02-25", forma_pagamento: "PIX" },
-  { id: "imp26l-049", tipo: "receita", categoria: "Honorários", cliente_id: "imp26c-casodebora", descricao: "Pago em dinheiro (não passou pelo extrato bancário) — lançado manualmente", valor: 30000.0, vencimento: "2026-02-28", pago_em: "2026-02-28", forma_pagamento: "PIX" },
+  // `diluido`: trabalho de anos pago de uma vez. Não muda o caixa — só permite
+  // ao gráfico da Desempenho espalhá-lo, senão este pico sozinho achata a
+  // leitura de 2026 inteiro.
+  { id: "imp26l-049", tipo: "receita", categoria: "Honorários", cliente_id: "imp26c-casodebora", descricao: "Pago em dinheiro (não passou pelo extrato bancário) — lançado manualmente", valor: 30000.0, vencimento: "2026-02-28", pago_em: "2026-02-28", forma_pagamento: "PIX", diluido: true },
   { id: "imp26l-050", tipo: "receita", categoria: "Honorários", cliente_id: "imp26c-karinadomi", descricao: "Honorários — KARINA DOMI", valor: 400.0, vencimento: "2026-03-02", pago_em: "2026-03-02", forma_pagamento: "PIX" },
   { id: "imp26l-051", tipo: "receita", categoria: "Honorários", cliente_id: "imp26c-mateusadriano", descricao: "Honorários — Mateus Adriano", valor: 400.0, vencimento: "2026-03-02", pago_em: "2026-03-02", forma_pagamento: "PIX" },
   { id: "imp26l-052", tipo: "receita", categoria: "Honorários", cliente_id: "imp26c-pietroalvesz", descricao: "Honorários — Pietro Alves Z", valor: 300.0, vencimento: "2026-03-02", pago_em: "2026-03-02", forma_pagamento: "PIX" },
