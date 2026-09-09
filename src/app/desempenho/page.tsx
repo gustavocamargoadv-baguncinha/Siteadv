@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { Check, Pencil, TrendingDown, TrendingUp } from "lucide-react";
 import { useTable } from "@/lib/hooks";
 import type { Cliente, Lancamento, Processo } from "@/lib/types";
-import { brl, hojeISO, mesPorExtenso } from "@/lib/format";
+import { brl, hojeISO, maiusculaInicial, mesPorExtenso } from "@/lib/format";
 import {
   MESES_CURTOS,
   anosComDados,
@@ -277,37 +277,54 @@ export default function DesempenhoPage() {
         </p>
       </Card>
 
-      {/* Quanto o mês deve fechar. Sempre o mês de HOJE — olhar 2024 nas abas
-          não muda o que vai entrar em setembro. */}
+      {/* O mês corrente, sempre o de HOJE — olhar 2024 nas abas não muda o que
+          vai entrar em setembro.
+
+          O card já se chamou "Previsão", e o nome mentia: a conta só enxerga
+          parcela agendada, e a maior parte do dinheiro deste escritório chega
+          sem agenda nenhuma. Lido como projeção, o número assustava todo mês. */}
       {ehAnoCorrente && (previsao.previsao > 0 || previsao.atrasadoAnterior > 0) && (
         <Card className="p-4">
           <div className="mb-3 flex items-center justify-between">
-            {/* sem `capitalize`: a classe põe maiúscula em TODA palavra e o mês
-                sairia "Previsão De Setembro De 2026" */}
-            <h2 className="text-sm font-bold text-slate-900">🔮 Previsão de {mesPorExtenso(previsao.mes)}</h2>
+            <h2 className="text-sm font-bold text-slate-900">
+              📅 {maiusculaInicial(mesPorExtenso(previsao.mes))} até agora
+            </h2>
             <Link href="/cobranca" className="text-xs font-semibold text-brand-700 hover:underline">
               cobrança
             </Link>
           </div>
 
           <p className="text-3xl font-bold tabular-nums text-slate-900">{brl(previsao.previsao)}</p>
+          <p className="text-xs font-medium text-slate-500">garantidos até aqui</p>
           <p className="mt-1 text-xs text-slate-500">
             <span className="font-semibold tabular-nums text-emerald-700">{brl(previsao.recebido)}</span> já entraram
             {previsao.aReceber > 0 && (
               <>
                 {" + "}
-                <span className="font-semibold tabular-nums text-amber-700">{brl(previsao.aReceber)}</span> a vencer
+                <span className="font-semibold tabular-nums text-amber-700">{brl(previsao.aReceber)}</span> agendados
+                para vencer
                 <span className="tabular-nums"> ({previsao.quantidade} parcela{previsao.quantidade === 1 ? "" : "s"})</span>
               </>
             )}
-            {mediaMensal > 0 && (
-              <>
-                {" · "}
-                {previsao.previsao >= mediaMensal ? "acima" : "abaixo"} da média de{" "}
-                <span className="tabular-nums">{brl(mediaMensal)}</span>
-              </>
-            )}
           </p>
+
+          {/* O tamanho do próprio ponto cego, medido nos dados do ano em vez de
+              afirmado. Sem isto o número passa por projeção de faturamento. */}
+          {mediaMensal > 0 && (
+            <p className="mt-3 rounded-lg bg-brand-50 px-2.5 py-2 text-xs text-slate-700">
+              <span className="font-semibold">Isto é um piso, não a previsão do mês.</span> A conta só enxerga parcela
+              agendada.
+              {previsao.fatiaSemAgenda !== null && previsao.fatiaSemAgenda > 0.15 && (
+                <>
+                  {" "}
+                  Em {ano}, <span className="font-semibold tabular-nums">{Math.round(previsao.fatiaSemAgenda * 100)}%</span>{" "}
+                  do que entrou veio de clientes sem parcela programada — caso novo, acordo fechado no mês, honorário
+                  combinado por fora.
+                </>
+              )}{" "}
+              Seus meses fecham em <span className="font-semibold tabular-nums">{brl(mediaMensal)}</span> na média.
+            </p>
+          )}
 
           <div className="mt-3 space-y-1.5">
             {previsao.jaVenceu > 0 && (
@@ -318,11 +335,11 @@ export default function DesempenhoPage() {
             )}
             {previsao.atrasadoAnterior > 0 && (
               <p className="rounded-lg bg-slate-50 px-2.5 py-1.5 text-xs text-slate-600">
-                {/* Atraso velho fica FORA da previsão de propósito: somá-lo daria
+                {/* Atraso velho fica FORA da conta de propósito: somá-lo daria
                     um número bonito que nunca se cumpre. */}
                 Fora desta conta: <span className="font-semibold tabular-nums">{brl(previsao.atrasadoAnterior)}</span>{" "}
-                parados de meses anteriores. Não entram na previsão porque já não vieram quando deviam — se caírem, é
-                lucro em cima disso.
+                parados de meses anteriores. Não entram porque já não vieram quando deviam — se caírem, é ganho em cima
+                disso.
               </p>
             )}
           </div>

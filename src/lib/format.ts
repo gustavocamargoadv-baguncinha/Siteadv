@@ -29,6 +29,17 @@ export function diasAteISO(iso: string): number {
   return Math.round((alvo - hoje) / 86400000);
 }
 
+/** Primeira letra maiúscula, resto intacto — para abrir frase com um mês
+ *  ("Setembro de 2026").
+ *
+ *  Não use `capitalize` do CSS para isso: ele põe maiúscula em TODA palavra e
+ *  sai "Setembro De 2026". E `first-letter` só vale em elemento de bloco, então
+ *  falha calado num <span>. No texto a conta é uma só e aparece em qualquer
+ *  lugar. */
+export function maiusculaInicial(s: string): string {
+  return s.charAt(0).toUpperCase() + s.slice(1);
+}
+
 /** "2026-02" → "fevereiro de 2026". Sem dia fixo ao meio-dia o mês vira o
  *  anterior nos fusos a oeste de Greenwich. */
 export function mesPorExtenso(mes: string): string {

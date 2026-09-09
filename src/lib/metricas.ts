@@ -126,24 +126,44 @@ export interface PrevisaoMes {
    *  dinheiro que já não veio quando devia, e somá-lo transformaria a previsão
    *  num número otimista que nunca se cumpre. */
   atrasadoAnterior: number;
-  /** recebido + aReceber. O mês fecha aqui se todo mundo pagar em dia. */
+  /** recebido + aReceber: o que já está garantido no mês. NÃO é o faturamento
+   *  esperado — ver `fatiaSemAgenda`. */
   previsao: number;
   quantidade: number; // quantas parcelas compõem o `aReceber`
+  /** A fatia do faturamento do ano que veio de clientes SEM nenhuma parcela em
+   *  aberto — ou seja, o dinheiro que uma conta baseada em agenda não tem como
+   *  enxergar. 0..1, ou null quando ainda não há faturamento no ano.
+   *
+   *  Existe porque o número acima é lido como previsão e não é: num escritório
+   *  onde a maior parte do dinheiro chega sem parcela marcada (caso novo, acordo
+   *  combinado no mês, honorário fechado por fora), o total agendado é um piso,
+   *  não um palpite. Sem esta medida ao lado, o card assusta todo mês. */
+  fatiaSemAgenda: number | null;
 }
 
-/** Quanto o mês corrente deve fechar, somando o que já entrou ao que ainda vence
+/** O que o mês corrente já tem garantido: o que entrou somado ao que ainda vence
  *  dentro dele.
+ *
+ *  É um PISO, não uma previsão. Só enxerga parcela que alguém agendou, e boa
+ *  parte do dinheiro deste escritório chega sem agenda nenhuma — daí o
+ *  `fatiaSemAgenda` vir junto, para a tela poder dizer o tamanho do próprio
+ *  ponto cego em vez de deixar o número passar por projeção.
  *
  *  É faturamento, não lucro: o sistema não registra despesas (o Financeiro só
  *  tem receitas), então subtrair custo daqui seria inventar número. */
 export function previsaoMes(lancamentos: Lancamento[], hojeISO: string): PrevisaoMes {
   const mes = hojeISO.slice(0, 10).slice(0, 7);
+  const ano = mes.slice(0, 4);
   const hoje = hojeISO.slice(0, 10);
   let recebido = 0;
   let aReceber = 0;
   let jaVenceu = 0;
   let atrasadoAnterior = 0;
   let quantidade = 0;
+  // Cliente "com agenda" é o que tem alguma cobrança em aberto — não importa se
+  // veio do gerador de contratos ou foi lançada à mão. É o que a conta do mês
+  // consegue ver quando olha para a frente.
+  const comAgenda = new Set<string>();
 
   for (const l of lancamentos) {
     if (l.tipo !== "receita") continue;
@@ -152,6 +172,7 @@ export function previsaoMes(lancamentos: Lancamento[], hojeISO: string): Previsa
       continue;
     }
     if (l.perdoado_em) continue; // dívida perdoada não volta como previsão
+    if (l.cliente_id) comAgenda.add(l.cliente_id);
     if (l.vencimento.startsWith(mes)) {
       aReceber += l.valor;
       quantidade++;
@@ -161,7 +182,26 @@ export function previsaoMes(lancamentos: Lancamento[], hojeISO: string): Previsa
     }
   }
 
-  return { mes, recebido, aReceber, jaVenceu, atrasadoAnterior, previsao: recebido + aReceber, quantidade };
+  // Segunda passada: o conjunto `comAgenda` só fica pronto no fim da primeira.
+  let recebidoAno = 0;
+  let recebidoSemAgenda = 0;
+  for (const l of lancamentos) {
+    if (l.tipo !== "receita" || !l.pago_em?.startsWith(ano)) continue;
+    recebidoAno += l.valor;
+    // sem cliente vinculado também conta como ponto cego: não há para quem olhar
+    if (!l.cliente_id || !comAgenda.has(l.cliente_id)) recebidoSemAgenda += l.valor;
+  }
+
+  return {
+    mes,
+    recebido,
+    aReceber,
+    jaVenceu,
+    atrasadoAnterior,
+    previsao: recebido + aReceber,
+    quantidade,
+    fatiaSemAgenda: recebidoAno > 0 ? recebidoSemAgenda / recebidoAno : null,
+  };
 }
 
 /** Variação percentual entre dois valores. null quando não há base de comparação. */
