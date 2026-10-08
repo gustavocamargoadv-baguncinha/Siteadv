@@ -8,7 +8,7 @@
 // desmarcar e a outra não, e o dinheiro contaria diferente dependendo de por
 // onde o lançamento foi editado.
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Trash2 } from "lucide-react";
 import { useTable } from "@/lib/hooks";
 import { ehParcelaProjetada, reconciliarParcelasCliente } from "@/lib/store";
@@ -69,6 +69,14 @@ export function EditarLancamento({ aberto, onFechar, lancamento = null, clienteF
   // ficava aberto, sem aviso nenhum, e a pessoa clicava "Salvar" de novo achando
   // que o clique não pegou.
   const [erro, setErro] = useState<string | null>(null);
+  // A tarja mora no topo do formulário, mas o botão "Salvar" fica no rodapé de
+  // um modal que rola: no celular e em tela pequena, quem clicou estava olhando
+  // para baixo e a tarja nascia fora da vista — o mesmo silêncio de antes, só
+  // que com o aviso escondido. Ao surgir, ela é trazida para a vista.
+  const tarjaErro = useRef<HTMLParagraphElement>(null);
+  useEffect(() => {
+    if (erro) tarjaErro.current?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+  }, [erro]);
   const [confirmando, setConfirmando] = useState(false);
   const [salvando, setSalvando] = useState(false);
 
@@ -226,7 +234,13 @@ export function EditarLancamento({ aberto, onFechar, lancamento = null, clienteF
         {/* Primeiro elemento do formulário: quem clicou em salvar e não viu o
             modal fechar olha para cá, não para o rodapé. */}
         {erro && (
-          <p className="rounded-lg border border-red-300 bg-red-50 p-2.5 text-xs font-medium text-red-800">{erro}</p>
+          <p
+            ref={tarjaErro}
+            role="alert"
+            className="rounded-lg border border-red-300 bg-red-50 p-2.5 text-xs font-medium text-red-800"
+          >
+            {erro}
+          </p>
         )}
         {lancamento && (
           <p className="rounded-lg bg-slate-50 p-2.5 text-xs text-slate-600">
