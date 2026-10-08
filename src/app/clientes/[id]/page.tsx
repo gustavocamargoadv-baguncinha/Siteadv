@@ -137,7 +137,14 @@ export default function ClienteDetalhe() {
   const totalRecebido = financeiro
     .filter((l) => l.tipo === "receita" && l.pago_em)
     .reduce((s, l) => s + l.valor, 0);
-  const saldoContrato = totalContratado - totalRecebido;
+  // Sem contrato cadastrado, o total combinado sai dos próprios lançamentos: o
+  // que já entrou mais o que está em cobrança. É o caso de quem fechou no
+  // WhatsApp e teve as parcelas lançadas à mão — antes a ficha dessas pessoas
+  // não mostrava resumo nenhum, como se não houvesse acordo. Perdoado fica de
+  // fora: entrou no combinado, mas não é mais devido nem foi pago.
+  const temContrato = totalContratado > 0;
+  const totalCombinado = temContrato ? totalContratado : totalRecebido + emAberto;
+  const saldoContrato = totalCombinado - totalRecebido;
 
   // A próxima cobrança do cliente: a em aberto que vence primeiro.
   const proximaParcela = financeiro
@@ -275,11 +282,13 @@ export default function ClienteDetalhe() {
         {cli.notas && <p className="rounded-lg bg-amber-50 p-2.5 text-xs text-amber-900">📌 {cli.notas}</p>}
       </Card>
 
-      {totalContratado > 0 && (
+      {totalCombinado > 0 && (
         <div className="grid grid-cols-3 gap-3">
           <div className="rounded-xl border border-slate-200 bg-white p-3 text-center">
-            <p className="text-xs text-slate-500">Contratado</p>
-            <p className="mt-0.5 text-lg font-bold text-slate-900">{brl(totalContratado)}</p>
+            {/* "Combinado" e não "Contratado" quando vem dos lançamentos: não há
+                contrato cadastrado, e o rótulo não deve fingir que há */}
+            <p className="text-xs text-slate-500">{temContrato ? "Contratado" : "Combinado"}</p>
+            <p className="mt-0.5 text-lg font-bold text-slate-900">{brl(totalCombinado)}</p>
           </div>
           <div className="rounded-xl border border-slate-200 bg-white p-3 text-center">
             <p className="text-xs text-slate-500">Recebido</p>
@@ -299,24 +308,22 @@ export default function ClienteDetalhe() {
           como texto na descrição ("10x de R$ 800,00"), de onde não dá para
           calcular nada com honestidade. Valor pago sobre valor contratado a
           ficha sabe com certeza, e é o que responde "quanto falta". */}
-      {(totalContratado > 0 || proximaParcela) && (
+      {totalCombinado > 0 && (
         <Card className="p-4">
           <div className="flex items-center justify-between gap-2">
-            <h2 className="text-sm font-bold text-slate-900">Andamento do contrato</h2>
-            {totalContratado > 0 && (
-              <span className="text-sm font-semibold tabular-nums text-slate-700">
-                {brl(totalRecebido)} de {brl(totalContratado)}
-              </span>
-            )}
+            <h2 className="text-sm font-bold text-slate-900">
+              {temContrato ? "Andamento do contrato" : "Andamento dos pagamentos"}
+            </h2>
+            <span className="text-sm font-semibold tabular-nums text-slate-700">
+              {brl(totalRecebido)} de {brl(totalCombinado)}
+            </span>
           </div>
-          {totalContratado > 0 && (
-            <div className="mt-2 h-2 w-full overflow-hidden rounded-full bg-slate-100">
-              <div
-                className="h-full rounded-full bg-emerald-500 transition-all"
-                style={{ width: `${Math.min(100, Math.round((totalRecebido / totalContratado) * 100))}%` }}
-              />
-            </div>
-          )}
+          <div className="mt-2 h-2 w-full overflow-hidden rounded-full bg-slate-100">
+            <div
+              className="h-full rounded-full bg-emerald-500 transition-all"
+              style={{ width: `${Math.min(100, Math.round((totalRecebido / totalCombinado) * 100))}%` }}
+            />
+          </div>
           <p className="mt-2 text-xs text-slate-600">
             {proximaParcela
               ? `Próxima: ${brl(proximaParcela.valor)}, vence ${dataBR(proximaParcela.vencimento)}.${
@@ -324,8 +331,15 @@ export default function ClienteDetalhe() {
                 }`
               : saldoContrato > 0
                 ? `Sem parcela em aberto, mas faltam ${brl(saldoContrato)} do contrato.`
-                : "✓ Contrato quitado."}
+                : temContrato
+                  ? "✓ Contrato quitado."
+                  : "✓ Tudo o que foi lançado está pago."}
           </p>
+          {!temContrato && (
+            <p className="mt-1 text-xs text-slate-400">
+              Sem contrato cadastrado — o total é a soma do que foi lançado para este cliente (recebido + em aberto).
+            </p>
+          )}
         </Card>
       )}
 
